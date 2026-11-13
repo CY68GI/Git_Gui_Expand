@@ -111,8 +111,9 @@ GitLab、Bitbucket 或通用 Git，每个远端显示名称、平台和脱敏后
 发布日期缺少 Windows x64 ZIP、SHA-256 或 `version.json` 时，只显示错误，不会修改程序。
 “打开发布页”始终作为网络较慢或自动更新失败时的手动后备入口。
 
-首次从旧版 PowerShell 更新架构迁移时，需要手动安装一次 Launcher 版本；之后从
-`GitGuiExpandLauncher.exe` 启动即可使用多版本自动更新。
+首次从旧版 PowerShell 更新架构迁移时，需要手动安装一次 Launcher 版本。`v0.8.1`
+和 `v0.8.2` 的哈希校验依赖 Windows PowerShell 文本输出，请手动安装一次 `v0.8.3`；
+之后从 `GitGuiExpandLauncher.exe` 启动即可使用多版本自动更新。
 
 ## 反馈
 

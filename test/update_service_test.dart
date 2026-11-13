@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
+import 'package:git_gui_expand/core/services/update_installer_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
 
 void main() {
@@ -87,6 +88,27 @@ void main() {
     expect(service.compareVersions('v0.5.0', '0.5'), 0);
     expect(service.compareVersions('0.4.9', '0.5.0'), lessThan(0));
   });
+
+  test(
+    'calculates update SHA-256 without depending on shell text encoding',
+    () async {
+      final file = File(
+        '${temporaryDirectory.path}${Platform.pathSeparator}digest-input.bin',
+      );
+      await file.writeAsString('abc');
+      final installer = UpdateInstallerService(
+        storage: AppStorageService(
+          softwareDirectoryOverride: temporaryDirectory.path,
+        ),
+      );
+
+      expect(
+        await installer.calculateSha256(file.path),
+        'ba7816bf8f01cfea414140de5dae2223'
+        'b00361a396177a9cb410ff61f20015ad',
+      );
+    },
+  );
 
   test('launcher configuration and version markers are present', () async {
     final launcherSource = await File(

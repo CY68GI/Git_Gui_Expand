@@ -14,6 +14,16 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.8.3',
+    date: '2026-11-14',
+    title: '修复更新包校验与自动重启',
+    items: [
+      'SHA-256 改为直接读取文件字节计算，不再依赖 PowerShell 输出的系统文本编码。',
+      '修复下载达到 100% 后在校验阶段中止、软件退出但不切换版本的问题。',
+      '增加文件哈希回归测试，确保 Windows 更新包可以继续进入解压和 Launcher 切换流程。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.8.2',
     date: '2026-11-14',
     title: 'Launcher 更新链路验证与设置迁移',

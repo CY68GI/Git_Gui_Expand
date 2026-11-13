@@ -6,7 +6,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.8.2`
+当前版本：`0.8.3`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -138,7 +138,7 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.8.1/
+    0.8.3/
       git_gui_expand.exe
       data/
       version.json
@@ -173,8 +173,9 @@ build\windows\x64\runner\Release\
 7. 新版本 8 秒内异常退出时恢复上一版本。
 
 `v0.8.1` 起使用 Launcher 更新架构。`v0.8.0` 及更早版本的原 PowerShell 更新助手存在
-进程未启动问题，因此必须手动安装一次 `v0.8.1` 或更新版本；安装后从 Launcher 启动。
-后续版本支持自动切换。
+进程未启动问题，必须先手动安装一次 Launcher 版本。`v0.8.1` 和 `v0.8.2` 的哈希校验还会
+受 Windows PowerShell 文本编码影响，请手动安装一次 `v0.8.3`；安装后从 Launcher 启动，
+后续版本可继续自动切换。
 没有公开 Release、缺少 Windows x64 资产、缺少 SHA-256 或网络不可用时，会显示可重试
 提示，不会执行不完整更新。
 

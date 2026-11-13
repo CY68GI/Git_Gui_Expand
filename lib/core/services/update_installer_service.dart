@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 import '../constants/app_info.dart';
 import 'app_log_service.dart';
 import 'app_storage_service.dart';
@@ -104,7 +106,7 @@ class UpdateInstallerService {
           message: '正在校验更新包 SHA-256…',
         ),
       );
-      final actualHash = await _sha256(archive.path);
+      final actualHash = await calculateSha256(archive.path);
       if (actualHash.toLowerCase() != release.sha256.toLowerCase()) {
         await _deleteFileIfExists(archive);
         throw const FormatException('更新包 SHA-256 校验失败');
@@ -324,34 +326,9 @@ Expand-Archive -LiteralPath $env:GIT_GUI_UPDATE_ZIP `
     }
   }
 
-  Future<String> _sha256(String filePath) async {
-    final result = await Process.run(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        r'''
-$ErrorActionPreference = 'Stop'
-(Get-FileHash -LiteralPath $env:GIT_GUI_UPDATE_FILE `
-  -Algorithm SHA256).Hash
-''',
-      ],
-      environment: {'GIT_GUI_UPDATE_FILE': filePath},
-      includeParentEnvironment: true,
-      runInShell: false,
-      stdoutEncoding: utf8,
-      stderrEncoding: utf8,
-    );
-    if (result.exitCode != 0) {
-      throw FileSystemException(
-        '计算更新包 SHA-256 失败：${(result.stderr as String).trim()}',
-        filePath,
-      );
-    }
-    return (result.stdout as String).trim();
+  Future<String> calculateSha256(String filePath) async {
+    final digest = await sha256.bind(File(filePath).openRead()).first;
+    return digest.toString();
   }
 
   Future<void> _deleteDirectoryIfExists(Directory directory) async {

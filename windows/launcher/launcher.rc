@@ -5,8 +5,8 @@
 IDI_APP_ICON ICON "../runner/resources/app_icon.ico"
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,8,2,11
- PRODUCTVERSION 0,8,2,11
+ FILEVERSION 0,8,3,12
+ PRODUCTVERSION 0,8,3,12
  FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
  FILEOS VOS__WINDOWS32
  FILETYPE VFT_APP
@@ -17,11 +17,11 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "CY68GI"
             VALUE "FileDescription", "Git GUI Expand Launcher"
-            VALUE "FileVersion", "0.8.2.11"
+            VALUE "FileVersion", "0.8.3.12"
             VALUE "InternalName", "GitGuiExpandLauncher"
             VALUE "OriginalFilename", "GitGuiExpandLauncher.exe"
             VALUE "ProductName", "Git GUI Expand"
-            VALUE "ProductVersion", "0.8.2.11"
+            VALUE "ProductVersion", "0.8.3.12"
         END
     END
     BLOCK "VarFileInfo"

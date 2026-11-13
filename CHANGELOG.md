@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.3 - 2026-11-14
+
+### Fixed
+
+- SHA-256 改为直接流式读取文件字节计算，移除对 PowerShell 文本输出编码的依赖。
+- 修复真实更新在下载达到 100% 后、SHA-256 校验阶段以
+  `FormatException: Missing extension byte` 中止的问题。
+- 增加 SHA-256 回归测试，并重新验证 Launcher 版本切换和启动健康检查。
+
+### Migration
+
+- `v0.8.1` 和 `v0.8.2` 使用相同的 PowerShell 哈希输出实现，无法可靠执行这次自动更新。
+- 请从 Release 手动安装一次 `v0.8.3`，之后始终通过
+  `GitGuiExpandLauncher.exe` 启动即可继续使用自动更新。
+
 ## 0.8.2 - 2026-11-14
 
 ### Fixed
