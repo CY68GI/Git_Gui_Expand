@@ -6,6 +6,7 @@ import 'package:git_gui_expand/app.dart';
 import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
+import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 
 void main() {
@@ -31,6 +32,7 @@ void main() {
   });
 
   test('settings and logs stay under the software data directory', () async {
+    expect(const AppSettings().fontFamily, isEmpty);
     final settingsService = SettingsService(
       storage: storage,
       logService: logger,
@@ -39,6 +41,7 @@ void main() {
       unitSystem: SizeUnitSystem.decimal,
       baseUnit: SizeBaseUnit.bit,
       themePreference: AppThemePreference.dark,
+      fontFamily: 'Noto Sans',
     );
 
     await settingsService.save(settings);
@@ -72,5 +75,15 @@ void main() {
     expect(app.themeMode, ThemeMode.system);
     expect(app.theme?.brightness, Brightness.light);
     expect(app.darkTheme?.brightness, Brightness.dark);
+  });
+
+  test('font catalog returns installed fonts or platform fallbacks', () async {
+    final fonts = await FontCatalogService(logService: logger)
+        .loadInstalledFonts();
+
+    expect(fonts, isNotEmpty);
+    if (Platform.isWindows) {
+      expect(fonts, contains('Segoe UI'));
+    }
   });
 }

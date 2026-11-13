@@ -14,6 +14,29 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.4.0',
+    date: '2026-11-13',
+    title: '最近仓库历史',
+    items: [
+      '启动页新增最近打开 Git 仓库卡片，可单击快速打开。',
+      '仅保存经过 Git 根目录验证的仓库，最多保留 10 条并按时间排序。',
+      '重复仓库自动前移，失效记录自动清理，也可手动从历史中移除。',
+      '历史记录保存在软件目录 userdata/recent_repositories.json。',
+    ],
+  ),
+  ChangelogEntry(
+    version: '0.3.0',
+    date: '2026-11-13',
+    title: '文件删除、远程推送与字体选择',
+    items: [
+      '新增带确认的批量删除，已跟踪项使用 git rm，未跟踪和忽略项使用 git clean。',
+      '新增推送当前分支，可自动使用 upstream、origin 或第一个可用远程。',
+      '新增 Delete 删除和 Ctrl+Shift+U 推送快捷键。',
+      '新增系统字体读取和字体选择，默认使用各操作系统原生字体。',
+      '字体与主题、大小单位一起持久化到软件目录 userdata。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.2.1',
     date: '2026-11-13',
     title: '桌面体验与诊断升级',

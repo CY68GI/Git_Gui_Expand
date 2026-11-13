@@ -1,15 +1,24 @@
 import 'package:flutter/material.dart';
 
+import '../../core/models/recent_repository.dart';
+import '../../core/utils/path_utils.dart';
+
 class StartView extends StatelessWidget {
   const StartView({
     super.key,
     required this.onOpenRepository,
     required this.isOpening,
+    required this.recentRepositories,
+    required this.onOpenRecent,
+    required this.onRemoveRecent,
     this.error,
   });
 
   final VoidCallback onOpenRepository;
   final bool isOpening;
+  final List<RecentRepository> recentRepositories;
+  final Future<void> Function(String path) onOpenRecent;
+  final Future<void> Function(String path) onRemoveRecent;
   final String? error;
 
   @override
@@ -136,6 +145,59 @@ class StartView extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (recentRepositories.isNotEmpty) ...[
+                    const SizedBox(height: 30),
+                    Row(
+                      children: [
+                        Text(
+                          '最近打开',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w800),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 7,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Text(
+                            '${recentRepositories.length} 个 Git 仓库',
+                            style: TextStyle(
+                              fontSize: 9.5,
+                              color: colors.primary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '仅保存验证成功的仓库根目录',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        for (final repository in recentRepositories)
+                          _RecentRepositoryCard(
+                            repository: repository,
+                            disabled: isOpening,
+                            onOpen: () => onOpenRecent(repository.path),
+                            onRemove: () => onRemoveRecent(repository.path),
+                          ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 42),
                   const Wrap(
                     alignment: WrapAlignment.center,
@@ -180,6 +242,119 @@ class StartView extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _RecentRepositoryCard extends StatelessWidget {
+  const _RecentRepositoryCard({
+    required this.repository,
+    required this.disabled,
+    required this.onOpen,
+    required this.onRemove,
+  });
+
+  final RecentRepository repository;
+  final bool disabled;
+  final VoidCallback onOpen;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final name = repositoryBasename(repository.path);
+    return SizedBox(
+      width: 405,
+      child: Material(
+        color: colors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(11),
+          side: BorderSide(color: colors.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: disabled ? null : onOpen,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 6, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: colors.primary.withValues(alpha: 0.09),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(
+                    Icons.folder_rounded,
+                    color: colors.primary,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Tooltip(
+                        message: repository.path,
+                        child: Text(
+                          toPosixPath(repository.path),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 9.5,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _formatRecentTime(repository.lastOpened),
+                  style: TextStyle(fontSize: 9, color: colors.onSurfaceVariant),
+                ),
+                IconButton(
+                  onPressed: disabled ? null : onRemove,
+                  tooltip: '从历史记录移除',
+                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.close_rounded, size: 15),
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatRecentTime(DateTime value) {
+    final local = value.toLocal();
+    final now = DateTime.now();
+    if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day) {
+      return '今天 ${local.hour.toString().padLeft(2, '0')}:'
+          '${local.minute.toString().padLeft(2, '0')}';
+    }
+    return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
+        '${local.day.toString().padLeft(2, '0')}';
   }
 }
 

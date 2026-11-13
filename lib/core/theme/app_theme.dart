@@ -6,7 +6,7 @@ class AppTheme {
   static const Color accent = Color(0xFF087C68);
   static const Color darkAccent = Color(0xFF43D4B4);
 
-  static ThemeData light() {
+  static ThemeData light({String? fontFamily}) {
     final scheme =
         ColorScheme.fromSeed(
           seedColor: accent,
@@ -26,10 +26,11 @@ class AppTheme {
       scheme: scheme,
       scaffoldBackground: const Color(0xFFF2F5F3),
       tooltipBackground: const Color(0xFF17211E),
+      fontFamily: fontFamily,
     );
   }
 
-  static ThemeData dark() {
+  static ThemeData dark({String? fontFamily}) {
     final scheme =
         ColorScheme.fromSeed(
           seedColor: darkAccent,
@@ -51,6 +52,7 @@ class AppTheme {
       scheme: scheme,
       scaffoldBackground: const Color(0xFF0C1110),
       tooltipBackground: const Color(0xFFE8EFEA),
+      fontFamily: fontFamily,
     );
   }
 
@@ -58,6 +60,7 @@ class AppTheme {
     required ColorScheme scheme,
     required Color scaffoldBackground,
     required Color tooltipBackground,
+    required String? fontFamily,
   }) {
     final tooltipForeground = tooltipBackground.computeLuminance() > 0.5
         ? const Color(0xFF17211E)
@@ -67,7 +70,7 @@ class AppTheme {
       brightness: scheme.brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: scaffoldBackground,
-      fontFamily: 'Segoe UI',
+      fontFamily: fontFamily,
       splashFactory: InkSparkle.splashFactory,
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
@@ -85,7 +88,7 @@ class AppTheme {
         titleMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         bodyMedium: TextStyle(fontSize: 13, height: 1.45),
         labelMedium: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-      ),
+      ).apply(fontFamily: fontFamily),
       tooltipTheme: TooltipThemeData(
         waitDuration: const Duration(milliseconds: 500),
         decoration: BoxDecoration(

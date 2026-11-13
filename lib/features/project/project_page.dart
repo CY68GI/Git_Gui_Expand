@@ -22,10 +22,12 @@ class ProjectPage extends StatefulWidget {
     super.key,
     this.initialRepositoryPath,
     required this.onThemeModeChanged,
+    required this.onFontFamilyChanged,
   });
 
   final String? initialRepositoryPath;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final ValueChanged<String> onFontFamilyChanged;
 
   @override
   State<ProjectPage> createState() => _ProjectPageState();
@@ -39,6 +41,7 @@ class _ProjectPageState extends State<ProjectPage> {
   bool _isOpening = false;
   bool _isCommitFieldFocused = false;
   AppThemePreference _lastThemePreference = AppThemePreference.system;
+  String _lastFontFamily = '';
   final AppLogService _log = AppLogService.instance;
 
   @override
@@ -69,8 +72,20 @@ class _ProjectPageState extends State<ProjectPage> {
   void _onControllerChanged() {
     if (mounted) {
       _syncThemeMode();
+      _syncFontFamily();
       setState(() {});
     }
+  }
+
+  void _syncFontFamily() {
+    final fontFamily = _controller.settings.fontFamily;
+    if (_lastFontFamily == fontFamily) return;
+    _lastFontFamily = fontFamily;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onFontFamilyChanged(fontFamily);
+      }
+    });
   }
 
   void _syncThemeMode() {
@@ -111,6 +126,18 @@ class _ProjectPageState extends State<ProjectPage> {
     if (key == LogicalKeyboardKey.f2) {
       _log.detail('shortcut', 'F2 重命名');
       _runShortcut(_renameActiveSelection);
+      return true;
+    }
+    if (key == LogicalKeyboardKey.delete) {
+      _log.detail('shortcut', 'Delete 删除');
+      _runShortcut(_deleteActiveSelection);
+      return true;
+    }
+    if (keyboard.isControlPressed &&
+        keyboard.isShiftPressed &&
+        key == LogicalKeyboardKey.keyU) {
+      _log.detail('shortcut', 'Ctrl+Shift+U 推送');
+      _runShortcut(_pushCurrentBranch);
       return true;
     }
     if (!keyboard.isControlPressed ||
@@ -214,6 +241,19 @@ class _ProjectPageState extends State<ProjectPage> {
       if (mounted) {
         setState(() => _isOpening = false);
       }
+    }
+  }
+
+  Future<void> _openRecentRepository(String path) async {
+    if (_isOpening) return;
+    _log.info('history', '从最近仓库打开：$path');
+    await _openRepositoryPath(path);
+  }
+
+  Future<void> _removeRecentRepository(String path) async {
+    final outcome = await _controller.removeRecentRepository(path);
+    if (mounted) {
+      _showOutcome(outcome);
     }
   }
 
@@ -331,6 +371,134 @@ class _ProjectPageState extends State<ProjectPage> {
     }
   }
 
+  Future<void> _deleteActiveSelection() async {
+    final panel = _controller.panelFor(_controller.activeSide);
+    if (panel.selectedPaths.isEmpty) {
+      _showOutcome(const OperationOutcome.failure('请先勾选要删除的项目。'));
+      return;
+    }
+    final paths = panel.selectedPaths.toList(growable: false);
+    _log.detail('ui', '打开删除确认：${paths.join(' | ')}');
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final colors = Theme.of(context).colorScheme;
+        final preview = paths.take(6).toList(growable: false);
+        return AlertDialog(
+          icon: Icon(Icons.delete_forever_outlined, color: colors.error),
+          title: Text('删除 ${paths.length} 个项目？'),
+          content: SizedBox(
+            width: 480,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '已跟踪内容使用 git rm；未跟踪或忽略内容使用 git clean。'
+                  '删除后文件会从工作区移除，并把已跟踪项的删除加入 Git 索引。',
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final path in preview)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            path,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ),
+                      if (paths.length > preview.length)
+                        Text(
+                          '以及其他 ${paths.length - preview.length} 项',
+                          style: TextStyle(
+                            fontSize: 10.5,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.delete_outline_rounded, size: 17),
+              label: const Text('确认删除'),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    final outcome = await _controller.deleteSelectedPaths();
+    if (mounted) {
+      _showOutcome(outcome);
+      _explorerFocus.requestFocus();
+    }
+  }
+
+  Future<void> _pushCurrentBranch() async {
+    if (!_controller.hasRepository) return;
+    final branch = _controller.branch.isEmpty ? '当前分支' : _controller.branch;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: const Icon(Icons.cloud_upload_outlined),
+        title: Text('推送 $branch？'),
+        content: SizedBox(
+          width: 430,
+          child: const Text(
+            '将当前提交推送到远程仓库。已配置 upstream 时直接执行 git push；'
+            '否则会优先使用 origin 并设置当前分支的 upstream。',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton.icon(
+            onPressed: () => Navigator.pop(context, true),
+            icon: const Icon(Icons.cloud_upload_outlined, size: 17),
+            label: const Text('确认推送'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    _log.info('ui', '用户确认推送 $branch');
+    final outcome = await _controller.pushCurrentBranch();
+    if (mounted) {
+      _showOutcome(outcome);
+      _explorerFocus.requestFocus();
+    }
+  }
+
   Future<void> _showSettings() async {
     _log.detail('ui', '打开设置对话框');
     await showDialog<void>(
@@ -393,6 +561,9 @@ class _ProjectPageState extends State<ProjectPage> {
           : StartView(
               onOpenRepository: _openRepository,
               isOpening: _isOpening || _controller.isBusy,
+              recentRepositories: _controller.recentRepositories,
+              onOpenRecent: _openRecentRepository,
+              onRemoveRecent: _removeRecentRepository,
               error: _controller.fatalError,
             ),
     );
@@ -452,6 +623,12 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
           ] else
             const Spacer(),
+          if (_controller.hasRepository)
+            _TopBarButton(
+              icon: Icons.cloud_upload_outlined,
+              label: '推送',
+              onTap: _pushCurrentBranch,
+            ),
           _TopBarButton(
             icon: Icons.folder_open_rounded,
             label: '打开',
@@ -665,6 +842,13 @@ class _ProjectPageState extends State<ProjectPage> {
               shortcut: 'F2',
               enabled: selectedCount == 1 && !_controller.isBusy,
               onTap: _renameActiveSelection,
+            ),
+            _OperationButton(
+              icon: Icons.delete_outline_rounded,
+              label: '删除',
+              shortcut: 'Delete',
+              enabled: selectedCount > 0 && !_controller.isBusy,
+              onTap: _deleteActiveSelection,
             ),
             Container(
               height: 22,

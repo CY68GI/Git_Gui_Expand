@@ -240,6 +240,48 @@ class GitService {
     return hash.isEmpty ? '尚未提交' : 'detached@$hash';
   }
 
+  Future<String> pushCurrentBranch() async {
+    final branchResult = await _run([
+      'branch',
+      '--show-current',
+    ], allowFailure: true);
+    final branch = branchResult.stdout.trim();
+    if (branch.isEmpty) {
+      throw const GitException('当前为分离 HEAD，无法直接推送分支。');
+    }
+    final upstream = await _run([
+      'rev-parse',
+      '--abbrev-ref',
+      '--symbolic-full-name',
+      '@{u}',
+    ], allowFailure: true);
+    _log.info(
+      'push',
+      upstream.success
+          ? '推送分支 $branch 到 ${upstream.stdout.trim()}'
+          : '推送分支 $branch 并设置远程 upstream',
+    );
+    if (upstream.success) {
+      final result = await _run(['push']);
+      return result.output.trim().isEmpty ? '已推送 $branch' : result.output;
+    }
+
+    final remotesResult = await _run(['remote'], allowFailure: true);
+    final remotes = remotesResult.stdout
+        .split(RegExp(r'[\r\n]+'))
+        .map((remote) => remote.trim())
+        .where((remote) => remote.isNotEmpty)
+        .toList(growable: false);
+    if (remotes.isEmpty) {
+      throw const GitException('仓库没有配置远程地址，无法推送。');
+    }
+    final remote = remotes.contains('origin') ? 'origin' : remotes.first;
+    final result = await _run(['push', '-u', remote, branch]);
+    return result.output.trim().isEmpty
+        ? '已推送 $branch 到 $remote'
+        : result.output;
+  }
+
   Future<void> stageAll() async {
     await _run(['add', '-A']);
   }
@@ -290,6 +332,47 @@ class GitService {
         ...safePaths,
       ], allowFailure: true);
     }
+  }
+
+  Future<void> deletePaths(List<String> paths) async {
+    final safePaths = _minimalSelection(_validateRepositoryPaths(paths));
+    if (safePaths.isEmpty) {
+      throw const GitException('没有选择要删除的项目。');
+    }
+    _log.info('delete', '删除 ${safePaths.length} 项：${safePaths.join(' | ')}');
+    for (final path in safePaths) {
+      final type = await FileSystemEntity.type(
+        absoluteRepositoryPath(rootPath, path),
+        followLinks: false,
+      );
+      if (type == FileSystemEntityType.notFound) {
+        throw GitException('要删除的项目不存在：$path');
+      }
+    }
+
+    for (final path in safePaths) {
+      if (await _isTracked(path)) {
+        await _run(['rm', '-r', '-f', '--', path]);
+      }
+      if (await FileSystemEntity.type(
+            absoluteRepositoryPath(rootPath, path),
+            followLinks: false,
+          ) !=
+          FileSystemEntityType.notFound) {
+        await _run(['clean', '-f', '-d', '-x', '--', path]);
+      }
+    }
+
+    for (final path in safePaths) {
+      if (await FileSystemEntity.type(
+            absoluteRepositoryPath(rootPath, path),
+            followLinks: false,
+          ) !=
+          FileSystemEntityType.notFound) {
+        throw GitException('部分内容未能删除，可能被占用或受 Git 保护：$path');
+      }
+    }
+    _log.info('delete', '删除完成：${safePaths.length} 项');
   }
 
   Future<void> commit(String message) async {
@@ -547,6 +630,32 @@ class GitService {
     if (type != FileSystemEntityType.directory) {
       throw GitException('目标文件夹不存在：$relativeDirectory');
     }
+  }
+
+  Future<bool> _isTracked(String path) async {
+    final result = await _run([
+      'ls-files',
+      '--error-unmatch',
+      '--',
+      path,
+    ], allowFailure: true);
+    return result.success;
+  }
+
+  List<String> _minimalSelection(List<String> paths) {
+    final sorted = paths.toSet().toList(growable: false)
+      ..sort((left, right) => left.length.compareTo(right.length));
+    final result = <String>[];
+    for (final path in sorted) {
+      final covered = result.any(
+        (selected) =>
+            selected == path || isSameOrDescendantPath(path, selected),
+      );
+      if (!covered) {
+        result.add(path);
+      }
+    }
+    return result;
   }
 
   Future<void> _ensureTracked(String path) async {

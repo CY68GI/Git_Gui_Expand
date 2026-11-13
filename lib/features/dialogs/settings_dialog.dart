@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/models/settings_models.dart';
+import '../../core/services/font_catalog_service.dart';
 import '../../core/services/app_storage_service.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
@@ -16,7 +17,46 @@ class SettingsDialog extends StatefulWidget {
 
 class _SettingsDialogState extends State<SettingsDialog> {
   late AppSettings _draft = widget.controller.settings;
+  final FontCatalogService _fontCatalog = FontCatalogService();
+  List<String> _fontFamilies = const [];
+  bool _loadingFonts = true;
   bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFonts();
+  }
+
+  Future<void> _loadFonts() async {
+    final fonts = await _fontCatalog.loadInstalledFonts();
+    if (!mounted) return;
+    setState(() {
+      _fontFamilies = fonts;
+      _loadingFonts = false;
+    });
+  }
+
+  String get _fontDropdownValue => _draft.fontFamily;
+
+  List<DropdownMenuItem<String>> get _fontItems {
+    final fonts = <String>[
+      if (_draft.fontFamily.isNotEmpty) _draft.fontFamily,
+      ..._fontFamilies.where((font) => font != _draft.fontFamily),
+    ];
+    return [
+      const DropdownMenuItem(value: '', child: Text('系统默认（自动适配）')),
+      for (final font in fonts)
+        DropdownMenuItem(
+          value: font,
+          child: Text(
+            font,
+            style: TextStyle(fontFamily: font),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +77,72 @@ class _SettingsDialogState extends State<SettingsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const _SectionLabel(
+                title: '界面字体',
+                caption: '默认为系统字体，会随 Windows、macOS 或 Linux 使用各自平台字体。',
+              ),
+              const SizedBox(height: 10),
+              Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.font_download_outlined,
+                      size: 19,
+                      color: colors.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _fontDropdownValue,
+                          isExpanded: true,
+                          borderRadius: BorderRadius.circular(10),
+                          items: _fontItems,
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setState(() {
+                              _draft = _draft.copyWith(fontFamily: value);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    if (_loadingFonts)
+                      const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(13),
+                decoration: BoxDecoration(
+                  color: colors.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Text(
+                  'Git GUI Expand · 文件提交 · 0123',
+                  style: TextStyle(
+                    fontFamily: _draft.fontFamily.isEmpty
+                        ? null
+                        : _draft.fontFamily,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               const _SectionLabel(
                 title: '外观模式',
                 caption: '跟随系统会根据 Windows 深色/浅色设置自动切换。',
@@ -203,11 +309,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(height: 7),
               SelectableText(
                 dataPath,
-                style: TextStyle(
-                  fontSize: 9.5,
-                  color: colors.primary,
-                  fontFamily: 'Consolas',
-                ),
+                style: TextStyle(fontSize: 9.5, color: colors.primary),
               ),
             ],
           ),

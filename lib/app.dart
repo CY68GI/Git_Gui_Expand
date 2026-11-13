@@ -18,6 +18,7 @@ class GitGuiExpandApp extends StatefulWidget {
 class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
+  String _fontFamily = '';
 
   @override
   void initState() {
@@ -51,11 +52,12 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
 
   @override
   Widget build(BuildContext context) {
+    final selectedFont = _fontFamily.trim().isEmpty ? null : _fontFamily;
     return MaterialApp(
       title: AppInfo.englishName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
+      theme: AppTheme.light(fontFamily: selectedFont),
+      darkTheme: AppTheme.dark(fontFamily: selectedFont),
       themeMode: _themeMode,
       themeAnimationDuration: const Duration(milliseconds: 220),
       home: ProjectPage(
@@ -63,6 +65,11 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
         onThemeModeChanged: (mode) {
           if (_themeMode != mode) {
             setState(() => _themeMode = mode);
+          }
+        },
+        onFontFamilyChanged: (fontFamily) {
+          if (_fontFamily != fontFamily) {
+            setState(() => _fontFamily = fontFamily);
           }
         },
       ),

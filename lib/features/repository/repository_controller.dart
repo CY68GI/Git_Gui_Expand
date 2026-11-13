@@ -3,9 +3,11 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../core/models/app_models.dart';
+import '../../core/models/recent_repository.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/git_service.dart';
+import '../../core/services/recent_repositories_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/utils/path_utils.dart';
 
@@ -67,12 +69,16 @@ class RepositoryController extends ChangeNotifier {
     SettingsService? settingsService,
     GitService? gitService,
     AppLogService? logService,
+    RecentRepositoriesService? recentRepositoriesService,
   }) : _settingsService = settingsService ?? SettingsService(),
        _git = gitService,
-       _log = logService ?? AppLogService.instance;
+       _log = logService ?? AppLogService.instance,
+       _recentRepositoriesService =
+           recentRepositoriesService ?? RecentRepositoriesService();
 
   final SettingsService _settingsService;
   final AppLogService _log;
+  final RecentRepositoriesService _recentRepositoriesService;
   GitService? _git;
 
   String? repositoryPath;
@@ -90,6 +96,7 @@ class RepositoryController extends ChangeNotifier {
   bool isInitializing = true;
   bool isBusy = false;
   String? fatalError;
+  List<RecentRepository> recentRepositories = const [];
 
   GitService? get git => _git;
   bool get hasRepository => _git != null && repositoryPath != null;
@@ -98,6 +105,7 @@ class RepositoryController extends ChangeNotifier {
 
   Future<void> initialize() async {
     settings = await _settingsService.load();
+    recentRepositories = await _recentRepositoriesService.load();
     isInitializing = false;
     _log.info(
       'app',
@@ -136,6 +144,11 @@ class RepositoryController extends ChangeNotifier {
       leftPanel = left;
       rightPanel = right;
       clipboard = null;
+      try {
+        recentRepositories = await _recentRepositoriesService.add(root);
+      } catch (error) {
+        _log.warning('history', '保存最近仓库失败，但仓库仍已打开：$error');
+      }
       _log.info(
         'repository',
         '仓库加载完成：root=$root branch=$branchName '
@@ -146,6 +159,15 @@ class RepositoryController extends ChangeNotifier {
       fatalError = error.toString().replaceFirst('Exception: ', '');
       _git = null;
       repositoryPath = null;
+      if (!await _recentRepositoriesService.isValidRepository(selectedPath)) {
+        try {
+          recentRepositories = await _recentRepositoriesService.remove(
+            selectedPath,
+          );
+        } catch (historyError) {
+          _log.warning('history', '移除失效仓库记录失败：$historyError');
+        }
+      }
       _log.error('repository', '仓库打开失败：$fatalError');
       return OperationOutcome.failure(fatalError!);
     } finally {
@@ -167,6 +189,17 @@ class RepositoryController extends ChangeNotifier {
     clipboard = null;
     fatalError = null;
     notifyListeners();
+  }
+
+  Future<OperationOutcome> removeRecentRepository(String path) async {
+    try {
+      recentRepositories = await _recentRepositoriesService.remove(path);
+      notifyListeners();
+      return const OperationOutcome.success('已从历史记录移除');
+    } catch (error) {
+      _log.error('history', '移除历史记录失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
   }
 
   void setActiveSide(ExplorerSide side) {
@@ -383,6 +416,57 @@ class RepositoryController extends ChangeNotifier {
     }
   }
 
+  Future<OperationOutcome> deleteSelectedPaths() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final panel = panelFor(activeSide);
+    if (panel.selectedPaths.isEmpty) {
+      return const OperationOutcome.failure('请先勾选要删除的项目。');
+    }
+    final paths = panel.selectedPaths.toList(growable: false);
+    isBusy = true;
+    notifyListeners();
+    try {
+      await _git!.deletePaths(paths);
+      clipboard = null;
+      leftPanel = leftPanel.copyWith(selectedPaths: const {});
+      rightPanel = rightPanel.copyWith(selectedPaths: const {});
+      await _reloadAfterMutation();
+      _log.info('delete', '已删除 ${paths.length} 项');
+      return OperationOutcome.success('已删除 ${paths.length} 项');
+    } catch (error) {
+      _log.error('delete', '删除失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OperationOutcome> pushCurrentBranch() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    isBusy = true;
+    notifyListeners();
+    try {
+      final output = await _git!.pushCurrentBranch();
+      branch = await _git!.currentBranch();
+      _log.detail('push', '推送输出：${output.isEmpty ? '无输出' : output}');
+      _log.info('push', '当前分支推送完成');
+      return OperationOutcome.success(
+        '已推送 ${branch.isEmpty ? '当前分支' : branch}',
+      );
+    } catch (error) {
+      _log.error('push', '推送失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
   Future<OperationOutcome> stageAllChanges() async {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
@@ -468,7 +552,9 @@ class RepositoryController extends ChangeNotifier {
         'settings',
         '设置更新：theme ${oldSettings.themePreference.name} -> '
             '${nextSettings.themePreference.name}; '
-            'units ${nextSettings.unitSystem.name}/${nextSettings.baseUnit.name}',
+            'units ${nextSettings.unitSystem.name}/${nextSettings.baseUnit.name}; '
+            'font ${oldSettings.fontFamily.isEmpty ? '系统默认' : oldSettings.fontFamily}'
+            ' -> ${nextSettings.fontFamily.isEmpty ? '系统默认' : nextSettings.fontFamily}',
       );
       return const OperationOutcome.success('设置已保存');
     } catch (error) {

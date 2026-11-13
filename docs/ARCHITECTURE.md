@@ -23,21 +23,24 @@ GitService ───────── SettingsService
 | 模块 | 职责 |
 | --- | --- |
 | `RepositoryController` | 打开仓库、左右面板状态、选择集合、剪贴板、提交与提示 |
-| `GitService` | Git 命令、目录列表、状态解析、移动/复制/重命名、统计 |
+| `GitService` | Git 命令、目录列表、状态解析、移动/复制/重命名/删除/推送、统计 |
 | `FileExplorerPanel` | 单侧资源树视图、面包屑、复选框与空/错误状态 |
 | `CommitPanel` | 变更列表、提交说明、暂存与提交按钮 |
 | `SettingsService` | 用户级 JSON 设置读写及平台目录选择 |
+| `RecentRepositoriesService` | 仓库验证、最近打开排序、去重、清理与 JSON 持久化 |
 | `AppStorageService` | 把设置、日志与临时数据定位到可执行文件旁的 `userdata` |
 | `AppLogService` | 写入普通日志和详细日志，提供读取与打开目录 |
 | `AppTheme` | 浅色、深色主题；`ThemeMode.system` 跟随设备 |
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
 | `FolderPickerService` | Windows 原生文件夹选择器，通过独立 PowerShell 进程 |
+| `FontCatalogService` | 读取 Windows InstalledFontCollection 或跨平台 fontconfig 字体 |
 
 ## 本地数据
 
 ```text
 <软件目录>/userdata/
   settings.json
+  recent_repositories.json
   logs/
     normal-YYYY-MM-DD.log
     detailed-YYYY-MM-DD.log
@@ -48,6 +51,9 @@ GitService ───────── SettingsService
 `APPDATA`、`XDG_CONFIG_HOME` 或 macOS Application Support。旧版设置只读复制到
 新位置，旧文件不会被改写。
 
+最近仓库记录仅包含经过 Git 根目录验证、且当前仍存在 `.git` 文件或目录的路径。
+记录按最后打开时间倒序，Windows 下路径比较不区分大小写，最多保存 10 条。
+
 普通日志接收 `info`、`warning` 和 `error`。详细日志额外接收 `detail`，并包含
 普通日志全部内容。日志写入采用串行队列，单次失败不会中断 Git 操作。
 
@@ -56,6 +62,8 @@ GitService ───────── SettingsService
 `AppSettings.themePreference` 保存 `system`、`light` 或 `dark`。
 `MaterialApp` 同时提供 `theme`、`darkTheme` 和 `ThemeMode`，选择跟随系统时由
 Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` 额外记录外观变化。
+字体默认值为空，`ThemeData.fontFamily` 保持 null 以使用当前平台系统字体。只有用户
+明确选择后才写入具体字体族，缺失字体由 Flutter 回退到系统字体。
 
 ## 图标
 
@@ -91,6 +99,18 @@ Git 状态使用 `git status --porcelain=v1 -z --untracked-files=all`。
 - 不会操作 `.git` 或逃逸到仓库外。
 
 未跟踪项目会先用 `git add --all -- <path>` 加入索引，再使用 `git mv`。
+
+## 删除与推送
+
+批量删除会先去重并移除被父目录覆盖的子路径，然后逐项判断索引状态：
+
+- 已跟踪内容：`git rm -r -f -- <path>`；
+- 未跟踪或忽略内容：`git clean -f -d -x -- <path>`；
+- 删除结束后重新读取面板、Git 状态和项目容量。
+
+推送先读取当前分支。若 `@{u}` 存在则执行 `git push`；否则读取 remote，
+优先使用 `origin`，否则选择第一个远程并执行 `git push -u <remote> <branch>`。
+应用不会自动提交，也不会在认证失败后尝试交互式密码输入。
 
 ## 复制
 

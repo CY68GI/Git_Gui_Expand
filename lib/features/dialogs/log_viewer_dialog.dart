@@ -207,7 +207,6 @@ class _LogPane extends StatelessWidget {
                 child: SelectableText(
                   text,
                   style: TextStyle(
-                    fontFamily: 'Consolas',
                     fontSize: 10.5,
                     height: 1.55,
                     color: colors.onSurface,

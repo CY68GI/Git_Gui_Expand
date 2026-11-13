@@ -110,6 +110,53 @@ void main() {
     expect(statuses.any((status) => status.isStaged), isFalse);
     expect(statuses.any((status) => status.path == 'alpha.txt'), isTrue);
   });
+
+  test('deletes tracked and untracked items through Git', () async {
+    final untracked = File(
+      '${repository.path}${Platform.pathSeparator}scratch.tmp',
+    );
+    await untracked.writeAsString('temporary');
+
+    await service.deletePaths(['alpha.txt', 'scratch.tmp']);
+
+    expect(
+      await File('${repository.path}${Platform.pathSeparator}alpha.txt')
+          .exists(),
+      isFalse,
+    );
+    expect(await untracked.exists(), isFalse);
+    final statuses = await service.status();
+    expect(
+      statuses.any(
+        (status) => status.path == 'alpha.txt' && status.indexCode == 'D',
+      ),
+      isTrue,
+    );
+  });
+
+  test('pushes the current branch to a configured remote', () async {
+    final remote = await Directory.systemTemp.createTemp(
+      'git_gui_bare_remote_',
+    );
+    addTearDown(() async {
+      if (await remote.exists()) {
+        await remote.delete(recursive: true);
+      }
+    });
+    await _git(remote, ['init', '--bare']);
+    await _git(repository, ['remote', 'add', 'origin', remote.path]);
+    final branch = await service.currentBranch();
+
+    await service.pushCurrentBranch();
+
+    final ref = await Process.run(
+      'git',
+      ['show-ref', '--verify', 'refs/heads/$branch'],
+      workingDirectory: remote.path,
+      runInShell: false,
+    );
+    expect(ref.exitCode, 0);
+  });
 }
 
 Future<void> _git(Directory directory, List<String> arguments) async {
