@@ -14,6 +14,18 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.5.0',
+    date: '2026-11-13',
+    title: '一键自动更新',
+    items: [
+      '发现新版本后可直接下载、校验、替换并自动重启，无需手动下载 ZIP。',
+      '更新包必须通过 GitHub Release 提供的 SHA-256 校验。',
+      '更新助手在独立进程中等待应用退出，保留 userdata 并创建更新前备份。',
+      '替换或启动失败时自动回滚到上一版本。',
+      'Release 包新增 version.json，更新前会验证包内版本与目标版本一致。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.4.0',
     date: '2026-11-13',
     title: '最近仓库历史',

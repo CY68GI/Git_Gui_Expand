@@ -1,22 +1,40 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_info.dart';
 import '../../core/constants/changelog.dart';
+import '../../core/services/app_log_service.dart';
+import '../../core/services/update_installer_service.dart';
 import '../../core/services/update_service.dart';
 
 class UpdateDialog extends StatefulWidget {
-  const UpdateDialog({super.key, this.showChangelogFirst = false});
+  const UpdateDialog({
+    super.key,
+    this.showChangelogFirst = false,
+    this.updateService,
+    this.installerService,
+  });
 
   final bool showChangelogFirst;
+  final UpdateService? updateService;
+  final UpdateInstallerService? installerService;
 
   @override
   State<UpdateDialog> createState() => _UpdateDialogState();
 }
 
 class _UpdateDialogState extends State<UpdateDialog> {
-  final UpdateService _service = UpdateService();
+  late final UpdateService _service =
+      widget.updateService ?? const UpdateService();
+  late final UpdateInstallerService _installer =
+      widget.installerService ?? UpdateInstallerService();
   UpdateCheckResult? _result;
   bool _isChecking = false;
+  bool _isInstalling = false;
+  bool _installFailed = false;
+  double? _installPercent;
+  String? _installMessage;
 
   @override
   void initState() {
@@ -77,7 +95,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _isChecking ? '正在检查更新' : '更新与发布日志',
+                              _isInstalling
+                                  ? '正在自动更新'
+                                  : _isChecking
+                                  ? '正在检查更新'
+                                  : '更新与发布日志',
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 3),
@@ -92,8 +114,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
                         ),
                       ),
                       TextButton.icon(
-                        onPressed: _isChecking ? null : _checkForUpdates,
-                        icon: _isChecking
+                        onPressed: _isChecking || _isInstalling
+                            ? null
+                            : _checkForUpdates,
+                        icon: _isChecking || _isInstalling
                             ? const SizedBox(
                                 width: 14,
                                 height: 14,
@@ -102,7 +126,13 @@ class _UpdateDialogState extends State<UpdateDialog> {
                                 ),
                               )
                             : const Icon(Icons.refresh_rounded, size: 16),
-                        label: Text(_isChecking ? '检查中' : '检查更新'),
+                        label: Text(
+                          _isInstalling
+                              ? '更新中'
+                              : _isChecking
+                              ? '检查中'
+                              : '检查更新',
+                        ),
                       ),
                     ],
                   ),
@@ -114,6 +144,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     children: [
                       if (_result != null) ...[
                         _buildResult(context, _result!),
+                        const SizedBox(height: 18),
+                      ],
+                      if (_installMessage != null) ...[
+                        _buildInstallProgress(context),
                         const SizedBox(height: 18),
                       ],
                       const _SectionTitle(
@@ -147,7 +181,8 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       ],
                       const SizedBox(height: 14),
                       Text(
-                        '更新检查通过 GitHub Releases 获取公开版本信息，不会自动下载或替换正在运行的程序。',
+                        '自动更新会从 GitHub 下载 Windows x64 ZIP，校验 SHA-256 后启动独立更新助手。'
+                        '应用退出后替换程序文件并自动重启；失败时会从 userdata 备份回滚，仓库和设置数据不会被覆盖。',
                         style: TextStyle(
                           fontSize: 10,
                           color: colors.onSurfaceVariant,
@@ -164,18 +199,29 @@ class _UpdateDialogState extends State<UpdateDialog> {
       ),
       actions: [
         TextButton.icon(
-          onPressed: () => _service.openExternalUrl(AppInfo.repositoryUrl),
+          onPressed: _isInstalling
+              ? null
+              : () => _service.openExternalUrl(AppInfo.repositoryUrl),
           icon: const Icon(Icons.code_rounded, size: 16),
           label: const Text('打开仓库'),
         ),
-        if (_result?.releaseUrl.isNotEmpty == true)
+        if (_result?.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
-            onPressed: () => _service.openExternalUrl(_result!.releaseUrl),
-            icon: const Icon(Icons.download_rounded, size: 17),
-            label: const Text('打开下载页面'),
+            onPressed: _isInstalling ? null : _installUpdate,
+            icon: _isInstalling
+                ? SizedBox(
+                    width: 15,
+                    height: 15,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: colors.onPrimary,
+                    ),
+                  )
+                : const Icon(Icons.rocket_launch_outlined, size: 17),
+            label: Text(_isInstalling ? '正在安装…' : '立即更新并重启'),
           ),
         TextButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _isInstalling ? null : () => Navigator.pop(context),
           child: const Text('关闭'),
         ),
       ],
@@ -238,6 +284,63 @@ class _UpdateDialogState extends State<UpdateDialog> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInstallProgress(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final color = _installFailed ? colors.error : colors.primary;
+    final percent = _installPercent;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                _installFailed
+                    ? Icons.error_outline_rounded
+                    : Icons.system_update_alt_rounded,
+                size: 18,
+                color: color,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _installMessage ?? '正在准备更新…',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (percent != null && !_installFailed)
+                Text(
+                  '${(percent * 100).round()}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+          if (!_installFailed) ...[
+            const SizedBox(height: 10),
+            LinearProgressIndicator(
+              value: percent,
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ],
         ],
       ),
     );
@@ -313,13 +416,55 @@ class _UpdateDialogState extends State<UpdateDialog> {
   }
 
   Future<void> _checkForUpdates() async {
-    setState(() => _isChecking = true);
+    setState(() {
+      _isChecking = true;
+      _installFailed = false;
+      _installMessage = null;
+      _installPercent = null;
+    });
     final result = await _service.checkForUpdates();
     if (!mounted) return;
     setState(() {
       _result = result;
       _isChecking = false;
     });
+  }
+
+  Future<void> _installUpdate() async {
+    final release = _result;
+    if (release == null || _isInstalling) return;
+    setState(() {
+      _isInstalling = true;
+      _installFailed = false;
+      _installPercent = 0;
+      _installMessage = '正在准备自动更新…';
+    });
+    final outcome = await _installer.install(
+      release,
+      onProgress: (progress) {
+        if (!mounted) return;
+        setState(() {
+          _installPercent = progress.percent ?? _installPercent;
+          _installMessage = progress.message;
+        });
+      },
+    );
+    if (!mounted) return;
+    if (!outcome.success) {
+      setState(() {
+        _isInstalling = false;
+        _installFailed = true;
+        _installMessage = outcome.message;
+      });
+      return;
+    }
+    setState(() {
+      _installPercent = 1;
+      _installMessage = outcome.message;
+    });
+    await AppLogService.instance.flush();
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    exit(0);
   }
 }
 

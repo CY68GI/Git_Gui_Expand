@@ -42,6 +42,13 @@ jobs:
             Where-Object { $_.Name -ne "userdata" } |
             Copy-Item -Destination $stage -Recurse
           Copy-Item README.md, CHANGELOG.md -Destination $stage
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          @{
+            version = $version
+            tag = $env:GITHUB_REF_NAME
+            builtAt = (Get-Date).ToUniversalTime().ToString("o")
+          } | ConvertTo-Json |
+            Set-Content -LiteralPath "$stage/version.json" -Encoding utf8
           Compress-Archive `
             -Path "$stage/*" `
             -DestinationPath "dist/Git_Gui_Expand-${{ github.ref_name }}-windows-x64.zip" `

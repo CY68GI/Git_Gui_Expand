@@ -32,6 +32,7 @@ GitService ───────── SettingsService
 | `AppLogService` | 写入普通日志和详细日志，提供读取与打开目录 |
 | `AppTheme` | 浅色、深色主题；`ThemeMode.system` 跟随设备 |
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
+| `UpdateInstallerService` | 下载、SHA-256 校验、解压、验证和启动更新助手 |
 | `FolderPickerService` | Windows 原生文件夹选择器，通过独立 PowerShell 进程 |
 | `FontCatalogService` | 读取 Windows InstalledFontCollection 或跨平台 fontconfig 字体 |
 
@@ -45,6 +46,10 @@ GitService ───────── SettingsService
     normal-YYYY-MM-DD.log
     detailed-YYYY-MM-DD.log
   picker-<timestamp>.txt
+  updates/
+    backups/
+    stage-v<version>/
+    updater.log
 ```
 
 `picker-*` 只在文件夹选择期间存在，读取后立即删除。设置和日志不使用用户
@@ -56,6 +61,20 @@ GitService ───────── SettingsService
 
 普通日志接收 `info`、`warning` 和 `error`。详细日志额外接收 `detail`，并包含
 普通日志全部内容。日志写入采用串行队列，单次失败不会中断 Git 操作。
+
+## 自动更新
+
+1. `UpdateService` 读取最新 Release，并只选择文件名包含 `windows`、`x64`、
+   且 API 提供 `sha256:` digest 的 ZIP。
+2. 下载文件写入 `userdata/updates`，随后调用 Windows `Get-FileHash` 校验。
+3. PowerShell 解压到 `userdata/updates/stage-v<version>`，验证
+   `git_gui_expand.exe`、Flutter `data` 和 `version.json`。
+4. 更新助手以隐藏进程启动，等待当前应用退出。
+5. 助手将除 `userdata` 外的程序文件备份到 `updates/backups`，替换文件并启动新版本。
+6. 新进程两秒内异常退出、文件复制失败或可执行文件缺失时，删除新文件、恢复备份并
+   启动旧版本。
+
+更新助手脚本自身和全部下载/备份数据都在软件目录内，不写入用户配置目录。
 
 ## 外观
 

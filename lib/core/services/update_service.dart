@@ -6,6 +6,20 @@ import 'app_log_service.dart';
 
 enum UpdateCheckStatus { updateAvailable, upToDate, unavailable }
 
+class UpdateAsset {
+  const UpdateAsset({
+    required this.name,
+    required this.downloadUrl,
+    required this.sha256,
+    required this.size,
+  });
+
+  final String name;
+  final String downloadUrl;
+  final String sha256;
+  final int size;
+}
+
 class UpdateCheckResult {
   const UpdateCheckResult({
     required this.status,
@@ -15,6 +29,10 @@ class UpdateCheckResult {
     this.releaseNotes = '',
     this.releaseUrl = '',
     this.publishedAt = '',
+    this.assetName = '',
+    this.downloadUrl = '',
+    this.sha256 = '',
+    this.assetSize = 0,
   });
 
   final UpdateCheckStatus status;
@@ -24,6 +42,10 @@ class UpdateCheckResult {
   final String releaseNotes;
   final String releaseUrl;
   final String publishedAt;
+  final String assetName;
+  final String downloadUrl;
+  final String sha256;
+  final int assetSize;
 }
 
 class UpdateService {
@@ -92,18 +114,47 @@ class UpdateService {
       }
 
       final comparison = compareVersions(latestVersion, AppInfo.version);
+      var windowsAsset = comparison > 0
+          ? selectWindowsAsset(decoded['assets'])
+          : null;
+      if (comparison > 0 &&
+          windowsAsset != null &&
+          windowsAsset.sha256.isEmpty) {
+        windowsAsset = await _resolveDigestFromReleasePage(
+          client,
+          tag,
+          windowsAsset,
+        );
+      }
+      if (comparison > 0 &&
+          (windowsAsset == null || windowsAsset.sha256.isEmpty)) {
+        _log.warning('update', '新版本缺少可验证的 Windows x64 ZIP 资产');
+        return UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: '发现新版本，但 Release 缺少带 SHA-256 的 Windows x64 ZIP。',
+          latestVersion: resultBase.latestVersion,
+          releaseName: resultBase.releaseName,
+          releaseNotes: resultBase.releaseNotes,
+          releaseUrl: resultBase.releaseUrl,
+          publishedAt: resultBase.publishedAt,
+        );
+      }
       final result = UpdateCheckResult(
         status: comparison > 0
             ? UpdateCheckStatus.updateAvailable
             : UpdateCheckStatus.upToDate,
         message: comparison > 0
-            ? '发现可用的新版本，请前往发布页面获取安装包。'
+            ? '发现可用的新版本，可直接下载、校验并自动重启更新。'
             : '当前版本 v${AppInfo.version} 已是线上最新版本。',
         latestVersion: resultBase.latestVersion,
         releaseName: resultBase.releaseName,
         releaseNotes: resultBase.releaseNotes,
         releaseUrl: resultBase.releaseUrl,
         publishedAt: resultBase.publishedAt,
+        assetName: windowsAsset?.name ?? '',
+        downloadUrl: windowsAsset?.downloadUrl ?? '',
+        sha256: windowsAsset?.sha256 ?? '',
+        assetSize: windowsAsset?.size ?? 0,
       );
       _log.info('update', '更新检查完成：${result.status.name} latest=$latestVersion');
       return result;
@@ -128,6 +179,98 @@ class UpdateService {
     } finally {
       client.close(force: true);
     }
+  }
+
+  UpdateAsset? selectWindowsAsset(Object? rawAssets) {
+    if (rawAssets is! List) return null;
+    UpdateAsset? fallback;
+    for (final raw in rawAssets) {
+      if (raw is! Map) continue;
+      final name = (raw['name'] as String? ?? '').trim();
+      final urlText = (raw['browser_download_url'] as String? ?? '').trim();
+      if (!name.toLowerCase().endsWith('.zip') ||
+          !name.toLowerCase().contains('windows') ||
+          !name.toLowerCase().contains('x64')) {
+        continue;
+      }
+      final uri = Uri.tryParse(urlText);
+      if (uri == null ||
+          uri.scheme != 'https' ||
+          (uri.host != 'github.com' &&
+              uri.host != 'objects.githubusercontent.com')) {
+        continue;
+      }
+      final digest = (raw['digest'] as String? ?? '').trim().toLowerCase();
+      final sha256 = digest.startsWith('sha256:')
+          ? digest.substring('sha256:'.length)
+          : '';
+      final asset = UpdateAsset(
+        name: name,
+        downloadUrl: urlText,
+        sha256: sha256,
+        size: (raw['size'] as num?)?.toInt() ?? 0,
+      );
+      if (name.toLowerCase().contains('git_gui_expand-v')) {
+        return asset;
+      }
+      fallback ??= asset;
+    }
+    return fallback;
+  }
+
+  Future<UpdateAsset?> _resolveDigestFromReleasePage(
+    HttpClient client,
+    String tag,
+    UpdateAsset asset,
+  ) async {
+    try {
+      final uri = Uri.parse(
+        'https://github.com/${AppInfo.owner}/${AppInfo.repository}'
+        '/releases/expanded_assets/${Uri.encodeComponent(tag)}',
+      );
+      final request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 8));
+      request.headers.set(HttpHeaders.acceptHeader, 'text/html');
+      final response = await request.close().timeout(
+        const Duration(seconds: 8),
+      );
+      if (response.statusCode != HttpStatus.ok) return asset;
+      final html = await response.transform(utf8.decoder).join();
+      final digest = extractSha256FromReleasePage(html, assetName: asset.name);
+      if (digest == null) {
+        _log.warning('update', 'Release 页面未找到 ZIP SHA-256');
+        return asset;
+      }
+      _log.detail('update', '从 Release 页面解析 SHA-256：$digest');
+      return UpdateAsset(
+        name: asset.name,
+        downloadUrl: asset.downloadUrl,
+        sha256: digest,
+        size: asset.size,
+      );
+    } catch (error) {
+      _log.warning('update', '从 Release 页面解析 SHA-256 失败：$error');
+      return asset;
+    }
+  }
+
+  String? extractSha256FromReleasePage(String html, {String? assetName}) {
+    var searchable = html;
+    if (assetName != null && assetName.isNotEmpty) {
+      final assetIndex = html.indexOf(assetName);
+      if (assetIndex >= 0) {
+        final end = assetIndex + 5000 < html.length
+            ? assetIndex + 5000
+            : html.length;
+        searchable = html.substring(assetIndex, end);
+      }
+    }
+    final match = RegExp(
+      r'sha256:([a-fA-F0-9]{64})',
+      caseSensitive: false,
+    ).firstMatch(searchable);
+    return match?.group(1)?.toLowerCase();
   }
 
   Future<void> openExternalUrl(String url) async {

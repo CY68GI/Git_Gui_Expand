@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.5.0 - 2026-11-13
+
+### Added
+
+- 更新界面新增“一键更新并重启”，无需手动打开发布页或下载 ZIP。
+- 自动选择带 SHA-256 的 Windows x64 Release ZIP 并验证下载内容。
+- 新增独立 PowerShell 更新助手，在应用退出后备份、替换文件并重启。
+- 更新保留 `userdata`，失败时自动回滚到之前版本。
+- Release ZIP 新增 `version.json`，更新前验证包内版本。
+
+### Changed
+
+- 更新包、暂存目录、更新助手日志和本地备份统一存放在
+  `userdata/updates`。
+
 ## 0.4.0 - 2026-11-13
 
 ### Added

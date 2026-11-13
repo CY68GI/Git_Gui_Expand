@@ -6,7 +6,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.4.0`
+当前版本：`0.5.0`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 
@@ -29,7 +29,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 - 所有窗口、任务栏、可执行文件、macOS 预留图标集和应用内品牌使用同一圆角矩形树形图标。
 - 普通日志记录关键事件，详细日志记录导航、选择、设置、更新及每条 Git 命令和输出。
 - 设置、日志、选择器临时文件等运行数据统一保存在软件目录的 `userdata` 文件夹。
-- 通过 GitHub Releases API 检查更新，并内置当前版本更新日志。
+- 通过 GitHub Releases API 检查并自动安装更新，完成后自动重启。
 - 项目使用 Git 标签版本控制，推送 `v*` 标签会触发 Windows Release 构建与上传。
 - Linux 和 macOS 目录已由 Flutter 保留，但当前版本未开发、未构建验证。
 
@@ -121,6 +121,9 @@ build\windows\x64\runner\Release\
   userdata/
     settings.json
     recent_repositories.json
+    updates/
+      backups/
+      updater.log
     logs/
       normal-YYYY-MM-DD.log
       detailed-YYYY-MM-DD.log
@@ -132,9 +135,19 @@ build\windows\x64\runner\Release\
 旧版本保存在 `%APPDATA%` 的设置会在首次启动时复制到新位置。日志查看器顶部提供
 当前日志目录路径，并可直接打开该目录。
 
-更新检查请求 GitHub 的公开 Releases API。发现新版本时只打开下载页面，
-不会自动下载、替换或重启程序。没有公开 Release 或离线时会显示可重试的提示；
-内置更新日志仍然可以离线查看。
+更新检查请求 GitHub 的公开 Releases API。发现新版本后可以点击“立即更新并重启”：
+
+1. 自动下载 Release 中的 Windows x64 ZIP；
+2. 使用 GitHub Release 提供的 SHA-256 校验下载文件；
+3. 解压并验证包内 `version.json`；
+4. 启动独立 PowerShell 更新助手，等待主程序退出；
+5. 在 `userdata/updates/backups` 创建备份后替换应用文件；
+6. 保留 `userdata`，重新启动新版本；
+7. 替换或启动失败时自动恢复备份并重启旧版本。
+
+自动替换流程从 `v0.5.0` 开始提供。更早版本仍需先手动下载一次 `v0.5.0` 或更高版本。
+没有公开 Release、缺少 Windows x64 资产、缺少 SHA-256 或网络不可用时，会显示可重试
+提示，不会执行不完整更新。
 
 ## 目录结构
 
