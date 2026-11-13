@@ -14,7 +14,7 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
-    version: '0.2.0',
+    version: '0.2.1',
     date: '2026-11-13',
     title: '桌面体验与诊断升级',
     items: [
@@ -22,7 +22,7 @@ const List<ChangelogEntry> builtInChangelog = [
       '应用设置、普通日志和详细日志统一存放在软件目录 userdata 文件夹。',
       '新增操作日志查看器，详细日志记录导航、选择、设置、更新和每条 Git 命令。',
       'Windows、macOS、Linux 预留位置和应用内品牌统一为圆角矩形树形图标。',
-      '版本号升级为 0.2.0，并发布 Windows x64 完整程序包。',
+      '版本号升级为 0.2.1，并发布 Windows x64 完整程序包。',
     ],
   ),
   ChangelogEntry(
