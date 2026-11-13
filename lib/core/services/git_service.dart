@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../models/app_models.dart';
+import '../models/git_remote.dart';
 import '../utils/path_utils.dart';
 import 'app_log_service.dart';
 
@@ -280,6 +281,76 @@ class GitService {
     return result.output.trim().isEmpty
         ? '已推送 $branch 到 $remote'
         : result.output;
+  }
+
+  Future<List<GitRemote>> remotes() async {
+    final namesResult = await _run(['remote'], allowFailure: true);
+    final names = namesResult.stdout
+        .split(RegExp(r'[\r\n]+'))
+        .map((name) => name.trim())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+    final remotes = <GitRemote>[];
+    for (final name in names) {
+      final fetch = await _run(['remote', 'get-url', name], allowFailure: true);
+      final push = await _run([
+        'remote',
+        'get-url',
+        '--push',
+        name,
+      ], allowFailure: true);
+      final fetchUrl = fetch.stdout.trim();
+      final pushUrl = push.stdout.trim();
+      final effectiveUrl = pushUrl.isNotEmpty ? pushUrl : fetchUrl;
+      if (effectiveUrl.isEmpty) continue;
+      remotes.add(
+        GitRemote(
+          name: name,
+          fetchUrl: fetchUrl,
+          pushUrl: pushUrl,
+          platform: GitRemote.detectPlatform(effectiveUrl),
+        ),
+      );
+    }
+    remotes.sort((left, right) {
+      if (left.name == 'origin') return -1;
+      if (right.name == 'origin') return 1;
+      return left.name.toLowerCase().compareTo(right.name.toLowerCase());
+    });
+    return remotes;
+  }
+
+  Future<void> addRemote(String name, String url) async {
+    _validateRemoteName(name);
+    _validateRemoteUrl(url);
+    await _run(['remote', 'add', name, url]);
+    _log.info('remote', '新增远端 $name -> ${GitRemote.maskRemoteUrl(url)}');
+  }
+
+  Future<void> setRemoteUrl(String name, String url) async {
+    _validateRemoteName(name);
+    _validateRemoteUrl(url);
+    await _run(['remote', 'set-url', name, url]);
+    _log.info('remote', '更新远端 $name -> ${GitRemote.maskRemoteUrl(url)}');
+  }
+
+  Future<void> removeRemote(String name) async {
+    _validateRemoteName(name);
+    await _run(['remote', 'remove', name]);
+    _log.info('remote', '删除远端 $name');
+  }
+
+  Future<String> pushToRemote(String remoteName) async {
+    _validateRemoteName(remoteName);
+    final branch = await _run(['branch', '--show-current']);
+    final name = branch.stdout.trim();
+    if (name.isEmpty) {
+      throw const GitException('当前为分离 HEAD，无法推送分支。');
+    }
+    final result = await _run(['push', remoteName, name]);
+    _log.info('remote', '已推送 $name 到远端 $remoteName');
+    return result.output.trim();
   }
 
   Future<void> stageAll() async {
@@ -731,6 +802,27 @@ class GitService {
     }
     if (Platform.isWindows && RegExp(r'[<>:"|?*]').hasMatch(name)) {
       throw const GitException('Windows 文件名不能包含 < > : " | ? *。');
+    }
+  }
+
+  void _validateRemoteName(String name) {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty ||
+        trimmed.startsWith('-') ||
+        RegExp(r'[\s~^:?*\[\]\\]').hasMatch(trimmed)) {
+      throw const GitException('远端名称不能为空、不能以 - 开头或包含空格及 Git 保留字符。');
+    }
+  }
+
+  void _validateRemoteUrl(String url) {
+    final trimmed = url.trim();
+    final uri = Uri.tryParse(trimmed);
+    final scpStyle = RegExp(r'^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:.+')
+        .hasMatch(trimmed);
+    final allowedScheme =
+        uri != null && const {'https', 'ssh', 'git'}.contains(uri.scheme);
+    if (!scpStyle && !allowedScheme) {
+      throw const GitException('远端 URL 仅支持 HTTPS、SSH 或 git@host:path 格式。');
     }
   }
 

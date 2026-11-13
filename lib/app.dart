@@ -20,6 +20,7 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
   String _fontFamily = AppSettings.defaultFontFamily;
+  double _fontScale = AppSettings.defaultFontScale;
 
   @override
   void initState() {
@@ -61,6 +62,13 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
       darkTheme: AppTheme.dark(fontFamily: selectedFont),
       themeMode: _themeMode,
       themeAnimationDuration: const Duration(milliseconds: 220),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(textScaler: TextScaler.linear(_fontScale)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: ProjectPage(
         initialRepositoryPath: widget.initialRepositoryPath,
         onThemeModeChanged: (mode) {
@@ -71,6 +79,14 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
         onFontFamilyChanged: (fontFamily) {
           if (_fontFamily != fontFamily) {
             setState(() => _fontFamily = fontFamily);
+          }
+        },
+        onFontScaleChanged: (fontScale) {
+          final bounded = fontScale
+              .clamp(AppSettings.minFontScale, AppSettings.maxFontScale)
+              .toDouble();
+          if (_fontScale != bounded) {
+            setState(() => _fontScale = bounded);
           }
         },
       ),

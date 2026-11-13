@@ -141,6 +141,28 @@ void main() {
     expect(notes, contains('- feat: add verified automatic updates'));
     expect(notes, isNot(contains('## 0.2.1')));
   });
+
+  test('Gitee upload script parses successfully', () async {
+    if (!Platform.isWindows) return;
+    final script = File(
+      '${Directory.current.path}${Platform.pathSeparator}tool'
+      '${Platform.pathSeparator}upload_gitee_release.ps1',
+    );
+    final result = await Process.run(
+      'pwsh',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        r'[scriptblock]::Create([IO.File]::ReadAllText($env:GITEE_UPLOAD_SCRIPT)) | Out-Null',
+      ],
+      environment: {'GITEE_UPLOAD_SCRIPT': script.path},
+      includeParentEnvironment: true,
+      runInShell: false,
+    );
+
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+  });
 }
 
 String _repeat(String character) => List.filled(64, character).join();

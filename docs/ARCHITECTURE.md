@@ -23,9 +23,10 @@ GitService ───────── SettingsService
 | 模块 | 职责 |
 | --- | --- |
 | `RepositoryController` | 打开仓库、左右面板状态、选择集合、剪贴板、提交与提示 |
-| `GitService` | Git 命令、目录列表、状态解析、移动/复制/重命名/删除/推送、统计 |
+| `GitService` | Git 命令、状态、文件操作、远端增删改、单远端/全部推送、统计 |
 | `FileExplorerPanel` | 单侧资源树视图、面包屑、复选框与空/错误状态 |
-| `CommitPanel` | 变更列表、提交说明、暂存与提交按钮 |
+| `CommitPanel` | 变更列表、提交说明、暂存、提交、推送和远端入口 |
+| `RemoteManagementDialog` | 多平台远端查看、增删改和逐项/全部推送 |
 | `SettingsService` | 用户级 JSON 设置读写及平台目录选择 |
 | `RecentRepositoriesService` | 仓库验证、最近打开排序、去重、清理与 JSON 持久化 |
 | `AppStorageService` | 把设置、日志与临时数据定位到可执行文件旁的 `userdata` |
@@ -98,6 +99,8 @@ Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` �
 | `IBM Plex Sans` | 产品信息与数字阅读 | SIL OFL |
 
 系统字体由 `FontCatalogService` 枚举，设置页把内置和系统字体合并为可搜索列表。
+全局字号通过 `MediaQuery.textScaler` 应用，模型只接受 0.9–1.1 的范围，
+设置页只提供 90%、100%、110% 三档。
 
 ## 图标
 

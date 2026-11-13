@@ -3,6 +3,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../core/models/app_models.dart';
+import '../../core/models/git_remote.dart';
 import '../../core/models/recent_repository.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
@@ -86,6 +87,7 @@ class RepositoryController extends ChangeNotifier {
   String branch = '';
   RepositoryStats? repositoryStats;
   List<GitFileStatus> changedFiles = const [];
+  List<GitRemote> remotes = const [];
   List<RepositoryEntry> leftEntries = const [];
   List<RepositoryEntry> rightEntries = const [];
   ExplorerPanelState leftPanel = const ExplorerPanelState();
@@ -110,7 +112,8 @@ class RepositoryController extends ChangeNotifier {
     _log.info(
       'app',
       '设置初始化完成：theme=${settings.themePreference.name} '
-          'units=${settings.unitSystem.name}/${settings.baseUnit.name}',
+          'units=${settings.unitSystem.name}/${settings.baseUnit.name} '
+          'font=${settings.fontFamily} scale=${settings.fontScale}',
     );
     notifyListeners();
   }
@@ -130,6 +133,7 @@ class RepositoryController extends ChangeNotifier {
       final service = GitService(root, logService: _log);
       final branchName = await service.currentBranch();
       final status = await service.status();
+      final remoteList = await service.remotes();
       final stats = await service.repositoryStats();
       final rootEntries = await service.listDirectory('');
       final left = ExplorerPanelState(entries: rootEntries);
@@ -141,6 +145,7 @@ class RepositoryController extends ChangeNotifier {
       branch = branchName;
       repositoryStats = stats;
       changedFiles = status;
+      remotes = remoteList;
       leftPanel = left;
       rightPanel = right;
       clipboard = null;
@@ -184,6 +189,7 @@ class RepositoryController extends ChangeNotifier {
     branch = '';
     repositoryStats = null;
     changedFiles = const [];
+    remotes = const [];
     leftPanel = const ExplorerPanelState();
     rightPanel = const ExplorerPanelState();
     clipboard = null;
@@ -238,12 +244,14 @@ class RepositoryController extends ChangeNotifier {
     notifyListeners();
     try {
       final status = await _git!.status();
+      final remoteList = await _git!.remotes();
       final stats = refreshStats
           ? await _git!.repositoryStats()
           : repositoryStats;
       final left = await _git!.listDirectory(leftPanel.relativePath);
       final right = await _git!.listDirectory(rightPanel.relativePath);
       changedFiles = status;
+      remotes = remoteList;
       repositoryStats = stats;
       leftPanel = leftPanel.copyWith(entries: left, error: null);
       rightPanel = rightPanel.copyWith(entries: right, error: null);
@@ -467,6 +475,121 @@ class RepositoryController extends ChangeNotifier {
     }
   }
 
+  Future<OperationOutcome> refreshRemotes() async {
+    if (_git == null) {
+      return const OperationOutcome.failure('当前没有打开的仓库。');
+    }
+    try {
+      remotes = await _git!.remotes();
+      notifyListeners();
+      return const OperationOutcome.success('远端列表已刷新');
+    } catch (error) {
+      _log.error('remote', '刷新远端失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<OperationOutcome> saveRemote({
+    required String name,
+    required String url,
+    required bool updateExisting,
+  }) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    isBusy = true;
+    notifyListeners();
+    try {
+      if (updateExisting) {
+        await _git!.setRemoteUrl(name, url);
+      } else {
+        await _git!.addRemote(name, url);
+      }
+      remotes = await _git!.remotes();
+      return OperationOutcome.success(
+        updateExisting ? '远端 $name 已更新' : '远端 $name 已添加',
+      );
+    } catch (error) {
+      _log.error('remote', '保存远端失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OperationOutcome> removeRemote(String name) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    isBusy = true;
+    notifyListeners();
+    try {
+      await _git!.removeRemote(name);
+      remotes = await _git!.remotes();
+      return OperationOutcome.success('远端 $name 已删除');
+    } catch (error) {
+      _log.error('remote', '删除远端失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OperationOutcome> pushToRemote(String name) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    isBusy = true;
+    notifyListeners();
+    try {
+      final output = await _git!.pushToRemote(name);
+      _log.detail('push', '远端 $name 输出：${output.isEmpty ? '无输出' : output}');
+      return OperationOutcome.success('已推送到 $name');
+    } catch (error) {
+      _log.error('push', '推送到 $name 失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
+  Future<OperationOutcome> pushToAllRemotes() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    if (remotes.isEmpty) {
+      return const OperationOutcome.failure('项目没有配置远端仓库。');
+    }
+    isBusy = true;
+    notifyListeners();
+    final succeeded = <String>[];
+    final failed = <String>[];
+    try {
+      for (final remote in remotes) {
+        try {
+          await _git!.pushToRemote(remote.name);
+          succeeded.add(remote.name);
+        } catch (error) {
+          _log.error('push', '推送到 ${remote.name} 失败：$error');
+          failed.add('${remote.name}：${_cleanError(error)}');
+        }
+      }
+      if (failed.isEmpty) {
+        return OperationOutcome.success('已推送到全部 ${succeeded.length} 个远端');
+      }
+      return OperationOutcome.failure(
+        '成功 ${succeeded.length} 个，失败 ${failed.length} 个。'
+        '\n${failed.join('\n')}',
+      );
+    } finally {
+      isBusy = false;
+      notifyListeners();
+    }
+  }
+
   Future<OperationOutcome> stageAllChanges() async {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
@@ -554,7 +677,8 @@ class RepositoryController extends ChangeNotifier {
             '${nextSettings.themePreference.name}; '
             'units ${nextSettings.unitSystem.name}/${nextSettings.baseUnit.name}; '
             'font ${oldSettings.fontFamily.isEmpty ? '系统默认' : oldSettings.fontFamily}'
-            ' -> ${nextSettings.fontFamily.isEmpty ? '系统默认' : nextSettings.fontFamily}',
+            ' -> ${nextSettings.fontFamily.isEmpty ? '系统默认' : nextSettings.fontFamily}; '
+            'scale ${oldSettings.fontScale} -> ${nextSettings.fontScale}',
       );
       return const OperationOutcome.success('设置已保存');
     } catch (error) {

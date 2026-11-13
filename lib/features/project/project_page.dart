@@ -9,8 +9,9 @@ import '../../core/services/folder_picker_service.dart';
 import '../../core/utils/path_utils.dart';
 import '../../core/utils/size_formatter.dart';
 import '../commit/commit_panel.dart';
-import '../dialogs/settings_dialog.dart';
 import '../dialogs/log_viewer_dialog.dart';
+import '../dialogs/remote_management_dialog.dart';
+import '../dialogs/settings_dialog.dart';
 import '../dialogs/update_dialog.dart';
 import '../explorer/file_explorer_panel.dart';
 import '../repository/repository_controller.dart';
@@ -23,11 +24,13 @@ class ProjectPage extends StatefulWidget {
     this.initialRepositoryPath,
     required this.onThemeModeChanged,
     required this.onFontFamilyChanged,
+    required this.onFontScaleChanged,
   });
 
   final String? initialRepositoryPath;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final ValueChanged<String> onFontFamilyChanged;
+  final ValueChanged<double> onFontScaleChanged;
 
   @override
   State<ProjectPage> createState() => _ProjectPageState();
@@ -42,6 +45,7 @@ class _ProjectPageState extends State<ProjectPage> {
   bool _isCommitFieldFocused = false;
   AppThemePreference _lastThemePreference = AppThemePreference.system;
   String _lastFontFamily = '';
+  double _lastFontScale = AppSettings.defaultFontScale;
   final AppLogService _log = AppLogService.instance;
 
   @override
@@ -73,6 +77,7 @@ class _ProjectPageState extends State<ProjectPage> {
     if (mounted) {
       _syncThemeMode();
       _syncFontFamily();
+      _syncFontScale();
       setState(() {});
     }
   }
@@ -84,6 +89,17 @@ class _ProjectPageState extends State<ProjectPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onFontFamilyChanged(fontFamily);
+      }
+    });
+  }
+
+  void _syncFontScale() {
+    final fontScale = _controller.settings.fontScale;
+    if (_lastFontScale == fontScale) return;
+    _lastFontScale = fontScale;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onFontScaleChanged(fontScale);
       }
     });
   }
@@ -526,6 +542,17 @@ class _ProjectPageState extends State<ProjectPage> {
     );
   }
 
+  Future<void> _showRemotes() async {
+    _log.detail('ui', '打开远端仓库管理');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => RemoteManagementDialog(controller: _controller),
+    );
+    if (mounted) {
+      _explorerFocus.requestFocus();
+    }
+  }
+
   void _handleClipboard(ClipboardMode mode) {
     _showOutcome(_controller.setClipboard(mode));
   }
@@ -704,6 +731,7 @@ class _ProjectPageState extends State<ProjectPage> {
                           controller: _controller,
                           showOutcome: _showOutcome,
                           onPushRequested: _pushCurrentBranch,
+                          onManageRemotes: _showRemotes,
                           onTextEditingChanged: (focused) {
                             _isCommitFieldFocused = focused;
                           },

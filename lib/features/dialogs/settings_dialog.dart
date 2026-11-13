@@ -421,6 +421,47 @@ class _SettingsDialogState extends State<SettingsDialog> {
             ],
           ),
         ),
+        const SizedBox(height: 22),
+        const _SectionLabel(
+          title: '字体大小',
+          caption: '仅在安全范围内提供三档，避免出现过小或过大字号导致界面布局异常。',
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: SegmentedButton<double>(
+            segments: const [
+              ButtonSegment(
+                value: AppSettings.minFontScale,
+                label: Text('90%'),
+                icon: Icon(Icons.text_decrease_rounded, size: 17),
+              ),
+              ButtonSegment(
+                value: AppSettings.defaultFontScale,
+                label: Text('100%'),
+                icon: Icon(Icons.text_fields_rounded, size: 17),
+              ),
+              ButtonSegment(
+                value: AppSettings.maxFontScale,
+                label: Text('110%'),
+                icon: Icon(Icons.text_increase_rounded, size: 17),
+              ),
+            ],
+            selected: {_draft.fontScale},
+            onSelectionChanged: (value) {
+              setState(() {
+                _draft = _draft.copyWith(fontScale: value.first);
+              });
+            },
+            showSelectedIcon: false,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          '允许范围：${(AppSettings.minFontScale * 100).round()}%–'
+          '${(AppSettings.maxFontScale * 100).round()}%',
+          style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+        ),
       ],
     );
   }

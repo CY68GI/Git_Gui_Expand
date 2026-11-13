@@ -10,12 +10,14 @@ class CommitPanel extends StatefulWidget {
     required this.showOutcome,
     required this.onTextEditingChanged,
     required this.onPushRequested,
+    required this.onManageRemotes,
   });
 
   final RepositoryController controller;
   final ValueChanged<OperationOutcome> showOutcome;
   final ValueChanged<bool> onTextEditingChanged;
   final VoidCallback onPushRequested;
+  final VoidCallback onManageRemotes;
 
   @override
   State<CommitPanel> createState() => _CommitPanelState();
@@ -88,6 +90,28 @@ class _CommitPanelState extends State<CommitPanel> {
                   _CountBadge(text: '$stagedCount 项已暂存', color: colors.primary),
                 ],
                 const Spacer(),
+                Tooltip(
+                  message: '查看和管理全部远端仓库',
+                  child: TextButton.icon(
+                    onPressed: controller.isBusy
+                        ? null
+                        : widget.onManageRemotes,
+                    icon: const Icon(Icons.hub_outlined, size: 15),
+                    label: Text('远端 ${controller.remotes.length}'),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 6,
+                      ),
+                      textStyle: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
                 Tooltip(
                   message: '推送当前分支 (Ctrl+Shift+U)',
                   child: TextButton.icon(

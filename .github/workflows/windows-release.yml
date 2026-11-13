@@ -11,6 +11,8 @@ permissions:
 jobs:
   build-and-release:
     runs-on: windows-latest
+    env:
+      GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -71,3 +73,12 @@ jobs:
             --title "Git GUI Expand $env:GITHUB_REF_NAME" `
             --notes-file RELEASE_NOTES.md `
             --verify-tag
+
+      - name: Upload package to Gitee Release
+        if: ${{ env.GITEE_TOKEN != '' }}
+        shell: pwsh
+        run: |
+          ./tool/upload_gitee_release.ps1 `
+            -Tag $env:GITHUB_REF_NAME `
+            -AssetPath "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
+            -NotesPath RELEASE_NOTES.md

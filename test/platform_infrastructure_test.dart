@@ -42,6 +42,7 @@ void main() {
       baseUnit: SizeBaseUnit.bit,
       themePreference: AppThemePreference.dark,
       fontFamily: 'Noto Sans',
+      fontScale: 1.1,
     );
 
     await settingsService.save(settings);
@@ -64,6 +65,14 @@ void main() {
     expect(normalLog, isNot(contains('详细日志内容')));
     expect(detailedLog, contains('普通日志内容'));
     expect(detailedLog, contains('详细日志内容'));
+    expect(
+      AppSettings.fromJson({'fontScale': 10}).fontScale,
+      AppSettings.maxFontScale,
+    );
+    expect(
+      AppSettings.fromJson({'fontScale': 0.1}).fontScale,
+      AppSettings.minFontScale,
+    );
   });
 
   testWidgets('application exposes light, dark and system theme modes', (

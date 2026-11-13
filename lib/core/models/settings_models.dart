@@ -6,6 +6,9 @@ enum AppThemePreference { system, light, dark }
 
 class AppSettings {
   static const String defaultFontFamily = 'Noto Sans SC';
+  static const double minFontScale = 0.9;
+  static const double defaultFontScale = 1.0;
+  static const double maxFontScale = 1.1;
 
   const AppSettings({
     this.unitSystem = SizeUnitSystem.binary,
@@ -13,6 +16,7 @@ class AppSettings {
     this.showHiddenFiles = false,
     this.themePreference = AppThemePreference.system,
     this.fontFamily = defaultFontFamily,
+    this.fontScale = defaultFontScale,
   });
 
   final SizeUnitSystem unitSystem;
@@ -20,6 +24,7 @@ class AppSettings {
   final bool showHiddenFiles;
   final AppThemePreference themePreference;
   final String fontFamily;
+  final double fontScale;
 
   AppSettings copyWith({
     SizeUnitSystem? unitSystem,
@@ -27,6 +32,7 @@ class AppSettings {
     bool? showHiddenFiles,
     AppThemePreference? themePreference,
     String? fontFamily,
+    double? fontScale,
   }) {
     return AppSettings(
       unitSystem: unitSystem ?? this.unitSystem,
@@ -34,6 +40,9 @@ class AppSettings {
       showHiddenFiles: showHiddenFiles ?? this.showHiddenFiles,
       themePreference: themePreference ?? this.themePreference,
       fontFamily: fontFamily ?? this.fontFamily,
+      fontScale: (fontScale ?? this.fontScale)
+          .clamp(minFontScale, maxFontScale)
+          .toDouble(),
     );
   }
 
@@ -43,6 +52,7 @@ class AppSettings {
     'showHiddenFiles': showHiddenFiles,
     'themePreference': themePreference.name,
     'fontFamily': fontFamily,
+    'fontScale': fontScale,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -63,6 +73,12 @@ class AppSettings {
       fontFamily: json['fontFamily'] is String
           ? (json['fontFamily'] as String).trim()
           : defaultFontFamily,
+      fontScale:
+          (json['fontScale'] is num
+                  ? (json['fontScale'] as num).toDouble()
+                  : defaultFontScale)
+              .clamp(minFontScale, maxFontScale)
+              .toDouble(),
     );
   }
 
@@ -73,7 +89,8 @@ class AppSettings {
         other.baseUnit == baseUnit &&
         other.showHiddenFiles == showHiddenFiles &&
         other.themePreference == themePreference &&
-        other.fontFamily == fontFamily;
+        other.fontFamily == fontFamily &&
+        other.fontScale == fontScale;
   }
 
   @override
@@ -83,5 +100,6 @@ class AppSettings {
     showHiddenFiles,
     themePreference,
     fontFamily,
+    fontScale,
   );
 }

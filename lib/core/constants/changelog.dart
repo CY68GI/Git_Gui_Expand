@@ -14,6 +14,17 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.8.0',
+    date: '2026-11-13',
+    title: '多平台远端与安全字号',
+    items: [
+      '提交工作区新增远端管理，可查看 GitHub、Gitee、GitLab 和通用 Git 远端。',
+      '支持添加、修改、删除远端，并可逐项推送或推送到全部远端。',
+      '新增字体大小 90%、100%、110% 三档，模型层强制限制安全范围。',
+      '源代码和自动更新发布流程同时支持 GitHub 与 Gitee。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.7.0',
     date: '2026-11-13',
     title: '可搜索 UI 字体与增量发布说明',

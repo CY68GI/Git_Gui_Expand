@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
+import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/services/git_service.dart';
 
 void main() {
@@ -156,6 +157,45 @@ void main() {
       runInShell: false,
     );
     expect(ref.exitCode, 0);
+  });
+
+  test('manages remotes from multiple platforms', () async {
+    expect(
+      GitRemote.maskRemoteUrl('https://user:secret@github.com/CY68GI/repo.git'),
+      isNot(contains('secret')),
+    );
+    await service.addRemote(
+      'gitee',
+      'git@gitee.com:CY68EWZRY/Git_Gui_Expand.git',
+    );
+    await service.addRemote(
+      'gitlab',
+      'https://gitlab.com/example/Git_Gui_Expand.git',
+    );
+
+    var remotes = await service.remotes();
+    expect(
+      remotes.singleWhere((remote) => remote.name == 'gitee').platform,
+      GitRemotePlatform.gitee,
+    );
+    expect(
+      remotes.singleWhere((remote) => remote.name == 'gitlab').platform,
+      GitRemotePlatform.gitlab,
+    );
+
+    await service.setRemoteUrl(
+      'gitee',
+      'https://gitee.com/CY68EWZRY/Git_Gui_Expand.git',
+    );
+    remotes = await service.remotes();
+    expect(
+      remotes.singleWhere((remote) => remote.name == 'gitee').pushUrl,
+      'https://gitee.com/CY68EWZRY/Git_Gui_Expand.git',
+    );
+
+    await service.removeRemote('gitlab');
+    remotes = await service.remotes();
+    expect(remotes.map((remote) => remote.name), isNot(contains('gitlab')));
   });
 }
 
