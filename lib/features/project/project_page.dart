@@ -623,12 +623,6 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
           ] else
             const Spacer(),
-          if (_controller.hasRepository)
-            _TopBarButton(
-              icon: Icons.cloud_upload_outlined,
-              label: '推送',
-              onTap: _pushCurrentBranch,
-            ),
           _TopBarButton(
             icon: Icons.folder_open_rounded,
             label: '打开',
@@ -709,6 +703,7 @@ class _ProjectPageState extends State<ProjectPage> {
                         child: CommitPanel(
                           controller: _controller,
                           showOutcome: _showOutcome,
+                          onPushRequested: _pushCurrentBranch,
                           onTextEditingChanged: (focused) {
                             _isCommitFieldFocused = focused;
                           },

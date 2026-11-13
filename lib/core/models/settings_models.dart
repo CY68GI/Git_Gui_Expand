@@ -5,12 +5,14 @@ enum SizeBaseUnit { byte, bit }
 enum AppThemePreference { system, light, dark }
 
 class AppSettings {
+  static const String defaultFontFamily = 'Noto Sans SC';
+
   const AppSettings({
     this.unitSystem = SizeUnitSystem.binary,
     this.baseUnit = SizeBaseUnit.byte,
     this.showHiddenFiles = false,
     this.themePreference = AppThemePreference.system,
-    this.fontFamily = '',
+    this.fontFamily = defaultFontFamily,
   });
 
   final SizeUnitSystem unitSystem;
@@ -58,7 +60,9 @@ class AppSettings {
         (value) => value.name == json['themePreference'],
         orElse: () => AppThemePreference.system,
       ),
-      fontFamily: (json['fontFamily'] as String? ?? '').trim(),
+      fontFamily: json['fontFamily'] is String
+          ? (json['fontFamily'] as String).trim()
+          : defaultFontFamily,
     );
   }
 

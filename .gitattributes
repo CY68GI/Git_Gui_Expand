@@ -9,3 +9,5 @@
 *.sh text eol=lf
 *.ico binary
 *.png binary
+*.ttf binary
+assets/fonts/LICENSE-*.txt whitespace=-trailing-space

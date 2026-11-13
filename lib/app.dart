@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'core/constants/app_info.dart';
+import 'core/models/settings_models.dart';
 import 'core/services/app_log_service.dart';
 import 'core/services/app_storage_service.dart';
 import 'core/theme/app_theme.dart';
@@ -18,7 +19,7 @@ class GitGuiExpandApp extends StatefulWidget {
 class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
-  String _fontFamily = '';
+  String _fontFamily = AppSettings.defaultFontFamily;
 
   @override
   void initState() {

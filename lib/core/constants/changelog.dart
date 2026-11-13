@@ -14,6 +14,30 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.7.0',
+    date: '2026-11-13',
+    title: '可搜索 UI 字体与增量发布说明',
+    items: [
+      '软件内置 Inter UI、Noto Sans SC 和 IBM Plex Sans 三款 OFL 开源 UI 字体。',
+      '软件默认字体改为内置的 Noto Sans SC / 思源黑体。',
+      '字体设置按“软件内置”和“系统自带”分组，并支持按名称与用途实时搜索。',
+      '字体列表显示实际字体预览，避免逐项查找和误选。',
+      'GitHub Release 描述只生成上一个标签到当前标签范围内的更新与提交。',
+      '继续保留更新页“打开发布页”和提交工作区推送。',
+    ],
+  ),
+  ChangelogEntry(
+    version: '0.6.0',
+    date: '2026-11-13',
+    title: '设置分页、更新后备与提交区推送',
+    items: [
+      '更新页新增“打开发布页”，网络缓慢或自动更新失败时可手动进入 Release。',
+      '推送按钮从顶部移动到提交工作区，保留 Ctrl+Shift+U 快捷键。',
+      '设置重构为字体、外观模式、单位设置和关于四个独立页面。',
+      '关于页和 README 新增 DeepSeek 人工智能与 ChatGPT Codex 协作致谢。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.5.0',
     date: '2026-11-13',
     title: '一键自动更新',

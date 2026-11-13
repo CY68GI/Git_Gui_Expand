@@ -205,6 +205,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
           icon: const Icon(Icons.code_rounded, size: 16),
           label: const Text('打开仓库'),
         ),
+        if (_result?.releaseUrl.isNotEmpty == true)
+          TextButton.icon(
+            onPressed: _isInstalling
+                ? null
+                : () => _service.openExternalUrl(_result!.releaseUrl),
+            icon: const Icon(Icons.open_in_new_rounded, size: 16),
+            label: const Text('打开发布页'),
+          ),
         if (_result?.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
             onPressed: _isInstalling ? null : _installUpdate,

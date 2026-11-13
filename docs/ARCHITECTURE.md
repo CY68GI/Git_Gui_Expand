@@ -76,13 +76,28 @@ GitService ───────── SettingsService
 
 更新助手脚本自身和全部下载/备份数据都在软件目录内，不写入用户配置目录。
 
+Release 说明由 `tool/generate_release_notes.ps1` 生成。脚本从当前标签的父提交
+寻找上一个标签，读取 CHANGELOG 中当前标签之前、上个标签之后的全部版本小节，并收集
+`<previousTag>..<currentTag>` 的提交记录。完整历史 CHANGELOG 不会写入 Release 描述。
+
 ## 外观
 
 `AppSettings.themePreference` 保存 `system`、`light` 或 `dark`。
 `MaterialApp` 同时提供 `theme`、`darkTheme` 和 `ThemeMode`，选择跟随系统时由
 Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` 额外记录外观变化。
-字体默认值为空，`ThemeData.fontFamily` 保持 null 以使用当前平台系统字体。只有用户
-明确选择后才写入具体字体族，缺失字体由 Flutter 回退到系统字体。
+字体默认值是内置字体族 `Noto Sans SC`。选择“系统默认”时，
+`ThemeData.fontFamily` 保持 null 以使用当前平台系统字体。缺失字体由 Flutter
+回退到系统字体。
+
+软件内置字体通过 Flutter `fonts` 资源注册：
+
+| 字体族 | 用途 | 许可证 |
+| --- | --- | --- |
+| `Inter UI` | 高密度英文与数字界面 | SIL OFL |
+| `Noto Sans SC` | 中英文混排界面 | SIL OFL |
+| `IBM Plex Sans` | 产品信息与数字阅读 | SIL OFL |
+
+系统字体由 `FontCatalogService` 枚举，设置页把内置和系统字体合并为可搜索列表。
 
 ## 图标
 

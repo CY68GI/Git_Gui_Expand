@@ -108,8 +108,38 @@ void main() {
       runInShell: false,
     );
 
-    expect(result.exitCode, 0);
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     expect((result.stderr as String).trim(), isEmpty);
+  });
+
+  test('release notes include only the previous-tag commit range', () async {
+    if (!Platform.isWindows) return;
+    final output = File(
+      '${temporaryDirectory.path}${Platform.pathSeparator}release-notes.md',
+    );
+    final result = await Process.run(
+      'pwsh',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-File',
+        'tool\\generate_release_notes.ps1',
+        '-Tag',
+        'v0.5.0',
+        '-OutputPath',
+        output.path,
+      ],
+      workingDirectory: Directory.current.path,
+      runInShell: false,
+    );
+
+    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+    final notes = await output.readAsString();
+    expect(notes, contains('自 v0.4.0 以来'));
+    expect(notes, contains('- feat: add verified automatic updates'));
+    expect(notes, isNot(contains('## 0.2.1')));
   });
 }
 

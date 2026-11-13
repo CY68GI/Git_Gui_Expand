@@ -32,7 +32,7 @@ void main() {
   });
 
   test('settings and logs stay under the software data directory', () async {
-    expect(const AppSettings().fontFamily, isEmpty);
+    expect(const AppSettings().fontFamily, AppSettings.defaultFontFamily);
     final settingsService = SettingsService(
       storage: storage,
       logService: logger,

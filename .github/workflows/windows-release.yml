@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -54,6 +56,11 @@ jobs:
             -DestinationPath "dist/Git_Gui_Expand-${{ github.ref_name }}-windows-x64.zip" `
             -CompressionLevel Optimal
 
+      - name: Generate release notes for this version
+        shell: pwsh
+        run: |
+          ./tool/generate_release_notes.ps1 -Tag $env:GITHUB_REF_NAME
+
       - name: Create GitHub Release and upload package
         shell: pwsh
         env:
@@ -62,5 +69,5 @@ jobs:
           gh release create $env:GITHUB_REF_NAME `
             "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
             --title "Git GUI Expand $env:GITHUB_REF_NAME" `
-            --notes-file CHANGELOG.md `
+            --notes-file RELEASE_NOTES.md `
             --verify-tag
