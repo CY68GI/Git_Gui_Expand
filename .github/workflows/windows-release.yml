@@ -1,0 +1,59 @@
+name: Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package Windows release
+        shell: pwsh
+        run: |
+          $stage = "dist/package"
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Get-ChildItem "build/windows/x64/runner/Release" -Force |
+            Where-Object { $_.Name -ne "userdata" } |
+            Copy-Item -Destination $stage -Recurse
+          Copy-Item README.md, CHANGELOG.md -Destination $stage
+          Compress-Archive `
+            -Path "$stage/*" `
+            -DestinationPath "dist/Git_Gui_Expand-${{ github.ref_name }}-windows-x64.zip" `
+            -CompressionLevel Optimal
+
+      - name: Create GitHub Release and upload package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
+            --title "Git GUI Expand $env:GITHUB_REF_NAME" `
+            --notes-file CHANGELOG.md `
+            --verify-tag
