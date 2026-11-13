@@ -22,7 +22,7 @@ void main() {
     expect(find.text('打开 Git 仓库'), findsOneWidget);
     expect(find.byIcon(Icons.folder_open_rounded), findsWidgets);
     expect(find.textContaining('左右双栏'), findsOneWidget);
-    expect(find.text('v0.8.1'), findsOneWidget);
+    expect(find.text('v0.8.2'), findsOneWidget);
   });
 
   testWidgets('recent Git repository can be opened from the start screen', (

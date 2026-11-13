@@ -14,6 +14,16 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.8.2',
+    date: '2026-11-14',
+    title: 'Launcher 更新链路验证与设置迁移',
+    items: [
+      '修复旧设置中空字体字段导致 Noto Sans SC 默认字体未生效的问题。',
+      '增加一次性设置版本迁移，同时保留用户主动选择的系统默认字体。',
+      '验证 Launcher 可完成版本目录准备、切换、重启和共享 userdata。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.8.1',
     date: '2026-11-13',
     title: 'Launcher 多版本安全更新',

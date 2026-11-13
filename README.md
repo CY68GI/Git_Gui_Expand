@@ -6,7 +6,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.8.1`
+当前版本：`0.8.2`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>

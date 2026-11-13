@@ -73,6 +73,17 @@ void main() {
       AppSettings.fromJson({'fontScale': 0.1}).fontScale,
       AppSettings.minFontScale,
     );
+    expect(
+      AppSettings.fromJson({'fontFamily': ''}).fontFamily,
+      AppSettings.defaultFontFamily,
+    );
+    expect(
+      AppSettings.fromJson({
+        'settingsVersion': AppSettings.currentSettingsVersion,
+        'fontFamily': '',
+      }).fontFamily,
+      isEmpty,
+    );
   });
 
   testWidgets('application exposes light, dark and system theme modes', (

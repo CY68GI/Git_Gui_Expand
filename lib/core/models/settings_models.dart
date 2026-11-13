@@ -5,6 +5,7 @@ enum SizeBaseUnit { byte, bit }
 enum AppThemePreference { system, light, dark }
 
 class AppSettings {
+  static const int currentSettingsVersion = 2;
   static const String defaultFontFamily = 'Noto Sans SC';
   static const double minFontScale = 0.9;
   static const double defaultFontScale = 1.0;
@@ -17,6 +18,7 @@ class AppSettings {
     this.themePreference = AppThemePreference.system,
     this.fontFamily = defaultFontFamily,
     this.fontScale = defaultFontScale,
+    this.settingsVersion = currentSettingsVersion,
   });
 
   final SizeUnitSystem unitSystem;
@@ -25,6 +27,7 @@ class AppSettings {
   final AppThemePreference themePreference;
   final String fontFamily;
   final double fontScale;
+  final int settingsVersion;
 
   AppSettings copyWith({
     SizeUnitSystem? unitSystem,
@@ -33,6 +36,7 @@ class AppSettings {
     AppThemePreference? themePreference,
     String? fontFamily,
     double? fontScale,
+    int? settingsVersion,
   }) {
     return AppSettings(
       unitSystem: unitSystem ?? this.unitSystem,
@@ -43,6 +47,7 @@ class AppSettings {
       fontScale: (fontScale ?? this.fontScale)
           .clamp(minFontScale, maxFontScale)
           .toDouble(),
+      settingsVersion: settingsVersion ?? this.settingsVersion,
     );
   }
 
@@ -53,9 +58,12 @@ class AppSettings {
     'themePreference': themePreference.name,
     'fontFamily': fontFamily,
     'fontScale': fontScale,
+    'settingsVersion': settingsVersion,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
+    final storedVersion = (json['settingsVersion'] as num?)?.toInt() ?? 1;
+    final storedFont = (json['fontFamily'] as String? ?? '').trim();
     return AppSettings(
       unitSystem: SizeUnitSystem.values.firstWhere(
         (value) => value.name == json['unitSystem'],
@@ -70,8 +78,10 @@ class AppSettings {
         (value) => value.name == json['themePreference'],
         orElse: () => AppThemePreference.system,
       ),
-      fontFamily: json['fontFamily'] is String
-          ? (json['fontFamily'] as String).trim()
+      fontFamily: storedVersion < currentSettingsVersion && storedFont.isEmpty
+          ? defaultFontFamily
+          : json['fontFamily'] is String
+          ? storedFont
           : defaultFontFamily,
       fontScale:
           (json['fontScale'] is num
@@ -79,6 +89,7 @@ class AppSettings {
                   : defaultFontScale)
               .clamp(minFontScale, maxFontScale)
               .toDouble(),
+      settingsVersion: currentSettingsVersion,
     );
   }
 
@@ -90,7 +101,8 @@ class AppSettings {
         other.showHiddenFiles == showHiddenFiles &&
         other.themePreference == themePreference &&
         other.fontFamily == fontFamily &&
-        other.fontScale == fontScale;
+        other.fontScale == fontScale &&
+        other.settingsVersion == settingsVersion;
   }
 
   @override
@@ -101,5 +113,6 @@ class AppSettings {
     themePreference,
     fontFamily,
     fontScale,
+    settingsVersion,
   );
 }
