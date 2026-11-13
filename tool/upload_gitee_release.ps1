@@ -4,6 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$NotesPath,
   [string]$Owner = "CY68EWZRY",
   [string]$Repo = "Git_Gui_Expand",
+  [string]$TargetCommitish = "main",
   [string]$Token = $env:GITEE_TOKEN
 )
 
@@ -15,12 +16,16 @@ $asset = Get-Item -LiteralPath $AssetPath
 $notes = Get-Content -LiteralPath $NotesPath -Raw
 $baseUrl = "https://gitee.com/api/v5/repos/$Owner/$Repo"
 $tagPath = [Uri]::EscapeDataString($Tag)
-$tokenQuery = [Uri]::EscapeDataString($Token)
+$headers = @{
+  Authorization = "Bearer $Token"
+  Accept = "application/json"
+}
 
 $release = $null
 try {
   $release = Invoke-RestMethod -Method Get `
-    -Uri "$baseUrl/releases/tags/$tagPath?access_token=$tokenQuery"
+    -Uri "$baseUrl/releases/tags/$tagPath" `
+    -Headers $headers
 } catch {
   $status = $_.Exception.Response.StatusCode.value__
   if ($status -ne 404) {
@@ -31,24 +36,26 @@ try {
 if ($null -eq $release) {
   $release = Invoke-RestMethod -Method Post `
     -Uri "$baseUrl/releases" `
-    -Form @{
-      access_token = $Token
+    -Headers $headers `
+    -ContentType "application/x-www-form-urlencoded; charset=utf-8" `
+    -Body @{
       tag_name = $Tag
       name = "Git GUI Expand $Tag"
       body = $notes
-      prerelease = $false
-      target_commitish = $Tag
+      prerelease = "false"
+      target_commitish = $TargetCommitish
     }
 }
 
 $attachments = Invoke-RestMethod -Method Get `
-  -Uri "$baseUrl/releases/$($release.id)/attach_files?access_token=$tokenQuery"
+  -Uri "$baseUrl/releases/$($release.id)/attach_files" `
+  -Headers $headers
 $existing = @($attachments) | Where-Object { $_.name -eq $asset.Name }
 if (-not $existing) {
   Invoke-RestMethod -Method Post `
     -Uri "$baseUrl/releases/$($release.id)/attach_files" `
+    -Headers $headers `
     -Form @{
-      access_token = $Token
       file = $asset
     } | Out-Null
   Write-Output "Uploaded $($asset.Name) to Gitee Release $Tag"
