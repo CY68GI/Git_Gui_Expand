@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.8.1 - 2026-11-13
+
+### Added
+
+- 新增稳定的 `GitGuiExpandLauncher.exe` 和版本目录启动架构。
+- Launcher 支持 pending 版本切换、启动健康检查和自动回滚。
+- 新版本目录与当前运行版本完全隔离，共享同一 `userdata`。
+
+### Fixed
+
+- 修复 Dart detached PowerShell 子进程未执行、导致更新下载完成后软件退出但不重启的问题。
+- 自动更新不再覆盖正在运行的程序文件，也不需要生成替换脚本。
+
+### Migration
+
+- v0.8.0 及更早版本无法自动修复自身，需要手动安装一次 v0.8.1 Launcher 包。
+- 安装后必须从 `GitGuiExpandLauncher.exe` 启动，后续版本才能自动切换。
+
 ## 0.8.0 - 2026-11-13
 
 ### Added

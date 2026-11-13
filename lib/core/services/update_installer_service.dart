@@ -51,36 +51,36 @@ class UpdateInstallerService {
         '更新资产缺少下载地址或有效 SHA-256，已取消自动更新。',
       );
     }
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(release.latestVersion)) {
+      return const UpdateInstallResult.failure('更新版本号包含非法字符。');
+    }
 
+    final version = release.latestVersion;
     final updatesRoot = Directory(
       '${storage.dataDirectory.path}${Platform.pathSeparator}updates',
     );
+    final versionsRoot = storage.versionsDirectory;
+    final archive = File(
+      '${updatesRoot.path}${Platform.pathSeparator}'
+      'Git_Gui_Expand-v$version.zip',
+    );
+    final staging = Directory(
+      '${updatesRoot.path}${Platform.pathSeparator}stage-v$version',
+    );
+    final target = Directory(
+      '${versionsRoot.path}${Platform.pathSeparator}$version',
+    );
+
     try {
       await updatesRoot.create(recursive: true);
-      final safeVersion = release.latestVersion.replaceAll(
-        RegExp(r'[^A-Za-z0-9._-]'),
-        '_',
-      );
-      final archive = File(
-        '${updatesRoot.path}${Platform.pathSeparator}'
-        'Git_Gui_Expand-v$safeVersion.zip',
-      );
-      final staging = Directory(
-        '${updatesRoot.path}${Platform.pathSeparator}stage-v$safeVersion',
-      );
-      final script = File(
-        '${updatesRoot.path}${Platform.pathSeparator}apply-update.ps1',
-      );
-      final updaterLog = File(
-        '${updatesRoot.path}${Platform.pathSeparator}updater.log',
-      );
-
+      await versionsRoot.create(recursive: true);
       await _deleteDirectoryIfExists(staging);
       await _deleteFileIfExists(archive);
+
       onProgress(
         const UpdateInstallProgress(
           stage: 'download',
-          message: '正在连接 GitHub 下载更新…',
+          message: '正在连接 Release 下载更新…',
           percent: 0,
         ),
       );
@@ -112,54 +112,129 @@ class UpdateInstallerService {
       logService.info('update', '更新包 SHA-256 校验通过：$actualHash');
 
       onProgress(
-        const UpdateInstallProgress(stage: 'extract', message: '正在解压更新包…'),
+        const UpdateInstallProgress(stage: 'extract', message: '正在解压到独立版本目录…'),
       );
       await staging.create(recursive: true);
       await _extract(archive.path, staging.path);
-      await _validateStaging(staging, release.latestVersion);
+      final payload = await _resolvePayloadDirectory(staging, version);
+      await _validatePayload(payload, version);
+
+      if (await target.exists()) {
+        try {
+          await _validatePayload(target, version);
+          await _deleteDirectoryIfExists(staging);
+        } catch (_) {
+          await _deleteDirectoryIfExists(target);
+        }
+      }
+
+      if (await target.exists()) {
+        logService.info('update', '版本 $version 已存在，复用现有版本目录');
+      } else {
+        final nestedPayload = payload.path != staging.path;
+        await payload.rename(target.path);
+        if (nestedPayload && await staging.exists()) {
+          await _deleteDirectoryIfExists(staging);
+        }
+        logService.info('update', '新版本已准备到 ${target.path}');
+      }
 
       onProgress(
-        const UpdateInstallProgress(stage: 'prepare', message: '正在准备安全替换与重启…'),
+        const UpdateInstallProgress(
+          stage: 'prepare',
+          message: '正在通知 Launcher 切换版本…',
+          percent: 1,
+        ),
       );
-      await script.writeAsString(updaterScript, flush: true);
-      await updaterLog.writeAsString(
-        '${DateTime.now().toIso8601String()} '
-        'Preparing update to v${release.latestVersion}\n',
-        mode: FileMode.append,
-        flush: true,
-      );
-      await Process.start(
-        'powershell.exe',
-        [
-          '-NoProfile',
-          '-WindowStyle',
-          'Hidden',
-          '-ExecutionPolicy',
-          'Bypass',
-          '-File',
-          script.path,
-          '-ParentPid',
-          pid.toString(),
-          '-SoftwareDir',
-          storage.softwareDirectory,
-          '-StageDir',
-          staging.path,
-          '-ArchivePath',
-          archive.path,
-          '-LogPath',
-          updaterLog.path,
-        ],
-        mode: ProcessStartMode.detached,
-        runInShell: false,
-      );
-      logService.info('update', '更新助手已启动，应用即将退出并重启到 v${release.latestVersion}');
+      await _writePendingVersion(version);
+      await logService.flush();
+
+      if (!storage.isLaunchedByLauncher) {
+        final launcher = File(
+          '${storage.softwareDirectory}${Platform.pathSeparator}'
+          'GitGuiExpandLauncher.exe',
+        );
+        if (!await launcher.exists()) {
+          throw FileSystemException(
+            '未找到 GitGuiExpandLauncher.exe；新版本已准备好，请手动打开 Launcher',
+            launcher.path,
+          );
+        }
+        await Process.start(
+          launcher.path,
+          ['--wait-pid', pid.toString()],
+          mode: ProcessStartMode.normal,
+          runInShell: false,
+        );
+      }
+
+      logService.info('update', '版本 $version 已就绪，等待应用退出后由 Launcher 重启');
       return UpdateInstallResult.success(
-        '更新助手已启动，应用将自动重启到 v${release.latestVersion}。',
+        '新版本 v$version 已准备完成，应用退出后 Launcher 将自动切换并重启。',
       );
     } catch (error) {
-      logService.error('update', '自动更新失败：$error');
-      return UpdateInstallResult.failure('自动更新失败：$error');
+      logService.error('update', 'Launcher 更新准备失败：$error');
+      return UpdateInstallResult.failure('更新准备失败：$error');
     }
+  }
+
+  Future<Directory> _resolvePayloadDirectory(
+    Directory staging,
+    String version,
+  ) async {
+    final rootVersion = File(
+      '${staging.path}${Platform.pathSeparator}version.json',
+    );
+    if (await rootVersion.exists()) {
+      return staging;
+    }
+    final nested = Directory(
+      '${staging.path}${Platform.pathSeparator}versions'
+      '${Platform.pathSeparator}$version',
+    );
+    if (await nested.exists()) {
+      return nested;
+    }
+    throw const FileSystemException('更新包中找不到目标版本的应用程序目录');
+  }
+
+  Future<void> _validatePayload(
+    Directory payload,
+    String expectedVersion,
+  ) async {
+    final executable = File(
+      '${payload.path}${Platform.pathSeparator}git_gui_expand.exe',
+    );
+    final appData = File(
+      '${payload.path}${Platform.pathSeparator}data'
+      '${Platform.pathSeparator}app.so',
+    );
+    final flutterData = Directory(
+      '${payload.path}${Platform.pathSeparator}data'
+      '${Platform.pathSeparator}flutter_assets',
+    );
+    final versionFile = File(
+      '${payload.path}${Platform.pathSeparator}version.json',
+    );
+    if (!await executable.exists() ||
+        !await appData.exists() ||
+        !await flutterData.exists()) {
+      throw const FileSystemException('新版本目录缺少应用运行文件');
+    }
+    if (!await versionFile.exists()) {
+      throw const FileSystemException('新版本目录缺少 version.json');
+    }
+    final decoded = jsonDecode(await versionFile.readAsString());
+    final version = decoded is Map<String, dynamic>
+        ? (decoded['version'] as String? ?? '')
+        : '';
+    if (version != expectedVersion) {
+      throw FormatException('更新包版本不匹配：包内 $version，Release $expectedVersion');
+    }
+  }
+
+  Future<void> _writePendingVersion(String version) async {
+    await storage.pendingVersionFile.writeAsString('$version\n', flush: true);
   }
 
   Future<void> _download(
@@ -169,7 +244,7 @@ class UpdateInstallerService {
   }) async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 15)
-      ..userAgent = 'GitGUIExpand/${AppInfo.version} AutoUpdater';
+      ..userAgent = 'GitGUIExpand/${AppInfo.version} LauncherUpdater';
     final partial = File('${target.path}.part');
     IOSink? sink;
     try {
@@ -223,6 +298,8 @@ class UpdateInstallerService {
       [
         '-NoProfile',
         '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
         '-Command',
         r'''
 $ErrorActionPreference = 'Stop'
@@ -253,6 +330,8 @@ Expand-Archive -LiteralPath $env:GIT_GUI_UPDATE_ZIP `
       [
         '-NoProfile',
         '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
         '-Command',
         r'''
 $ErrorActionPreference = 'Stop'
@@ -275,32 +354,6 @@ $ErrorActionPreference = 'Stop'
     return (result.stdout as String).trim();
   }
 
-  Future<void> _validateStaging(
-    Directory staging,
-    String expectedVersion,
-  ) async {
-    final executable = File(
-      '${staging.path}${Platform.pathSeparator}git_gui_expand.exe',
-    );
-    final data = Directory('${staging.path}${Platform.pathSeparator}data');
-    final versionFile = File(
-      '${staging.path}${Platform.pathSeparator}version.json',
-    );
-    if (!await executable.exists() || !await data.exists()) {
-      throw const FileSystemException('更新包缺少应用程序或 Flutter 数据目录');
-    }
-    if (!await versionFile.exists()) {
-      throw const FileSystemException('更新包缺少 version.json');
-    }
-    final decoded = jsonDecode(await versionFile.readAsString());
-    final version = decoded is Map<String, dynamic>
-        ? (decoded['version'] as String? ?? '')
-        : '';
-    if (version != expectedVersion) {
-      throw FormatException('更新包版本不匹配：包内 $version，Release $expectedVersion');
-    }
-  }
-
   Future<void> _deleteDirectoryIfExists(Directory directory) async {
     if (await directory.exists()) {
       await directory.delete(recursive: true);
@@ -312,94 +365,4 @@ $ErrorActionPreference = 'Stop'
       await file.delete();
     }
   }
-
-  static const String updaterScript = r'''
-param(
-  [Parameter(Mandatory = $true)][int]$ParentPid,
-  [Parameter(Mandatory = $true)][string]$SoftwareDir,
-  [Parameter(Mandatory = $true)][string]$StageDir,
-  [Parameter(Mandatory = $true)][string]$ArchivePath,
-  [Parameter(Mandatory = $true)][string]$LogPath
-)
-
-$ErrorActionPreference = 'Stop'
-
-function Write-UpdaterLog {
-  param([string]$Message)
-  $line = "$(Get-Date -Format o) $Message"
-  Add-Content -LiteralPath $LogPath -Value $line -Encoding UTF8
-}
-
-function Remove-AppItems {
-  Get-ChildItem -LiteralPath $SoftwareDir -Force |
-    Where-Object { $_.Name -ne 'userdata' } |
-    ForEach-Object {
-      Remove-Item -LiteralPath $_.FullName -Recurse -Force
-    }
-}
-
-Write-UpdaterLog "Waiting for parent process $ParentPid"
-$deadline = (Get-Date).AddSeconds(120)
-while (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue) {
-  if ((Get-Date) -gt $deadline) {
-    Write-UpdaterLog 'Timed out waiting for application to exit'
-    exit 1
-  }
-  Start-Sleep -Milliseconds 500
-}
-
-$updatesRoot = Join-Path $SoftwareDir 'userdata\updates'
-$backupRoot = Join-Path $updatesRoot 'backups'
-New-Item -ItemType Directory -Force -Path $backupRoot | Out-Null
-$backupDir = Join-Path $backupRoot ("backup-" + (Get-Date -Format 'yyyyMMdd-HHmmss'))
-New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
-$exePath = Join-Path $SoftwareDir 'git_gui_expand.exe'
-
-try {
-  Write-UpdaterLog "Creating backup at $backupDir"
-  Get-ChildItem -LiteralPath $SoftwareDir -Force |
-    Where-Object { $_.Name -ne 'userdata' } |
-    ForEach-Object {
-      Copy-Item -LiteralPath $_.FullName -Destination $backupDir -Recurse -Force
-    }
-
-  Write-UpdaterLog 'Removing previous application files'
-  Remove-AppItems
-  Write-UpdaterLog "Copying staged update from $StageDir"
-  Get-ChildItem -LiteralPath $StageDir -Force |
-    Copy-Item -Destination $SoftwareDir -Recurse -Force
-
-  if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
-    throw 'Updated executable is missing'
-  }
-
-  $newProcess = Start-Process -FilePath $exePath -WorkingDirectory $SoftwareDir -PassThru
-  Start-Sleep -Seconds 2
-  if ($newProcess.HasExited) {
-    throw "Updated application exited during startup with code $($newProcess.ExitCode)"
-  }
-  Write-UpdaterLog 'Update installed; application restarted'
-  Remove-Item -LiteralPath $StageDir -Recurse -Force -ErrorAction SilentlyContinue
-  Remove-Item -LiteralPath $ArchivePath -Force -ErrorAction SilentlyContinue
-
-  Get-ChildItem -LiteralPath $backupRoot -Directory |
-    Sort-Object LastWriteTime -Descending |
-    Select-Object -Skip 2 |
-    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-} catch {
-  Write-UpdaterLog "Update failed: $($_.Exception.Message)"
-  try {
-    Remove-AppItems
-    Get-ChildItem -LiteralPath $backupDir -Force |
-      Copy-Item -Destination $SoftwareDir -Recurse -Force
-    if (Test-Path -LiteralPath $exePath -PathType Leaf) {
-      Start-Process -FilePath $exePath -WorkingDirectory $SoftwareDir
-    }
-    Write-UpdaterLog 'Rollback completed'
-  } catch {
-    Write-UpdaterLog "Rollback failed: $($_.Exception.Message)"
-  }
-  exit 1
-}
-''';
 }

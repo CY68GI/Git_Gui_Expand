@@ -5,6 +5,8 @@
 当前状态：开发与验证目标。
 
 - Flutter Windows runner 已生成。
+- 原生 `GitGuiExpandLauncher.exe` 负责共享 userdata、版本切换和启动失败回滚。
+- 发布结构使用 `versions/<version>`，当前版本由 `current-version.txt` 指定。
 - 原生文件夹选择器通过 PowerShell WinForms 调用。
 - 外链通过 PowerShell `Start-Process` 打开。
 - Windows ICO 包含 16 到 256 像素的圆角矩形树形图标。

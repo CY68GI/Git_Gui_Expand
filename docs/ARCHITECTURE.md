@@ -33,7 +33,8 @@ GitService ───────── SettingsService
 | `AppLogService` | 写入普通日志和详细日志，提供读取与打开目录 |
 | `AppTheme` | 浅色、深色主题；`ThemeMode.system` 跟随设备 |
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
-| `UpdateInstallerService` | 下载、SHA-256 校验、解压、验证和启动更新助手 |
+| `UpdateInstallerService` | 下载、SHA-256 校验、准备独立版本目录并写入 pending 标记 |
+| `GitGuiExpandLauncher` | 原生 Windows 启动器，切换版本、重启和失败回滚 |
 | `FolderPickerService` | Windows 原生文件夹选择器，通过独立 PowerShell 进程 |
 | `FontCatalogService` | 读取 Windows InstalledFontCollection 或跨平台 fontconfig 字体 |
 
@@ -65,17 +66,16 @@ GitService ───────── SettingsService
 
 ## 自动更新
 
-1. `UpdateService` 读取最新 Release，并只选择文件名包含 `windows`、`x64`、
-   且 API 提供 `sha256:` digest 的 ZIP。
+1. `UpdateService` 读取最新 Release，并只选择带 SHA-256 的 Windows x64 ZIP。
 2. 下载文件写入 `userdata/updates`，随后调用 Windows `Get-FileHash` 校验。
-3. PowerShell 解压到 `userdata/updates/stage-v<version>`，验证
-   `git_gui_expand.exe`、Flutter `data` 和 `version.json`。
-4. 更新助手以隐藏进程启动，等待当前应用退出。
-5. 助手将除 `userdata` 外的程序文件备份到 `updates/backups`，替换文件并启动新版本。
-6. 新进程两秒内异常退出、文件复制失败或可执行文件缺失时，删除新文件、恢复备份并
-   启动旧版本。
+3. 解压到 `userdata/updates/stage-v<version>`，寻找发布包中的
+   `versions/<version>`。
+4. 验证 EXE、`data/app.so`、`data/flutter_assets` 和 `version.json`。
+5. 将已验证目录移动到根目录 `versions/<version>`，写入 `pending-version.txt`。
+6. 主应用退出后，Launcher 切换 `current-version.txt` 并启动新版本。
+7. 新版本若在 8 秒内退出，Launcher 恢复 `rollback-version.txt`。
 
-更新助手脚本自身和全部下载/备份数据都在软件目录内，不写入用户配置目录。
+运行中的版本不会被覆盖。`userdata` 位于 Launcher 根目录，由全部版本共享。
 
 Release 说明由 `tool/generate_release_notes.ps1` 生成。脚本从当前标签的父提交
 寻找上一个标签，读取 CHANGELOG 中当前标签之前、上个标签之后的全部版本小节，并收集
@@ -107,6 +107,19 @@ Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` �
 `tool/generate_app_icons.ps1` 从同一几何规则生成多尺寸 Windows ICO、macOS
 AppIcon PNG、Linux 预留 PNG 和 Flutter 资源图。树形节点与界面品牌内容保持一致，
 外轮廓始终是透明背景上的圆角矩形。
+
+## 版本目录
+
+```text
+GitGuiExpandLauncher.exe
+current-version.txt
+pending-version.txt
+versions/<version>/
+userdata/
+```
+
+Launcher 和 `userdata` 在版本切换时保持不变。版本字符串只允许字母、数字、点、横线和
+下划线，防止目录穿越。
 
 ## 文件枚举
 

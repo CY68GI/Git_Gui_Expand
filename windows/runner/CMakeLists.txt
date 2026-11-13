@@ -38,3 +38,17 @@ target_include_directories(${BINARY_NAME} PRIVATE "${CMAKE_SOURCE_DIR}")
 
 # Run the Flutter tool portions of the build. This must not be removed.
 add_dependencies(${BINARY_NAME} flutter_assemble)
+
+# Stable launcher for versioned application directories.
+add_executable(git_gui_launcher WIN32
+  "../launcher/main.cpp"
+  "../launcher/launcher.rc"
+)
+set_target_properties(git_gui_launcher PROPERTIES
+  OUTPUT_NAME "GitGuiExpandLauncher"
+)
+apply_standard_settings(git_gui_launcher)
+target_compile_options(git_gui_launcher PRIVATE "/utf-8")
+target_link_libraries(git_gui_launcher PRIVATE "shell32.lib")
+install(TARGETS git_gui_launcher RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
+  COMPONENT Runtime)

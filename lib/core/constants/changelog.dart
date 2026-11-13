@@ -14,6 +14,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.8.1',
+    date: '2026-11-13',
+    title: 'Launcher 多版本安全更新',
+    items: [
+      'Windows 发布结构改为稳定 Launcher 与 versions/<版本> 独立目录。',
+      '自动更新只准备并校验新版本目录，不再覆盖正在运行的程序文件。',
+      '主程序退出后由 Launcher 原子切换版本并自动重启。',
+      '新版本启动失败时自动恢复上一版本。',
+      'userdata 由所有版本共享，升级不会覆盖设置、日志或最近仓库记录。',
+      '修复 detached PowerShell 更新助手未执行的问题。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.8.0',
     date: '2026-11-13',
     title: '多平台远端与安全字号',

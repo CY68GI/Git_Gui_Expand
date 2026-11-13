@@ -1,0 +1,31 @@
+#pragma code_page(65001)
+#include "winres.h"
+
+#define IDI_APP_ICON 101
+IDI_APP_ICON ICON "../runner/resources/app_icon.ico"
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 0,8,1,10
+ PRODUCTVERSION 0,8,1,10
+ FILEFLAGSMASK VS_FFI_FILEFLAGSMASK
+ FILEOS VOS__WINDOWS32
+ FILETYPE VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "CY68GI"
+            VALUE "FileDescription", "Git GUI Expand Launcher"
+            VALUE "FileVersion", "0.8.1.10"
+            VALUE "InternalName", "GitGuiExpandLauncher"
+            VALUE "OriginalFilename", "GitGuiExpandLauncher.exe"
+            VALUE "ProductName", "Git GUI Expand"
+            VALUE "ProductVersion", "0.8.1.10"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END

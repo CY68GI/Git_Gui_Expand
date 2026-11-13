@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
-import 'package:git_gui_expand/core/services/update_installer_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
 
 void main() {
@@ -89,27 +88,21 @@ void main() {
     expect(service.compareVersions('0.4.9', '0.5.0'), lessThan(0));
   });
 
-  test('generated PowerShell updater script parses successfully', () async {
-    if (!Platform.isWindows) return;
-    final script = File(
-      '${temporaryDirectory.path}${Platform.pathSeparator}apply-update.ps1',
-    );
-    await script.writeAsString(UpdateInstallerService.updaterScript);
-    final result = await Process.run(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-Command',
-        r'[scriptblock]::Create([IO.File]::ReadAllText($env:UPDATE_SCRIPT)) | Out-Null',
-      ],
-      environment: {'UPDATE_SCRIPT': script.path},
-      includeParentEnvironment: true,
-      runInShell: false,
-    );
+  test('launcher configuration and version markers are present', () async {
+    final launcherSource = await File(
+      '${Directory.current.path}${Platform.pathSeparator}windows'
+      '${Platform.pathSeparator}launcher${Platform.pathSeparator}main.cpp',
+    ).readAsString();
+    final cmake = await File(
+      '${Directory.current.path}${Platform.pathSeparator}windows'
+      '${Platform.pathSeparator}runner${Platform.pathSeparator}CMakeLists.txt',
+    ).readAsString();
 
-    expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
-    expect((result.stderr as String).trim(), isEmpty);
+    expect(launcherSource, contains('pending-version.txt'));
+    expect(launcherSource, contains('current-version.txt'));
+    expect(launcherSource, contains('GIT_GUI_EXPAND_ROOT'));
+    expect(launcherSource, contains('rollback-version.txt'));
+    expect(cmake, contains('GitGuiExpandLauncher'));
   });
 
   test('release notes include only the previous-tag commit range', () async {
