@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/app_models.dart';
 import '../../core/models/settings_models.dart';
+import '../../core/services/folder_picker_service.dart';
 import '../../core/utils/path_utils.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
+
+enum _FileContextAction { revealInExplorer, openWithDefaultApp }
 
 class FileExplorerPanel extends StatefulWidget {
   const FileExplorerPanel({
@@ -32,6 +35,7 @@ class FileExplorerPanel extends StatefulWidget {
 
 class _FileExplorerPanelState extends State<FileExplorerPanel> {
   final ScrollController _scrollController = ScrollController();
+  final FolderPickerService _systemFiles = const FolderPickerService();
 
   @override
   void dispose() {
@@ -292,10 +296,74 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
                     entry.relativePath,
                   )
                 : null,
+            onContextMenu: entry.isDirectory
+                ? null
+                : (position) => _showFileContextMenu(entry, position),
           );
         },
       ),
     );
+  }
+
+  Future<void> _showFileContextMenu(
+    RepositoryEntry entry,
+    Offset globalPosition,
+  ) async {
+    widget.controller.setActiveSide(widget.side);
+    if (!widget.state.selectedPaths.contains(entry.relativePath)) {
+      widget.controller.selectOnly(widget.side, entry.relativePath);
+    }
+    final overlay = Overlay.of(context).context.findRenderObject();
+    if (overlay is! RenderBox) return;
+    final localPosition = overlay.globalToLocal(globalPosition);
+    final action = await showMenu<_FileContextAction>(
+      context: context,
+      position: RelativeRect.fromRect(
+        Rect.fromLTWH(localPosition.dx, localPosition.dy, 0, 0),
+        Offset.zero & overlay.size,
+      ),
+      items: const [
+        PopupMenuItem(
+          value: _FileContextAction.revealInExplorer,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.folder_open_rounded, size: 19),
+            title: Text('用文件资源打开'),
+          ),
+        ),
+        PopupMenuItem(
+          value: _FileContextAction.openWithDefaultApp,
+          child: ListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.open_in_new_rounded, size: 19),
+            title: Text('用默认打开方式打开'),
+          ),
+        ),
+      ],
+    );
+    if (action == null || !mounted) return;
+    final absolutePath = absoluteRepositoryPath(
+      widget.rootPath,
+      entry.relativePath,
+    );
+    try {
+      switch (action) {
+        case _FileContextAction.revealInExplorer:
+          await _systemFiles.revealFileInExplorer(absolutePath);
+        case _FileContextAction.openWithDefaultApp:
+          await _systemFiles.openFileWithDefaultApp(absolutePath);
+      }
+    } catch (error) {
+      if (mounted) {
+        widget.showOutcome(
+          OperationOutcome.failure(
+            '无法打开文件：${error.toString().replaceFirst('FileSystemException: ', '')}',
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildFooter(BuildContext context, int selectedCount) {
@@ -339,6 +407,7 @@ class _ExplorerRow extends StatefulWidget {
     required this.onToggle,
     required this.onActivate,
     this.onOpen,
+    this.onContextMenu,
   });
 
   final RepositoryEntry entry;
@@ -347,6 +416,7 @@ class _ExplorerRow extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onActivate;
   final VoidCallback? onOpen;
+  final ValueChanged<Offset>? onContextMenu;
 
   @override
   State<_ExplorerRow> createState() => _ExplorerRowState();
@@ -367,6 +437,9 @@ class _ExplorerRowState extends State<_ExplorerRow> {
         behavior: HitTestBehavior.opaque,
         onTapDown: (_) => widget.onActivate(),
         onDoubleTap: widget.onOpen,
+        onSecondaryTapDown: widget.onContextMenu == null
+            ? null
+            : (details) => widget.onContextMenu!(details.globalPosition),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 110),
           height: 39,

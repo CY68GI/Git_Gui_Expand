@@ -120,6 +120,12 @@ void main() {
       expect(source, contains(r"$dialog.Title = '打开 Git 仓库'"));
       expect(source, isNot(contains('FolderBrowserDialog')));
       expect(source, contains("'explorer.exe'"));
+      expect(source, contains(r"'/select,$file'"));
+      expect(source, contains('openFileWithDefaultApp'));
+      expect(
+        source,
+        contains(r'Start-Process -FilePath $env:GIT_GUI_OPEN_FILE'),
+      );
       final projectPage = await File(
         '${Directory.current.path}${Platform.pathSeparator}lib'
         '${Platform.pathSeparator}features${Platform.pathSeparator}project'

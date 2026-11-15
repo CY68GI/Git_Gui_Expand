@@ -114,5 +114,92 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
     throw UnsupportedError('当前平台不支持打开项目目录。');
   }
 
+  Future<void> revealFileInExplorer(String filePath) async {
+    final file = File(filePath).absolute.path;
+    if (!await File(file).exists()) {
+      throw FileSystemException('文件不存在', file);
+    }
+    _log.detail('system', '在文件资源管理器中定位文件：$file');
+    if (Platform.isWindows) {
+      await Process.start(
+        'explorer.exe',
+        ['/select,$file'],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    final parent = File(file).parent.path;
+    if (Platform.isMacOS) {
+      await Process.start(
+        'open',
+        ['-R', file],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    if (Platform.isLinux) {
+      await Process.start(
+        'xdg-open',
+        [parent],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    throw UnsupportedError('当前平台不支持在文件资源管理器中定位文件。');
+  }
+
+  Future<void> openFileWithDefaultApp(String filePath) async {
+    final file = File(filePath).absolute.path;
+    if (!await File(file).exists()) {
+      throw FileSystemException('文件不存在', file);
+    }
+    _log.info('system', '使用默认打开方式打开文件：$file');
+    if (Platform.isWindows) {
+      final result = await Process.run(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          r'Start-Process -FilePath $env:GIT_GUI_OPEN_FILE',
+        ],
+        environment: {'GIT_GUI_OPEN_FILE': file},
+        includeParentEnvironment: true,
+        runInShell: false,
+      );
+      if (result.exitCode != 0) {
+        throw FileSystemException(
+          (result.stderr as String).trim().isEmpty
+              ? '无法使用默认打开方式打开文件'
+              : (result.stderr as String).trim(),
+          file,
+        );
+      }
+      return;
+    }
+    if (Platform.isMacOS) {
+      await Process.start(
+        'open',
+        [file],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    if (Platform.isLinux) {
+      await Process.start(
+        'xdg-open',
+        [file],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    throw UnsupportedError('当前平台不支持使用默认打开方式打开文件。');
+  }
+
   String _escapePowerShell(String value) => value.replaceAll("'", "''");
 }

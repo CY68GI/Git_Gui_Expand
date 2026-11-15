@@ -400,6 +400,14 @@ class RepositoryController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void selectOnly(ExplorerSide side, String path) {
+    final panel = panelFor(side);
+    _setPanel(side, panel.copyWith(selectedPaths: UnmodifiableSetView({path})));
+    activeSide = side;
+    _log.detail('selection', '${side.name} 仅选中 $path');
+    notifyListeners();
+  }
+
   void selectAll(ExplorerSide side) {
     final panel = panelFor(side);
     final selection = panel.entries.map((entry) => entry.relativePath).toSet();
@@ -1055,7 +1063,8 @@ class RepositoryController extends ChangeNotifier {
               '项目 ${preview.projectName}，目标分支 ${preview.targetBranch}。'
               '将备份并删除原 ${preview.branchCount} 个分支、'
               '${preview.tagCount} 个标签，然后只保留一个空提交：'
-              '“${preview.emptyCommitMessage}”。本地文件内容不变。'
+              '“${preview.emptyCommitMessage}”。本地文件内容不变，'
+              '但本地索引会重置为空，刷新后文件显示为未跟踪。'
               '受保护分支或服务器不支持原子推送时，整个操作会失败。',
           run: () => _applyClearRemote(preview),
           isDangerous: true,
@@ -1071,10 +1080,12 @@ class RepositoryController extends ChangeNotifier {
         preview.remoteName,
         preview: preview,
       );
+      await _reloadAfterMutation();
       return OperationOutcome.success(
         '已清空远端 ${preview.remoteName} 的历史。'
         '${result.targetBranch} 现指向空提交 '
-        '${result.emptyCommitHash.substring(0, 8)}；本地内容未改变。',
+        '${result.emptyCommitHash.substring(0, 8)}；'
+        '本地索引已重置为空，文件已保留并显示为未跟踪。',
       );
     } catch (error) {
       _log.error('remote-clear', '清空远端失败：$error');

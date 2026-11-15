@@ -2,7 +2,7 @@ class AppInfo {
   const AppInfo._();
 
   static const String englishName = 'Git GUI Expand';
-  static const String version = '0.9.0';
+  static const String version = '0.9.2';
   static const String owner = 'CY68GI';
   static const String repository = 'Git_Gui_Expand';
   static const String repositoryUrl =

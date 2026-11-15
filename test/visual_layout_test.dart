@@ -1,14 +1,18 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
+import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
+import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
 void main() {
@@ -188,6 +192,57 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/settings_font_dark_110.png'),
+    );
+  });
+
+  testWidgets('file context menu stays readable in dark 110 percent', (
+    WidgetTester tester,
+  ) async {
+    await _setViewport(tester);
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    controller.leftPanel = const ExplorerPanelState(
+      entries: [
+        RepositoryEntry(
+          relativePath: 'docs/一个很长很长的使用说明文件名称.md',
+          name: '一个很长很长的使用说明文件名称.md',
+          kind: EntryKind.file,
+          size: 2048,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      _visualApp(
+        SizedBox(
+          width: 900,
+          height: 560,
+          child: FileExplorerPanel(
+            side: ExplorerSide.left,
+            state: controller.leftPanel,
+            rootPath: 'C:\\Projects\\Git_Gui_Expand',
+            settings: const AppSettings(),
+            isActive: true,
+            controller: controller,
+            showOutcome: (_) {},
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('一个很长很长的使用说明文件名称.md')),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryMouseButton,
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('用文件资源打开'), findsOneWidget);
+    expect(find.text('用默认打开方式打开'), findsOneWidget);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/file_context_menu_dark_110.png'),
     );
   });
 }

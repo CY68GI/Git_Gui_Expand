@@ -440,6 +440,26 @@ class GitService {
     if (inspected.remoteName != remoteName) {
       throw const GitException('远端清空预览与实际远端不一致。');
     }
+    final localBranch = (await currentBranch()).trim();
+    if (localBranch.isEmpty ||
+        localBranch == '尚未提交' ||
+        localBranch.startsWith('detached@')) {
+      throw const GitException('当前没有可用于同步清空历史的本地分支。');
+    }
+    if (localBranch != inspected.targetBranch) {
+      throw GitException(
+        '当前本地分支为 $localBranch，但远端目标分支为 '
+        '${inspected.targetBranch}。请先切换到目标分支再执行。',
+      );
+    }
+    final localHeadBefore = await _run([
+      'rev-parse',
+      '--verify',
+      'HEAD',
+    ], allowFailure: true);
+    if (!localHeadBefore.success) {
+      throw const GitException('当前本地分支没有可备份的提交。');
+    }
 
     _log.warning(
       'remote-clear',
@@ -514,10 +534,35 @@ class GitService {
             .join('\n'),
       );
     }
+    final localBackupRef =
+        'refs/gitgui-expand/backup/local/$remoteName/heads/'
+        '${inspected.targetBranch}';
+    await _run(['update-ref', localBackupRef, localHeadBefore.stdout.trim()]);
+    await _run(['reset', '--mixed', emptyCommit]);
+    final localHeadAfter = await _run(['rev-parse', '--verify', 'HEAD']);
+    if (localHeadAfter.stdout.trim() != emptyCommit) {
+      throw const GitException('本地分支未能同步到新的空提交。');
+    }
+    final localIndex = await _run(['ls-files', '--cached']);
+    if (localIndex.stdout.trim().isNotEmpty) {
+      throw const GitException('本地索引未能重置为空；工作区文件仍然保留。');
+    }
+    final fetchResult = await _run([
+      'fetch',
+      '--prune',
+      remoteName,
+    ], allowFailure: true);
+    if (!fetchResult.success) {
+      _log.warning(
+        'remote-clear',
+        '远端已清空，但更新本地 remote-tracking 引用失败：'
+            '${fetchResult.output.trim()}',
+      );
+    }
     _log.warning(
       'remote-clear',
       '远端 $remoteName 历史已替换为空提交 $emptyCommit，'
-          '保留分支 ${inspected.targetBranch}',
+          '本地 ${inspected.targetBranch} 已同步，原提交备份到 $localBackupRef',
     );
     return RemoteClearResult(
       remoteName: remoteName,
@@ -586,13 +631,11 @@ class GitService {
     required String projectName,
     required String targetBranch,
   }) {
-    final now = DateTime.now();
-    String two(int value) => value.toString().padLeft(2, '0');
-    final timestamp =
-        '${now.year}-${two(now.month)}-${two(now.day)} '
-        '${two(now.hour)}:${two(now.minute)}:${two(now.second)}';
-    return '$timestamp 仓库已清除，第一次空提交'
-        '（$projectName / $targetBranch）';
+    return GitRemote.emptyHistoryCommitMessage(
+      timestamp: DateTime.now(),
+      projectSlug: projectName,
+      branch: targetBranch,
+    );
   }
 
   Future<void> stageAll() async {

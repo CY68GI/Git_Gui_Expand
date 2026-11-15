@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/app.dart';
 import 'package:git_gui_expand/core/constants/app_info.dart';
+import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
+import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
@@ -12,6 +15,7 @@ import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/update_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/user_guide_dialog.dart';
+import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 import 'package:git_gui_expand/features/start/start_view.dart';
 import 'package:git_gui_expand/features/project/widgets/app_outcome_snack_bar.dart';
@@ -266,6 +270,58 @@ void main() {
     expect(message.style?.color, Colors.white);
     expect(message.style?.fontSize, greaterThanOrEqualTo(13));
     expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
+  });
+
+  testWidgets('file row secondary click opens the requested context menu', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    const entries = [
+      RepositoryEntry(
+        relativePath: 'README.md',
+        name: 'README.md',
+        kind: EntryKind.file,
+        size: 128,
+      ),
+    ];
+    controller.leftPanel = const ExplorerPanelState(entries: entries);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 700,
+            height: 500,
+            child: FileExplorerPanel(
+              side: ExplorerSide.left,
+              state: controller.leftPanel,
+              rootPath: 'C:\\Projects\\sample_repo',
+              settings: const AppSettings(),
+              isActive: true,
+              controller: controller,
+              showOutcome: (_) {},
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    final gesture = await tester.startGesture(
+      tester.getCenter(find.text('README.md')),
+      kind: PointerDeviceKind.mouse,
+      buttons: kSecondaryMouseButton,
+    );
+    await gesture.up();
+    await tester.pumpAndSettle();
+
+    expect(find.text('用文件资源打开'), findsOneWidget);
+    expect(find.text('用默认打开方式打开'), findsOneWidget);
   });
 }
 

@@ -363,7 +363,8 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                 Text(
                   '这是不可撤销的高风险操作。软件会先备份远端引用，然后把 '
                   '${preview.targetBranch} 强制替换为一个不含文件的空根提交，'
-                  '并删除其他分支和标签。本地工作区与索引不会被修改。',
+                  '删除其他分支和标签，并把本地同名分支与索引同步到该空提交。'
+                  '本地文件不会删除，刷新后会显示为未跟踪。',
                   style: const TextStyle(fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 10),

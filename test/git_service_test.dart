@@ -175,6 +175,15 @@ void main() {
       ),
       'CY68EWZRY/Git_Gui_Expand',
     );
+    expect(
+      GitRemote.emptyHistoryCommitMessage(
+        timestamp: DateTime(2026, 11, 16, 1, 2, 3),
+        projectSlug: 'CY68GI/Self_learning_to_code',
+        branch: 'main',
+      ),
+      '2026-11-16 01:02:03 仓库已清除，这是第一次空提交'
+      '(CY68GI/Self_learning_to_code/main)，来自软件Git GUI Expand的功能',
+    );
     await service.addRemote(
       'gitee',
       'git@gitee.com:CY68EWZRY/Git_Gui_Expand.git',
@@ -242,7 +251,8 @@ void main() {
       preview.confirmationText,
       '${repository.path.split(Platform.pathSeparator).last}/$branch',
     );
-    expect(preview.emptyCommitMessage, contains('仓库已清除，第一次空提交'));
+    expect(preview.emptyCommitMessage, contains('仓库已清除，这是第一次空提交'));
+    expect(preview.emptyCommitMessage, contains('来自软件Git GUI Expand的功能'));
     expect(preview.refs, containsAll(['refs/heads/$branch', 'refs/tags/v1']));
 
     final result = await service.clearRemote('origin', preview: preview);
@@ -264,13 +274,35 @@ void main() {
       runInShell: false,
       stdoutEncoding: utf8,
     );
-    expect(commitObject.stdout, contains('仓库已清除，第一次空提交'));
+    expect(commitObject.stdout, contains('仓库已清除，这是第一次空提交'));
+    expect(commitObject.stdout, contains('来自软件Git GUI Expand的功能'));
     expect(commitObject.stdout, isNot(contains('parent ')));
     expect(
       await File('${repository.path}${Platform.pathSeparator}alpha.txt')
           .readAsString(),
       'alpha',
     );
+    final localHead = await Process.run(
+      'git',
+      ['rev-parse', 'HEAD'],
+      workingDirectory: repository.path,
+      runInShell: false,
+    );
+    expect((localHead.stdout as String).trim(), result.emptyCommitHash);
+    final localIndex = await Process.run(
+      'git',
+      ['ls-files', '--cached'],
+      workingDirectory: repository.path,
+      runInShell: false,
+    );
+    expect((localIndex.stdout as String).trim(), isEmpty);
+    final localStatus = await Process.run(
+      'git',
+      ['status', '--porcelain=v1'],
+      workingDirectory: repository.path,
+      runInShell: false,
+    );
+    expect(localStatus.stdout, contains('?? alpha.txt'));
 
     final backup = await Process.run(
       'git',
@@ -346,6 +378,45 @@ void main() {
         'refs/heads/main',
       ], runInShell: false);
       expect((remoteHead.stdout as String).trim(), result.emptyCommitHash);
+    },
+  );
+
+  test(
+    'refuses to clear when local and remote target branches differ',
+    () async {
+      final remote = await Directory.systemTemp.createTemp(
+        'git_gui_clear_remote_branch_mismatch_',
+      );
+      addTearDown(() async {
+        if (await remote.exists()) {
+          await remote.delete(recursive: true);
+        }
+      });
+      await _git(remote, ['init', '--bare']);
+      await _git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+      await _git(repository, ['remote', 'add', 'origin', remote.path]);
+      await _git(repository, ['push', 'origin', 'main']);
+      await _git(repository, ['checkout', '-b', 'feature']);
+
+      final preview = await service.previewClearRemote('origin');
+      expect(preview.targetBranch, 'main');
+      await expectLater(
+        service.clearRemote('origin', preview: preview),
+        throwsA(
+          isA<GitException>().having(
+            (error) => error.message,
+            'message',
+            contains('请先切换到目标分支'),
+          ),
+        ),
+      );
+      final refs = await Process.run(
+        'git',
+        ['ls-remote', '--heads', '--refs', remote.path],
+        workingDirectory: repository.path,
+        runInShell: false,
+      );
+      expect(refs.stdout, contains('refs/heads/main'));
     },
   );
 }

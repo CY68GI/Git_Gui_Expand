@@ -213,6 +213,16 @@ void main() {
             .readAsString(),
         'alpha',
       );
+      expect(controller.changedFiles, isNotEmpty);
+      expect(
+        controller.changedFiles.any(
+          (status) =>
+              status.path == 'alpha.txt' &&
+              status.indexCode == '?' &&
+              status.worktreeCode == '?',
+        ),
+        isTrue,
+      );
     },
   );
 

@@ -74,6 +74,20 @@ class GitRemote {
         .toList(growable: false);
     return segments.isEmpty ? null : segments.join('/');
   }
+
+  static String emptyHistoryCommitMessage({
+    required DateTime timestamp,
+    required String projectSlug,
+    required String branch,
+  }) {
+    String two(int value) => value.toString().padLeft(2, '0');
+    final formattedTimestamp =
+        '${timestamp.year}-${two(timestamp.month)}-${two(timestamp.day)} '
+        '${two(timestamp.hour)}:${two(timestamp.minute)}:'
+        '${two(timestamp.second)}';
+    return '$formattedTimestamp 仓库已清除，这是第一次空提交'
+        '($projectSlug/$branch)，来自软件Git GUI Expand的功能';
+  }
 }
 
 class RemoteClearPreview {

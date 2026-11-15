@@ -37,7 +37,7 @@ GitService ───────── SettingsService
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
 | `UpdateInstallerService` | 下载、SHA-256 校验、准备独立版本目录并写入 pending 标记 |
 | `GitGuiExpandLauncher` | 原生 Windows 启动器，切换版本、重启和失败回滚 |
-| `FolderPickerService` | Windows 标准“打开”对话框与项目目录启动 |
+| `FolderPickerService` | Windows 标准“打开”对话框、目录启动、文件定位与默认应用打开 |
 | `FontCatalogService` | 读取 Windows InstalledFontCollection 或跨平台 fontconfig 字体 |
 
 ## 本地数据
@@ -88,6 +88,8 @@ GitService ───────── SettingsService
 把原引用 `git fetch` 到 `refs/gitgui-expand/backup/<remote>`；然后使用
 `git mktree` 和 `git commit-tree` 创建空目录树及空根提交，不修改工作区或索引。
 最后以 `git push --atomic --force` 把目标分支替换为该提交，并删除其它 heads/tags。
+推送成功后使用 `git reset --mixed` 把本地同名分支和索引同步到空提交，磁盘文件仍保留，
+因此刷新后会显示为未跟踪。
 平台保护、atomic push 不支持、认证或网络失败都会终止并记录。
 
 ## 自动更新
