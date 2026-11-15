@@ -45,4 +45,75 @@ class GitRemote {
     if (uri == null || uri.userInfo.isEmpty) return url;
     return url.replaceFirst(uri.userInfo, '***');
   }
+
+  static String? repositorySlug(String rawUrl) {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return null;
+    String? repositoryPath;
+    final scpMatch = RegExp(r'^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:(.+)$')
+        .firstMatch(url);
+    if (scpMatch != null) {
+      repositoryPath = scpMatch.group(1);
+    } else {
+      final uri = Uri.tryParse(url);
+      if (uri != null &&
+          const {'https', 'ssh', 'git'}.contains(uri.scheme) &&
+          uri.host.isNotEmpty) {
+        repositoryPath = uri.path;
+      }
+    }
+    if (repositoryPath == null) return null;
+    final normalized = repositoryPath
+        .replaceAll('\\', '/')
+        .replaceFirst(RegExp(r'^/+'), '')
+        .replaceFirst(RegExp(r'\.git$'), '')
+        .replaceFirst(RegExp(r'/+$'), '');
+    final segments = normalized
+        .split('/')
+        .where((segment) => segment.isNotEmpty)
+        .toList(growable: false);
+    return segments.isEmpty ? null : segments.join('/');
+  }
+}
+
+class RemoteClearPreview {
+  const RemoteClearPreview({
+    required this.remoteName,
+    required this.projectName,
+    required this.targetBranch,
+    required this.emptyCommitMessage,
+    required this.refs,
+    required this.backupRefspecs,
+  });
+
+  final String remoteName;
+  final String projectName;
+  final String targetBranch;
+  final String emptyCommitMessage;
+  final List<String> refs;
+  final List<String> backupRefspecs;
+
+  int get branchCount =>
+      refs.where((ref) => ref.startsWith('refs/heads/')).length;
+  int get tagCount => refs.where((ref) => ref.startsWith('refs/tags/')).length;
+  bool get isEmpty => refs.isEmpty;
+  String get confirmationText => '$projectName/$targetBranch';
+}
+
+class RemoteClearResult {
+  const RemoteClearResult({
+    required this.remoteName,
+    required this.deletedRefs,
+    required this.backupRefspecs,
+    required this.emptyCommitHash,
+    required this.targetBranch,
+    required this.commitMessage,
+  });
+
+  final String remoteName;
+  final List<String> deletedRefs;
+  final List<String> backupRefspecs;
+  final String emptyCommitHash;
+  final String targetBranch;
+  final String commitMessage;
 }

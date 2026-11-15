@@ -82,12 +82,15 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          SelectableText(
-                            _log.logsDirectoryPath,
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: colors.onSurfaceVariant,
+                          SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SelectableText(
+                              _log.logsDirectoryPath,
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                color: colors.onSurfaceVariant,
+                              ),
                             ),
                           ),
                         ],
@@ -195,7 +198,8 @@ class _LogPane extends StatelessWidget {
                   emptyMessage,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 11.5,
+                    fontSize: 12.5,
+                    height: 1.45,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
@@ -207,7 +211,7 @@ class _LogPane extends StatelessWidget {
                 child: SelectableText(
                   text,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
                     height: 1.55,
                     color: colors.onSurface,
                   ),

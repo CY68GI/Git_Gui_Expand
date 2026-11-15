@@ -134,7 +134,7 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
                   child: Text(
                     '粘贴目标',
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 10.5,
                       color: colors.primary,
                       fontWeight: FontWeight.w700,
                     ),
@@ -310,13 +310,13 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
         children: [
           Text(
             '${widget.state.entries.length} 项',
-            style: TextStyle(fontSize: 10.5, color: colors.onSurfaceVariant),
+            style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
           ),
           const Spacer(),
           Text(
             selectedCount == 0 ? '双击文件夹进入' : '已选 $selectedCount 项',
             style: TextStyle(
-              fontSize: 10.5,
+              fontSize: 11.5,
               color: selectedCount == 0
                   ? colors.onSurfaceVariant
                   : colors.primary,
@@ -438,7 +438,7 @@ class _ExplorerRowState extends State<_ExplorerRow> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 11.5,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
@@ -547,7 +547,7 @@ class _StatusBadge extends StatelessWidget {
           labels[first] ?? first,
           style: TextStyle(
             color: color,
-            fontSize: 9,
+            fontSize: 10,
             fontWeight: FontWeight.w800,
           ),
         ),
@@ -603,7 +603,7 @@ class _BreadcrumbPart extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            fontSize: 10.5,
+            fontSize: 11.5,
             fontWeight: isLast ? FontWeight.w700 : FontWeight.w500,
             color: isLast ? colors.onSurface : colors.onSurfaceVariant,
           ),
@@ -623,7 +623,7 @@ class _ColumnLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 9.5,
+        fontSize: 11,
         fontWeight: FontWeight.w700,
         letterSpacing: 0.5,
         color: Theme.of(context).colorScheme.onSurfaceVariant,

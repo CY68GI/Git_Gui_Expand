@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/models/git_remote.dart';
 import '../repository/repository_controller.dart';
+import 'operation_plan_dialog.dart';
 
 class RemoteManagementDialog extends StatefulWidget {
   const RemoteManagementDialog({super.key, required this.controller});
@@ -18,6 +19,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   String? _editingName;
   String? _message;
   bool _messageIsError = false;
+  bool _inspectingClear = false;
 
   @override
   void initState() {
@@ -47,7 +49,10 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
       insetPadding: const EdgeInsets.all(28),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 820, maxHeight: 650),
+        constraints: BoxConstraints(
+          maxWidth: 900,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.86,
+        ),
         child: Column(
           children: [
             Container(
@@ -74,29 +79,50 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                     ),
                   ),
                   const SizedBox(width: 11),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        '远端仓库',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          '远端仓库',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '当前分支：${controller.branch.isEmpty ? '无' : controller.branch}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: colors.onSurfaceVariant,
+                        const SizedBox(height: 2),
+                        Tooltip(
+                          message:
+                              '当前分支：${controller.branch.isEmpty ? '无' : controller.branch}',
+                          child: Text(
+                            '当前分支：${controller.branch.isEmpty ? '无' : controller.branch}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const Spacer(),
                   OutlinedButton.icon(
-                    onPressed: controller.isBusy || controller.remotes.isEmpty
+                    onPressed: controller.isBusy || _inspectingClear
+                        ? null
+                        : _showOperationPlan,
+                    icon: const Icon(
+                      Icons.playlist_add_check_rounded,
+                      size: 16,
+                    ),
+                    label: Text('待执行 ${controller.pendingOperations.length}'),
+                  ),
+                  const SizedBox(width: 6),
+                  OutlinedButton.icon(
+                    onPressed:
+                        controller.isBusy ||
+                            _inspectingClear ||
+                            controller.remotes.isEmpty
                         ? null
                         : _confirmPushAll,
                     icon: const Icon(Icons.cloud_upload_outlined, size: 16),
@@ -142,7 +168,8 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                                 '尚未配置远端仓库。请在右侧添加 GitHub、Gitee、GitLab 或其他 Git 远端。',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: 12.5,
+                                  height: 1.45,
                                   color: colors.onSurfaceVariant,
                                 ),
                               ),
@@ -155,17 +182,18 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                               final remote = controller.remotes[index];
                               return _RemoteCard(
                                 remote: remote,
-                                busy: controller.isBusy,
+                                busy: controller.isBusy || _inspectingClear,
                                 onPush: () => _confirmPush(remote),
                                 onEdit: () => _startEdit(remote),
                                 onRemove: () => _confirmRemove(remote),
+                                onClear: () => _confirmClearRemote(remote),
                               );
                             },
                           ),
                   ),
                   Container(width: 1, color: colors.outlineVariant),
                   SizedBox(
-                    width: 300,
+                    width: 330,
                     child: SingleChildScrollView(
                       padding: const EdgeInsets.all(16),
                       child: Column(
@@ -180,10 +208,12 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            '支持 GitHub、Gitee、GitLab、Bitbucket 和任意标准 Git 远端。',
+                            '支持 GitHub、Gitee、GitLab、Bitbucket 和任意标准 Git 远端。'
+                            '所有修改会先加入待执行计划。远端右侧红色垃圾桶用于'
+                            '清空该远端全部分支和标签。',
                             style: TextStyle(
-                              fontSize: 9.5,
-                              height: 1.45,
+                              fontSize: 12,
+                              height: 1.5,
                               color: colors.onSurfaceVariant,
                             ),
                           ),
@@ -219,7 +249,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                               size: 17,
                             ),
                             label: Text(
-                              _editingName == null ? '添加远端' : '保存 URL',
+                              _editingName == null ? '加入添加计划' : '加入修改计划',
                             ),
                           ),
                           if (_editingName != null) ...[
@@ -252,7 +282,8 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                               child: SelectableText(
                                 _message!,
                                 style: TextStyle(
-                                  fontSize: 9.5,
+                                  fontSize: 12,
+                                  height: 1.4,
                                   color: _messageIsError
                                       ? colors.error
                                       : colors.primary,
@@ -273,6 +304,16 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
     );
   }
 
+  Future<void> _showOperationPlan() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => OperationPlanDialog(controller: widget.controller),
+    );
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   void _startEdit(GitRemote remote) {
     setState(() {
       _editingName = remote.name;
@@ -280,6 +321,123 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
       _urlController.text = remote.effectiveUrl;
       _message = null;
     });
+  }
+
+  Future<void> _confirmClearRemote(GitRemote remote) async {
+    setState(() {
+      _inspectingClear = true;
+      _message = '正在读取远端 ${remote.name} 的分支和标签…';
+      _messageIsError = false;
+    });
+    final inspection = await widget.controller.inspectRemoteForClear(
+      remote.name,
+    );
+    if (!mounted) return;
+    final preview = inspection.preview;
+    if (!inspection.isSuccess || preview == null) {
+      setState(() {
+        _inspectingClear = false;
+        _message = inspection.message;
+        _messageIsError = true;
+      });
+      return;
+    }
+    setState(() {
+      _inspectingClear = false;
+      _message = inspection.message;
+      _messageIsError = false;
+    });
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        final colors = Theme.of(context).colorScheme;
+        return AlertDialog(
+          icon: Icon(Icons.delete_forever_rounded, color: colors.error),
+          title: Text('清空远端历史 ${remote.name}？'),
+          content: SizedBox(
+            width: 600,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '这是不可撤销的高风险操作。软件会先备份远端引用，然后把 '
+                  '${preview.targetBranch} 强制替换为一个不含文件的空根提交，'
+                  '并删除其他分支和标签。本地工作区与索引不会被修改。',
+                  style: const TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 10),
+                SelectableText(
+                  '项目：${preview.projectName}\n'
+                  '目标分支：${preview.targetBranch}\n'
+                  '空提交说明：${preview.emptyCommitMessage}\n'
+                  '计划执行确认：${preview.confirmationText}',
+                  style: const TextStyle(fontSize: 12.5, height: 1.55),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  '${remote.platformLabel} 的默认分支通常受保护。'
+                  '如果服务器拒绝强制更新或删除，整个原子操作不会删除任何引用；'
+                  '需要先在托管平台临时解除默认分支保护。',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.5,
+                    color: colors.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  height: 210,
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(9),
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.22),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    child: SelectableText(
+                      preview.refs.isEmpty
+                          ? '远端当前没有分支或标签，将直接创建第一个空提交。'
+                          : preview.refs.join('\n'),
+                      style: const TextStyle(fontSize: 12, height: 1.45),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('取消'),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(context, true),
+              icon: const Icon(Icons.playlist_add_rounded, size: 18),
+              label: const Text('加入清空计划'),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true || !mounted) return;
+    final outcome = await widget.controller.queueClearRemote(preview);
+    if (!mounted) return;
+    setState(() {
+      _message = outcome.message;
+      _messageIsError = !outcome.isSuccess;
+    });
+    if (outcome.isSuccess) {
+      await _showOperationPlan();
+    }
   }
 
   Future<void> _saveRemote() async {
@@ -307,10 +465,12 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('推送到 ${remote.name}？'),
+        title: Text('将推送到 ${remote.name} 加入计划'),
         content: Text(
-          '将当前分支 ${widget.controller.branch} 推送到 ${remote.platformLabel}。\n'
+          '现在不会联网推送。执行计划时，将当前分支 '
+          '${widget.controller.branch} 推送到 ${remote.platformLabel}。\n'
           '${remote.maskedUrl}',
+          style: const TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -320,7 +480,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: const Text('推送'),
+            label: const Text('加入推送计划'),
           ),
         ],
       ),
@@ -332,6 +492,9 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
       _message = outcome.message;
       _messageIsError = !outcome.isSuccess;
     });
+    if (outcome.isSuccess) {
+      await _showOperationPlan();
+    }
   }
 
   Future<void> _confirmPushAll() async {
@@ -341,8 +504,11 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('推送到全部远端？'),
-        content: Text('当前分支 ${widget.controller.branch} 将依次推送到：\n$names'),
+        title: const Text('将全部推送加入计划'),
+        content: Text(
+          '执行计划时，当前分支 ${widget.controller.branch} 将依次推送到：\n$names',
+          style: const TextStyle(fontSize: 13, height: 1.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -351,7 +517,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: const Text('全部推送'),
+            label: const Text('加入全部推送计划'),
           ),
         ],
       ),
@@ -363,14 +529,20 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
       _message = outcome.message;
       _messageIsError = !outcome.isSuccess;
     });
+    if (outcome.isSuccess) {
+      await _showOperationPlan();
+    }
   }
 
   Future<void> _confirmRemove(GitRemote remote) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('删除远端 ${remote.name}？'),
-        content: const Text('只删除本地 Git remote 配置，不会删除远端平台上的仓库。'),
+        title: Text('将移除远端配置 ${remote.name} 加入计划'),
+        content: const Text(
+          '执行计划时只删除本地 Git remote 配置，不会删除远端平台上的仓库。',
+          style: TextStyle(fontSize: 13, height: 1.5),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -381,7 +553,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('删除'),
+            child: const Text('加入移除计划'),
           ),
         ],
       ),
@@ -408,6 +580,7 @@ class _RemoteCard extends StatelessWidget {
     required this.onPush,
     required this.onEdit,
     required this.onRemove,
+    required this.onClear,
   });
 
   final GitRemote remote;
@@ -415,6 +588,7 @@ class _RemoteCard extends StatelessWidget {
   final VoidCallback onPush;
   final VoidCallback onEdit;
   final VoidCallback onRemove;
+  final VoidCallback onClear;
 
   @override
   Widget build(BuildContext context) {
@@ -451,11 +625,18 @@ class _RemoteCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      remote.name,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Tooltip(
+                        message: remote.name,
+                        child: Text(
+                          remote.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 7),
@@ -471,8 +652,10 @@ class _RemoteCard extends StatelessWidget {
                       child: Text(
                         remote.platformLabel,
                         style: TextStyle(
-                          fontSize: 8.5,
-                          color: platformColor,
+                          fontSize: 11.5,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? colors.onSurface
+                              : platformColor,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -480,14 +663,17 @@ class _RemoteCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  remote.maskedUrl,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 9.5,
-                    height: 1.35,
-                    color: colors.onSurfaceVariant,
+                Tooltip(
+                  message: remote.maskedUrl,
+                  child: Text(
+                    remote.maskedUrl,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      height: 1.4,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -511,8 +697,18 @@ class _RemoteCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: busy ? null : onRemove,
-            tooltip: '删除远端',
+            tooltip: '移除本地远端配置',
             icon: const Icon(Icons.delete_outline_rounded, size: 16),
+            visualDensity: VisualDensity.compact,
+          ),
+          IconButton(
+            onPressed: busy ? null : onClear,
+            tooltip: '清空远端全部分支和标签（危险）',
+            icon: Icon(
+              Icons.delete_forever_rounded,
+              size: 18,
+              color: colors.error,
+            ),
             visualDensity: VisualDensity.compact,
           ),
         ],

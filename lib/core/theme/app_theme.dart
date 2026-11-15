@@ -123,7 +123,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -133,13 +137,34 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: TextStyle(
+            fontFamily: fontFamily,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         insetPadding: const EdgeInsets.all(18),
+        contentTextStyle: TextStyle(
+          color: scheme.onInverseSurface,
+          fontSize: 13,
+          height: 1.4,
+          fontWeight: FontWeight.w600,
+        ),
+        showCloseIcon: true,
+        closeIconColor: scheme.onInverseSurface,
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surface,

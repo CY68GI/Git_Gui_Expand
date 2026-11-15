@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,7 @@ void main() {
 
   setUp(() async {
     repository = await Directory.systemTemp.createTemp('git_gui_expand_test_');
-    await _git(repository, ['init']);
+    await _git(repository, ['init', '-b', 'main']);
     await _git(repository, ['config', 'user.name', 'Git GUI Expand Test']);
     await _git(repository, ['config', 'user.email', 'test@example.invalid']);
     await Directory('${repository.path}${Platform.pathSeparator}docs').create();
@@ -164,6 +165,16 @@ void main() {
       GitRemote.maskRemoteUrl('https://user:secret@github.com/CY68GI/repo.git'),
       isNot(contains('secret')),
     );
+    expect(
+      GitRemote.repositorySlug('git@github.com:CY68GI/Git_Gui_Expand.git'),
+      'CY68GI/Git_Gui_Expand',
+    );
+    expect(
+      GitRemote.repositorySlug(
+        'https://gitee.com/CY68EWZRY/Git_Gui_Expand.git',
+      ),
+      'CY68EWZRY/Git_Gui_Expand',
+    );
     await service.addRemote(
       'gitee',
       'git@gitee.com:CY68EWZRY/Git_Gui_Expand.git',
@@ -197,6 +208,146 @@ void main() {
     remotes = await service.remotes();
     expect(remotes.map((remote) => remote.name), isNot(contains('gitlab')));
   });
+
+  test('backs up and atomically clears all remote branches and tags', () async {
+    final remote = await Directory.systemTemp.createTemp(
+      'git_gui_clear_remote_success_',
+    );
+    addTearDown(() async {
+      if (await remote.exists()) {
+        await remote.delete(recursive: true);
+      }
+    });
+    await _git(remote, ['init', '--bare']);
+    await _git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+    await _git(remote, ['config', 'receive.denyDeleteCurrent', 'ignore']);
+    await _git(remote, ['config', 'receive.denyNonFastForwards', 'false']);
+    await _git(repository, ['remote', 'add', 'origin', remote.path]);
+    await _git(repository, ['branch', 'second']);
+    await _git(repository, ['tag', 'v1']);
+    final branch = await service.currentBranch();
+    await _git(repository, [
+      'push',
+      'origin',
+      'refs/heads/$branch',
+      'refs/heads/second',
+      'refs/tags/v1',
+    ]);
+
+    final preview = await service.previewClearRemote('origin');
+    expect(preview.branchCount, 2);
+    expect(preview.tagCount, 1);
+    expect(preview.targetBranch, branch);
+    expect(
+      preview.confirmationText,
+      '${repository.path.split(Platform.pathSeparator).last}/$branch',
+    );
+    expect(preview.emptyCommitMessage, contains('仓库已清除，第一次空提交'));
+    expect(preview.refs, containsAll(['refs/heads/$branch', 'refs/tags/v1']));
+
+    final result = await service.clearRemote('origin', preview: preview);
+    expect(result.deletedRefs.length, 3);
+    expect(result.targetBranch, branch);
+    expect(result.emptyCommitHash, isNotEmpty);
+    final remaining = await service.previewClearRemote('origin');
+    expect(remaining.refs, ['refs/heads/$branch']);
+    final remoteHead = await Process.run('git', [
+      '--git-dir=${remote.path}',
+      'rev-parse',
+      'refs/heads/$branch',
+    ], runInShell: false);
+    expect((remoteHead.stdout as String).trim(), result.emptyCommitHash);
+    final commitObject = await Process.run(
+      'git',
+      ['cat-file', '-p', result.emptyCommitHash],
+      workingDirectory: repository.path,
+      runInShell: false,
+      stdoutEncoding: utf8,
+    );
+    expect(commitObject.stdout, contains('仓库已清除，第一次空提交'));
+    expect(commitObject.stdout, isNot(contains('parent ')));
+    expect(
+      await File('${repository.path}${Platform.pathSeparator}alpha.txt')
+          .readAsString(),
+      'alpha',
+    );
+
+    final backup = await Process.run(
+      'git',
+      [
+        'for-each-ref',
+        '--format=%(refname)',
+        'refs/gitgui-expand/backup/origin',
+      ],
+      workingDirectory: repository.path,
+      runInShell: false,
+    );
+    expect(backup.exitCode, 0);
+    expect(backup.stdout, contains('refs/gitgui-expand/backup/origin'));
+  });
+
+  test('does not partially clear a protected remote', () async {
+    final remote = await Directory.systemTemp.createTemp(
+      'git_gui_clear_remote_protected_',
+    );
+    addTearDown(() async {
+      if (await remote.exists()) {
+        await remote.delete(recursive: true);
+      }
+    });
+    await _git(remote, ['init', '--bare']);
+    await _git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+    await _git(remote, ['config', 'receive.denyDeleteCurrent', 'refuse']);
+    await _git(remote, ['config', 'receive.denyNonFastForwards', 'true']);
+    await _git(repository, ['remote', 'add', 'origin', remote.path]);
+    await _git(repository, ['tag', 'v1']);
+    final branch = await service.currentBranch();
+    await _git(repository, [
+      'push',
+      'origin',
+      'refs/heads/$branch',
+      'refs/tags/v1',
+    ]);
+
+    final preview = await service.previewClearRemote('origin');
+    await expectLater(
+      service.clearRemote('origin', preview: preview),
+      throwsA(isA<GitException>()),
+    );
+    final remaining = await service.previewClearRemote('origin');
+    expect(remaining.refs, containsAll(['refs/heads/$branch', 'refs/tags/v1']));
+  });
+
+  test(
+    'initializes an already empty remote with the first empty commit',
+    () async {
+      final remote = await Directory.systemTemp.createTemp(
+        'git_gui_clear_remote_empty_',
+      );
+      addTearDown(() async {
+        if (await remote.exists()) {
+          await remote.delete(recursive: true);
+        }
+      });
+      await _git(remote, ['init', '--bare']);
+      await _git(remote, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+      await _git(repository, ['remote', 'add', 'origin', remote.path]);
+
+      final preview = await service.previewClearRemote('origin');
+      expect(preview.refs, isEmpty);
+      expect(preview.targetBranch, 'main');
+      final result = await service.clearRemote('origin', preview: preview);
+      final refs = await service.previewClearRemote('origin');
+
+      expect(refs.refs, ['refs/heads/main']);
+      final remoteHead = await Process.run('git', [
+        '--git-dir=${remote.path}',
+        'rev-parse',
+        'refs/heads/main',
+      ], runInShell: false);
+      expect((remoteHead.stdout as String).trim(), result.emptyCommitHash);
+    },
+  );
 }
 
 Future<void> _git(Directory directory, List<String> arguments) async {

@@ -22,11 +22,13 @@ GitService ───────── SettingsService
 
 | 模块 | 职责 |
 | --- | --- |
-| `RepositoryController` | 打开仓库、左右面板状态、选择集合、剪贴板、提交与提示 |
-| `GitService` | Git 命令、状态、文件操作、远端增删改、单远端/全部推送、统计 |
+| `RepositoryController` | 打开仓库、面板状态、待执行计划、逐步执行、提交与提示 |
+| `GitService` | Git 命令、文件操作、远端增删改、推送、引用清空与统计 |
 | `FileExplorerPanel` | 单侧资源树视图、面包屑、复选框与空/错误状态 |
 | `CommitPanel` | 变更列表、提交说明、暂存、提交、推送和远端入口 |
 | `RemoteManagementDialog` | 多平台远端查看、增删改和逐项/全部推送 |
+| `OperationPlanDialog` | 展示、移除、确认和监控待执行操作 |
+| `UserGuideDialog` | 读取并显示内置 Markdown 使用指南 |
 | `SettingsService` | 用户级 JSON 设置读写及平台目录选择 |
 | `RecentRepositoriesService` | 仓库验证、最近打开排序、去重、清理与 JSON 持久化 |
 | `AppStorageService` | 把设置、日志与临时数据定位到可执行文件旁的 `userdata` |
@@ -35,7 +37,7 @@ GitService ───────── SettingsService
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
 | `UpdateInstallerService` | 下载、SHA-256 校验、准备独立版本目录并写入 pending 标记 |
 | `GitGuiExpandLauncher` | 原生 Windows 启动器，切换版本、重启和失败回滚 |
-| `FolderPickerService` | Windows 原生文件夹选择器，通过独立 PowerShell 进程 |
+| `FolderPickerService` | Windows 标准“打开”对话框与项目目录启动 |
 | `FontCatalogService` | 读取 Windows InstalledFontCollection 或跨平台 fontconfig 字体 |
 
 ## 本地数据
@@ -64,10 +66,34 @@ GitService ───────── SettingsService
 普通日志接收 `info`、`warning` 和 `error`。详细日志额外接收 `detail`，并包含
 普通日志全部内容。日志写入采用串行队列，单次失败不会中断 Git 操作。
 
+## 操作计划
+
+界面只把用户意图转换为 `PlannedRepositoryOperation`，先追加到
+`RepositoryController.pendingOperations`，不会直接调用会修改仓库的 GitService
+方法。计划步骤保存标题、说明、危险标志、二次确认文本和执行闭包。
+
+`OperationPlanDialog` 提供：
+
+- 按顺序展示全部步骤；
+- 逐项移除或整体清空；
+- 危险确认和“项目全称/目标分支”精确匹配；
+- 逐步执行进度；
+- 失败后保留失败步骤和后续步骤。
+
+`executePendingOperations` 在执行前设置全局 busy，随后顺序调用每个步骤的执行闭包。
+成功步骤从计划中移除；任一步失败立即停止。文件操作仍由
+`GitService` 重新验证源路径、目标冲突和仓库边界。
+
+清空远端要求该步骤独占计划。执行时先用 `git ls-remote --refs` 快照 heads/tags，
+把原引用 `git fetch` 到 `refs/gitgui-expand/backup/<remote>`；然后使用
+`git mktree` 和 `git commit-tree` 创建空目录树及空根提交，不修改工作区或索引。
+最后以 `git push --atomic --force` 把目标分支替换为该提交，并删除其它 heads/tags。
+平台保护、atomic push 不支持、认证或网络失败都会终止并记录。
+
 ## 自动更新
 
 1. `UpdateService` 读取最新 Release，并只选择带 SHA-256 的 Windows x64 ZIP。
-2. 下载文件写入 `userdata/updates`，随后调用 Windows `Get-FileHash` 校验。
+2. 下载文件写入 `userdata/updates`，随后由 Dart `crypto` 流式计算 SHA-256。
 3. 解压到 `userdata/updates/stage-v<version>`，寻找发布包中的
    `versions/<version>`。
 4. 验证 EXE、`data/app.so`、`data/flutter_assets` 和 `version.json`。

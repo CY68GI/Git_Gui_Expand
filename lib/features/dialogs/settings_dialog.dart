@@ -99,7 +99,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
       insetPadding: const EdgeInsets.all(28),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 920, maxHeight: 650),
+        constraints: BoxConstraints(
+          maxWidth: 1000,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.88,
+        ),
         child: Column(
           children: [
             Container(
@@ -182,7 +185,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           child: Text(
                             'Git GUI Expand\nv${AppInfo.version}',
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 11,
                               height: 1.5,
                               color: colors.onSurfaceVariant,
                             ),
@@ -219,7 +222,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                     ? '关于信息不会修改设置'
                                     : '设置将在点击保存后应用到整个软件',
                                 style: TextStyle(
-                                  fontSize: 9.5,
+                                  fontSize: 11.5,
                                   color: colors.onSurfaceVariant,
                                 ),
                               ),
@@ -278,6 +281,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
       title: '字体',
       subtitle: '默认使用内置的 Noto Sans SC / 思源黑体，也可搜索系统字体或其他内置字体。',
       children: [
+        const _SettingsScrollHint(
+          title: '此页还有下方内容',
+          message: '向下滚动可查看字体预览和字体大小设置。',
+        ),
+        const SizedBox(height: 14),
         TextField(
           controller: _fontSearchController,
           onChanged: (value) => setState(() => _fontQuery = value),
@@ -301,7 +309,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
           children: [
             Text(
               '找到 $resultCount 个选项',
-              style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+              style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
             ),
             const Spacer(),
             if (_loadingFonts)
@@ -313,7 +321,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             else
               Text(
                 '输入名称可快速筛选',
-                style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
           ],
         ),
@@ -388,7 +396,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         const SizedBox(height: 10),
         Text(
           '内置字体均来自 Google Fonts，使用 SIL Open Font License 并随程序分发。',
-          style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+          style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 18),
         const _SectionLabel(title: '字体预览', caption: '保存后会应用到菜单、资源面板、对话框和提交说明。'),
@@ -460,7 +468,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         Text(
           '允许范围：${(AppSettings.minFontScale * 100).round()}%–'
           '${(AppSettings.maxFontScale * 100).round()}%',
-          style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+          style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
         ),
       ],
     );
@@ -640,7 +648,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(height: 10),
               Text(
                 sizeUnitDescription(_draft),
-                style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -648,12 +659,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
         const SizedBox(height: 14),
         Text(
           '设置数据目录',
-          style: TextStyle(fontSize: 10, color: colors.onSurfaceVariant),
+          style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 3),
         SelectableText(
           dataPath,
-          style: TextStyle(fontSize: 9.5, color: colors.primary),
+          style: TextStyle(fontSize: 11, color: colors.primary),
         ),
       ],
     );
@@ -690,7 +701,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     Text(
                       '版本 v${AppInfo.version}',
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         color: colors.primary,
                         fontWeight: FontWeight.w600,
                       ),
@@ -699,7 +710,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     Text(
                       '通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。',
                       style: TextStyle(
-                        fontSize: 10.5,
+                        fontSize: 12,
                         color: colors.onSurfaceVariant,
                         height: 1.5,
                       ),
@@ -759,7 +770,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         Text(
           '本项目为开源项目，未附带许可证；分发或商用前请由项目所有者补充许可证。',
           style: TextStyle(
-            fontSize: 9.5,
+            fontSize: 11.5,
             height: 1.5,
             color: colors.onSurfaceVariant,
           ),
@@ -821,7 +832,7 @@ class _FontGroupHeader extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             label,
-            style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(width: 6),
           Container(
@@ -833,7 +844,7 @@ class _FontGroupHeader extends StatelessWidget {
             child: Text(
               '$count',
               style: TextStyle(
-                fontSize: 8.5,
+                fontSize: 10,
                 color: colors.primary,
                 fontWeight: FontWeight.w700,
               ),
@@ -924,7 +935,7 @@ class _BundledFontRow extends StatelessWidget {
                               '内置',
                               style: TextStyle(
                                 color: colors.primary,
-                                fontSize: 8,
+                                fontSize: 10,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -937,7 +948,7 @@ class _BundledFontRow extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          fontSize: 9.2,
+                          fontSize: 11,
                           color: colors.onSurfaceVariant,
                         ),
                       ),
@@ -1001,14 +1012,14 @@ class _SystemFontRow extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontFamily: fontFamily,
-                          fontSize: 10.5,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
                         detail,
                         style: TextStyle(
-                          fontSize: 8.5,
+                          fontSize: 10.5,
                           color: colors.onSurfaceVariant,
                         ),
                       ),
@@ -1038,7 +1049,7 @@ class _FontEmptyRow extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 9.5,
+          fontSize: 11,
           color: Theme.of(context).colorScheme.onSurfaceVariant,
         ),
       ),
@@ -1046,7 +1057,7 @@ class _FontEmptyRow extends StatelessWidget {
   }
 }
 
-class _SettingsPage extends StatelessWidget {
+class _SettingsPage extends StatefulWidget {
   const _SettingsPage({
     required this.title,
     required this.subtitle,
@@ -1058,29 +1069,101 @@ class _SettingsPage extends StatelessWidget {
   final List<Widget> children;
 
   @override
+  State<_SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<_SettingsPage> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              widget.title,
+              style: Theme.of(context).textTheme.headlineSmall
+                  ?.copyWith(fontSize: 20),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              widget.subtitle,
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ...widget.children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SettingsScrollHint extends StatelessWidget {
+  const _SettingsScrollHint({required this.title, required this.message});
+
+  final String title;
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
+      decoration: BoxDecoration(
+        color: colors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.22)),
+      ),
+      child: Row(
         children: [
-          Text(
-            title,
-            style: Theme.of(context).textTheme.headlineSmall
-                ?.copyWith(fontSize: 20),
+          Icon(
+            Icons.keyboard_double_arrow_down_rounded,
+            size: 21,
+            color: colors.primary,
           ),
-          const SizedBox(height: 5),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 10.5,
-              color: colors.onSurfaceVariant,
-              height: 1.5,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: colors.primary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          ...children,
         ],
       ),
     );
@@ -1181,7 +1264,7 @@ class _SectionLabel extends StatelessWidget {
         Text(
           caption,
           style: TextStyle(
-            fontSize: 10.5,
+            fontSize: 11.5,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -1208,7 +1291,7 @@ class _PreviewValue extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            fontSize: 9.5,
+            fontSize: 11,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
@@ -1278,7 +1361,7 @@ class _AboutTag extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 9.5,
+          fontSize: 10.5,
           color: colors.primary,
           fontWeight: FontWeight.w600,
         ),

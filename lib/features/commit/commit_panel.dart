@@ -11,6 +11,7 @@ class CommitPanel extends StatefulWidget {
     required this.onTextEditingChanged,
     required this.onPushRequested,
     required this.onManageRemotes,
+    required this.onPlanRequested,
   });
 
   final RepositoryController controller;
@@ -18,6 +19,7 @@ class CommitPanel extends StatefulWidget {
   final ValueChanged<bool> onTextEditingChanged;
   final VoidCallback onPushRequested;
   final VoidCallback onManageRemotes;
+  final Future<void> Function() onPlanRequested;
 
   @override
   State<CommitPanel> createState() => _CommitPanelState();
@@ -104,10 +106,11 @@ class _CommitPanelState extends State<CommitPanel> {
                         horizontal: 7,
                         vertical: 6,
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      textStyle: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                 ),
@@ -126,10 +129,11 @@ class _CommitPanelState extends State<CommitPanel> {
                         horizontal: 8,
                         vertical: 6,
                       ),
-                      textStyle: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      textStyle: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
                     ),
                   ),
                 ),
@@ -147,7 +151,7 @@ class _CommitPanelState extends State<CommitPanel> {
                       Text(
                         controller.branch,
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 11.5,
                           color: colors.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
@@ -175,6 +179,28 @@ class _CommitPanelState extends State<CommitPanel> {
   Widget _buildChangeList(BuildContext context) {
     final changes = widget.controller.changedFiles;
     if (changes.isEmpty) {
+      if (widget.controller.hasPendingFileChanges) {
+        return Center(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.playlist_add_check_circle_outlined,
+                size: 20,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '文件变更尚未执行，请在待执行操作计划中确认',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
       return Center(
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -207,6 +233,8 @@ class _CommitPanelState extends State<CommitPanel> {
 
   Widget _buildComposer(BuildContext context) {
     final hasChanges = widget.controller.changedFiles.isNotEmpty;
+    final canQueueCommit =
+        hasChanges || widget.controller.hasPendingFileChanges;
     return Padding(
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -233,7 +261,10 @@ class _CommitPanelState extends State<CommitPanel> {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: hasChanges && !widget.controller.isBusy
+                  onPressed:
+                      canQueueCommit &&
+                          !widget.controller.isBusy &&
+                          !widget.controller.localOperationsLocked
                       ? () async {
                           final outcome = await widget.controller
                               .stageAllChanges();
@@ -253,7 +284,10 @@ class _CommitPanelState extends State<CommitPanel> {
               const SizedBox(width: 7),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: hasChanges && !widget.controller.isBusy
+                  onPressed:
+                      hasChanges &&
+                          !widget.controller.isBusy &&
+                          !widget.controller.localOperationsLocked
                       ? () async {
                           final outcome = await widget.controller
                               .unstageAllChanges();
@@ -274,7 +308,10 @@ class _CommitPanelState extends State<CommitPanel> {
               Expanded(
                 flex: 2,
                 child: FilledButton.icon(
-                  onPressed: hasChanges && !widget.controller.isBusy
+                  onPressed:
+                      hasChanges &&
+                          !widget.controller.isBusy &&
+                          !widget.controller.localOperationsLocked
                       ? () async {
                           final outcome = await widget.controller.commitAll(
                             _messageController.text,
@@ -283,6 +320,9 @@ class _CommitPanelState extends State<CommitPanel> {
                             _messageController.clear();
                           }
                           widget.showOutcome(outcome);
+                          if (outcome.isSuccess) {
+                            await widget.onPlanRequested();
+                          }
                         }
                       : null,
                   icon: widget.controller.isBusy
@@ -295,7 +335,7 @@ class _CommitPanelState extends State<CommitPanel> {
                           ),
                         )
                       : const Icon(Icons.check_rounded, size: 17),
-                  label: const Text('提交全部更改'),
+                  label: const Text('加入提交计划'),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -308,9 +348,10 @@ class _CommitPanelState extends State<CommitPanel> {
           ),
           const SizedBox(height: 7),
           Text(
-            '提交前自动执行 git add -A，再执行 git commit。',
+            '提交不会立即执行。请在待执行操作计划中确认后，再运行 git add -A 和 git commit。',
             style: TextStyle(
-              fontSize: 9.5,
+              fontSize: 11.5,
+              height: 1.4,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
@@ -367,7 +408,7 @@ class _ChangeRow extends StatelessWidget {
                 label,
                 style: TextStyle(
                   color: color,
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -378,7 +419,7 @@ class _ChangeRow extends StatelessWidget {
                 status.path,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 11),
+                style: const TextStyle(fontSize: 12),
               ),
             ),
             Container(
@@ -415,7 +456,7 @@ class _CountBadge extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 9.5,
+          fontSize: 11,
           color: color,
           fontWeight: FontWeight.w700,
         ),

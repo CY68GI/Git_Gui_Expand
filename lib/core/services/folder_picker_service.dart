@@ -18,7 +18,7 @@ class FolderPickerService {
     if (!Platform.isWindows) {
       throw UnsupportedError('当前版本仅支持 Windows 文件夹选择。');
     }
-    _log.detail('dialog', '打开文件夹选择器，初始目录=${initialDirectory ?? '无'}');
+    _log.detail('dialog', '打开 Windows“打开”对话框，初始目录=${initialDirectory ?? '无'}');
 
     final dataDirectory = await storage.ensureDataDirectory();
     final resultFile = File(
@@ -30,12 +30,22 @@ class FolderPickerService {
     final script =
         '''
 Add-Type -AssemblyName System.Windows.Forms
-\$dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-\$dialog.Description = '选择已经初始化 Git 的仓库根目录'
-\$dialog.ShowNewFolderButton = \$false
-if ('$selectedPath'.Length -gt 0) { \$dialog.SelectedPath = '$selectedPath' }
+\$dialog = New-Object System.Windows.Forms.OpenFileDialog
+\$dialog.Title = '打开 Git 仓库'
+\$dialog.Filter = '文件夹|*.*'
+\$dialog.CheckFileExists = \$false
+\$dialog.CheckPathExists = \$true
+\$dialog.ValidateNames = \$false
+\$dialog.Multiselect = \$false
+\$dialog.RestoreDirectory = \$true
+\$dialog.FileName = '选择当前文件夹'
+if ('$selectedPath'.Length -gt 0 -and (Test-Path -LiteralPath '$selectedPath')) {
+  \$dialog.InitialDirectory = '$selectedPath'
+}
 if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-  [System.IO.File]::WriteAllText('$outputPath', \$dialog.SelectedPath, (New-Object System.Text.UTF8Encoding(\$false)))
+  \$selected = [System.IO.Path]::GetDirectoryName(\$dialog.FileName)
+  if ([string]::IsNullOrWhiteSpace(\$selected)) { \$selected = \$dialog.InitialDirectory }
+  [System.IO.File]::WriteAllText('$outputPath', \$selected, (New-Object System.Text.UTF8Encoding(\$false)))
 }
 ''';
 
@@ -59,13 +69,49 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         return null;
       }
       final path = (await resultFile.readAsString()).trim();
-      _log.detail('dialog', '文件夹选择器返回：$path');
+      _log.detail('dialog', '“打开”对话框返回：$path');
       return path.isEmpty ? null : path;
     } finally {
       if (await resultFile.exists()) {
         await resultFile.delete();
       }
     }
+  }
+
+  Future<void> openDirectory(String path) async {
+    final directory = Directory(path).absolute.path;
+    if (!await Directory(directory).exists()) {
+      throw FileSystemException('项目目录不存在', directory);
+    }
+    _log.info('system', '打开项目目录：$directory');
+    if (Platform.isWindows) {
+      await Process.start(
+        'explorer.exe',
+        [directory],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    if (Platform.isMacOS) {
+      await Process.start(
+        'open',
+        [directory],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    if (Platform.isLinux) {
+      await Process.start(
+        'xdg-open',
+        [directory],
+        mode: ProcessStartMode.detached,
+        runInShell: false,
+      );
+      return;
+    }
+    throw UnsupportedError('当前平台不支持打开项目目录。');
   }
 
   String _escapePowerShell(String value) => value.replaceAll("'", "''");

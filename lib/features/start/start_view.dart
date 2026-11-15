@@ -167,7 +167,7 @@ class StartView extends StatelessWidget {
                           child: Text(
                             '${recentRepositories.length} 个 Git 仓库',
                             style: TextStyle(
-                              fontSize: 9.5,
+                              fontSize: 11,
                               color: colors.primary,
                               fontWeight: FontWeight.w700,
                             ),
@@ -177,7 +177,7 @@ class StartView extends StatelessWidget {
                         Text(
                           '仅保存验证成功的仓库根目录',
                           style: TextStyle(
-                            fontSize: 10,
+                            fontSize: 11,
                             color: colors.onSurfaceVariant,
                           ),
                         ),
@@ -312,7 +312,7 @@ class _RecentRepositoryCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 9.5,
+                            fontSize: 11,
                             color: colors.onSurfaceVariant,
                           ),
                         ),
@@ -323,7 +323,10 @@ class _RecentRepositoryCard extends StatelessWidget {
                 const SizedBox(width: 6),
                 Text(
                   _formatRecentTime(repository.lastOpened),
-                  style: TextStyle(fontSize: 9, color: colors.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 10.5,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
                 IconButton(
                   onPressed: disabled ? null : onRemove,
@@ -460,7 +463,7 @@ class _ShortcutHint extends StatelessWidget {
           ),
           child: Text(
             keys,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(width: 6),

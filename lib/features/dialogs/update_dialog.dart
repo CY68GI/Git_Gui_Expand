@@ -106,7 +106,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                             Text(
                               '${AppInfo.englishName} · 当前 v${AppInfo.version}',
                               style: TextStyle(
-                                fontSize: 11,
+                                fontSize: 12,
                                 color: colors.onSurfaceVariant,
                               ),
                             ),
@@ -181,12 +181,14 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       ],
                       const SizedBox(height: 14),
                       Text(
-                        '自动更新会从 GitHub 下载 Windows x64 ZIP，校验 SHA-256 后启动独立更新助手。'
-                        '应用退出后替换程序文件并自动重启；失败时会从 userdata 备份回滚，仓库和设置数据不会被覆盖。',
+                        '自动更新会从 GitHub 下载 Windows x64 ZIP 并校验 SHA-256，'
+                        '解压到 versions/<版本>。应用退出后由 GitGuiExpandLauncher '
+                        '切换版本并自动重启；新版本启动失败时会回滚。'
+                        '根目录 userdata 和正在运行的版本不会被覆盖。',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           color: colors.onSurfaceVariant,
-                          height: 1.45,
+                          height: 1.55,
                         ),
                       ),
                     ],
@@ -285,7 +287,8 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 Text(
                   message,
                   style: TextStyle(
-                    fontSize: 10.5,
+                    fontSize: 12,
+                    height: 1.45,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
@@ -335,7 +338,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 Text(
                   '${(percent * 100).round()}%',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11.5,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
@@ -379,13 +382,13 @@ class _UpdateDialogState extends State<UpdateDialog> {
               const SizedBox(width: 8),
               Text(
                 entry.date,
-                style: TextStyle(fontSize: 9.5, color: colors.onSurfaceVariant),
+                style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
               const Spacer(),
               Text(
                 entry.title,
                 style: TextStyle(
-                  fontSize: 10,
+                  fontSize: 11,
                   color: colors.primary,
                   fontWeight: FontWeight.w600,
                 ),
@@ -411,7 +414,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   Expanded(
                     child: Text(
                       item,
-                      style: const TextStyle(fontSize: 11, height: 1.45),
+                      style: const TextStyle(fontSize: 12, height: 1.5),
                     ),
                   ),
                 ],

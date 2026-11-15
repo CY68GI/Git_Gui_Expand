@@ -106,4 +106,26 @@ void main() {
       expect(fonts, contains('Segoe UI'));
     }
   });
+
+  test(
+    'Windows picker uses the native Open dialog and can open project folder',
+    () async {
+      final source = await File(
+        '${Directory.current.path}${Platform.pathSeparator}lib'
+        '${Platform.pathSeparator}core${Platform.pathSeparator}services'
+        '${Platform.pathSeparator}folder_picker_service.dart',
+      ).readAsString();
+
+      expect(source, contains('System.Windows.Forms.OpenFileDialog'));
+      expect(source, contains(r"$dialog.Title = '打开 Git 仓库'"));
+      expect(source, isNot(contains('FolderBrowserDialog')));
+      expect(source, contains("'explorer.exe'"));
+      final projectPage = await File(
+        '${Directory.current.path}${Platform.pathSeparator}lib'
+        '${Platform.pathSeparator}features${Platform.pathSeparator}project'
+        '${Platform.pathSeparator}project_page.dart',
+      ).readAsString();
+      expect(projectPage, contains("label: '项目目录'"));
+    },
+  );
 }

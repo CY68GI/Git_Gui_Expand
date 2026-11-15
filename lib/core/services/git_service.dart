@@ -48,11 +48,16 @@ class GitService {
   Future<GitCommandResult> _run(
     List<String> arguments, {
     bool allowFailure = false,
+    String? stdin,
   }) async {
     final displayCommand = 'git ${arguments.map(_quoteArgument).join(' ')}';
     _log.detail('git', 'cwd=$rootPath command=$displayCommand');
     try {
-      final result = await _runProcess(arguments, workingDirectory: rootPath);
+      final result = await _runProcess(
+        arguments,
+        workingDirectory: rootPath,
+        stdin: stdin,
+      );
       _log.detail(
         'git',
         'exit=${result.exitCode} command=$displayCommand\n'
@@ -83,13 +88,44 @@ class GitService {
   static Future<GitCommandResult> _runProcess(
     List<String> arguments, {
     required String workingDirectory,
+    String? stdin,
   }) async {
     try {
+      if (stdin != null) {
+        final process = await Process.start(
+          'git',
+          arguments,
+          workingDirectory: workingDirectory,
+          environment: const {
+            'GIT_TERMINAL_PROMPT': '0',
+            'LC_ALL': 'C.UTF-8',
+            'LANG': 'C.UTF-8',
+          },
+          includeParentEnvironment: true,
+          runInShell: false,
+        );
+        final stdoutFuture = process.stdout.transform(utf8.decoder).join();
+        final stderrFuture = process.stderr.transform(utf8.decoder).join();
+        process.stdin.encoding = utf8;
+        process.stdin.write(stdin);
+        await process.stdin.close();
+        final exitCode = await process.exitCode;
+        return GitCommandResult(
+          success: exitCode == 0,
+          exitCode: exitCode,
+          stdout: await stdoutFuture,
+          stderr: await stderrFuture,
+        );
+      }
       final process = await Process.run(
         'git',
         arguments,
         workingDirectory: workingDirectory,
-        environment: const {'GIT_TERMINAL_PROMPT': '0', 'LC_ALL': 'C.UTF-8'},
+        environment: const {
+          'GIT_TERMINAL_PROMPT': '0',
+          'LC_ALL': 'C.UTF-8',
+          'LANG': 'C.UTF-8',
+        },
         includeParentEnvironment: true,
         runInShell: false,
         stdoutEncoding: utf8,
@@ -351,6 +387,200 @@ class GitService {
     final result = await _run(['push', remoteName, name]);
     _log.info('remote', '已推送 $name 到远端 $remoteName');
     return result.output.trim();
+  }
+
+  Future<RemoteClearPreview> previewClearRemote(String remoteName) async {
+    _validateRemoteName(remoteName);
+    final refHashes = await _readRemoteRefHashes(remoteName);
+    final sortedRefs = refHashes.keys.toList(growable: false)..sort();
+    final projectName = await _remoteProjectName(remoteName);
+    final targetBranch = await _remoteHeadBranch(remoteName);
+    final emptyCommitMessage = _buildEmptyCommitMessage(
+      projectName: projectName,
+      targetBranch: targetBranch,
+    );
+    final backupRefspecs = [
+      '+refs/heads/*:refs/gitgui-expand/backup/$remoteName/heads/*',
+      '+refs/tags/*:refs/gitgui-expand/backup/$remoteName/tags/*',
+    ];
+    _log.info(
+      'remote-clear',
+      '清空远端预览：remote=$remoteName refs=${sortedRefs.length} '
+          'project=$projectName branch=$targetBranch '
+          'refs=${sortedRefs.join(' | ')}',
+    );
+    return RemoteClearPreview(
+      remoteName: remoteName,
+      projectName: projectName,
+      targetBranch: targetBranch,
+      emptyCommitMessage: emptyCommitMessage,
+      refs: List.unmodifiable(sortedRefs),
+      backupRefspecs: List.unmodifiable(backupRefspecs),
+    );
+  }
+
+  Future<RemoteClearResult> clearRemote(
+    String remoteName, {
+    RemoteClearPreview? preview,
+  }) async {
+    _validateRemoteName(remoteName);
+    final inspected = preview ?? await previewClearRemote(remoteName);
+    if (inspected.remoteName != remoteName) {
+      throw const GitException('远端清空预览与实际远端不一致。');
+    }
+
+    _log.warning(
+      'remote-clear',
+      '即将备份并清空远端 $remoteName 的 ${inspected.refs.length} 个引用；'
+          '保留空分支 ${inspected.targetBranch}',
+    );
+    if (inspected.refs.isNotEmpty) {
+      await _run([
+        'fetch',
+        '--no-tags',
+        '--prune',
+        remoteName,
+        ...inspected.backupRefspecs,
+      ]);
+      _log.info(
+        'remote-clear',
+        '远端 $remoteName 引用已备份到 refs/gitgui-expand/backup/$remoteName',
+      );
+    }
+
+    final emptyTreeResult = await _run(['mktree'], stdin: '');
+    final emptyTree = emptyTreeResult.stdout.trim();
+    if (emptyTree.isEmpty) {
+      throw const GitException('无法创建空目录树。');
+    }
+    final emptyCommitResult = await _run([
+      '-c',
+      'i18n.commitEncoding=UTF-8',
+      'commit-tree',
+      emptyTree,
+      '-F',
+      '-',
+    ], stdin: inspected.emptyCommitMessage);
+    final emptyCommit = emptyCommitResult.stdout.trim();
+    if (emptyCommit.isEmpty) {
+      throw const GitException('无法创建第一个空提交。');
+    }
+
+    final targetRef = 'refs/heads/${inspected.targetBranch}';
+    final refsToDelete = inspected.refs
+        .where((ref) => ref != targetRef)
+        .toList(growable: false);
+    final pushArguments = <String>[
+      'push',
+      '--atomic',
+      '--force',
+      remoteName,
+      '$emptyCommit:$targetRef',
+      ...refsToDelete.map((ref) => ':$ref'),
+    ];
+    final pushResult = await _run(pushArguments, allowFailure: true);
+    if (!pushResult.success) {
+      final output = pushResult.output.trim();
+      final protectedHint =
+          output.toLowerCase().contains('protected') || output.contains('保护')
+          ? '目标分支或受保护引用拒绝强制更新或删除。请先在托管平台临时解除保护，再重新执行计划。'
+          : '远端未完成原子替换。服务器必须支持 atomic push，且目标分支必须允许强制更新。';
+      throw GitException(
+        '清空远端 $remoteName 失败。$protectedHint',
+        commandOutput: output,
+      );
+    }
+
+    final remaining = await _readRemoteRefHashes(remoteName);
+    final expectedRefs = {targetRef};
+    if (remaining.keys.toSet().difference(expectedRefs).isNotEmpty ||
+        remaining[targetRef] != emptyCommit) {
+      throw GitException(
+        '清空远端后验证失败，远端未达到预期的单个空提交状态。',
+        commandOutput: remaining.entries
+            .map((entry) => '${entry.key} ${entry.value}')
+            .join('\n'),
+      );
+    }
+    _log.warning(
+      'remote-clear',
+      '远端 $remoteName 历史已替换为空提交 $emptyCommit，'
+          '保留分支 ${inspected.targetBranch}',
+    );
+    return RemoteClearResult(
+      remoteName: remoteName,
+      deletedRefs: inspected.refs,
+      backupRefspecs: inspected.backupRefspecs,
+      emptyCommitHash: emptyCommit,
+      targetBranch: inspected.targetBranch,
+      commitMessage: inspected.emptyCommitMessage,
+    );
+  }
+
+  Future<Map<String, String>> _readRemoteRefHashes(String remoteName) async {
+    final refsResult = await _run(['ls-remote', '--refs', remoteName]);
+    final refs = <String, String>{};
+    for (final line in const LineSplitter().convert(refsResult.stdout)) {
+      final separator = line.indexOf('\t');
+      if (separator < 0) continue;
+      final hash = line.substring(0, separator).trim();
+      final ref = line.substring(separator + 1).trim();
+      if (ref.startsWith('refs/heads/') || ref.startsWith('refs/tags/')) {
+        refs[ref] = hash;
+      }
+    }
+    return refs;
+  }
+
+  Future<String> _remoteHeadBranch(String remoteName) async {
+    final headResult = await _run([
+      'ls-remote',
+      '--symref',
+      remoteName,
+      'HEAD',
+    ], allowFailure: true);
+    if (headResult.success) {
+      for (final line in const LineSplitter().convert(headResult.stdout)) {
+        final parts = line.split('\t');
+        if (parts.length == 2 &&
+            parts[1] == 'HEAD' &&
+            parts[0].startsWith('ref: refs/heads/')) {
+          final branch = parts[0].substring('ref: refs/heads/'.length).trim();
+          if (branch.isNotEmpty) return branch;
+        }
+      }
+    }
+    final current = (await currentBranch()).trim();
+    if (current.isEmpty ||
+        current == '尚未提交' ||
+        current.startsWith('detached@')) {
+      throw const GitException('无法确定要保留的远端分支名称。');
+    }
+    return current;
+  }
+
+  Future<String> _remoteProjectName(String remoteName) async {
+    final urlResult = await _run([
+      'remote',
+      'get-url',
+      '--push',
+      remoteName,
+    ], allowFailure: true);
+    final slug = GitRemote.repositorySlug(urlResult.stdout.trim());
+    return slug ?? repositoryBasename(rootPath);
+  }
+
+  String _buildEmptyCommitMessage({
+    required String projectName,
+    required String targetBranch,
+  }) {
+    final now = DateTime.now();
+    String two(int value) => value.toString().padLeft(2, '0');
+    final timestamp =
+        '${now.year}-${two(now.month)}-${two(now.day)} '
+        '${two(now.hour)}:${two(now.minute)}:${two(now.second)}';
+    return '$timestamp 仓库已清除，第一次空提交'
+        '（$projectName / $targetBranch）';
   }
 
   Future<void> stageAll() async {

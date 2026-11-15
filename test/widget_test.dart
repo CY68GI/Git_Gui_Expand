@@ -6,11 +6,15 @@ import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
+import 'package:git_gui_expand/core/theme/app_theme.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/update_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/user_guide_dialog.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 import 'package:git_gui_expand/features/start/start_view.dart';
+import 'package:git_gui_expand/features/project/widgets/app_outcome_snack_bar.dart';
 
 void main() {
   testWidgets('start screen presents repository opening workflow', (
@@ -109,6 +113,9 @@ void main() {
     expect(find.text('字体大小'), findsOneWidget);
     expect(find.text('90%'), findsOneWidget);
     expect(find.text('110%'), findsOneWidget);
+    expect(find.text('此页还有下方内容'), findsOneWidget);
+    expect(find.text('向下滚动可查看字体预览和字体大小设置。'), findsOneWidget);
+    expect(find.byType(Scrollbar), findsWidgets);
     expect(find.text('外观模式'), findsOneWidget);
     expect(find.text('单位设置'), findsOneWidget);
 
@@ -160,6 +167,105 @@ void main() {
     expect(find.text('Gitee'), findsOneWidget);
     expect(find.text('全部推送'), findsOneWidget);
     expect(find.text('添加远端'), findsWidgets);
+    expect(find.text('待执行 0'), findsOneWidget);
+  });
+
+  testWidgets('operation plan lists dangerous steps before execution', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    controller.pendingOperations = [
+      PlannedRepositoryOperation(
+        id: 'delete-1',
+        kind: PlannedOperationKind.delete,
+        title: '删除 2 个项目',
+        description: '将永久删除 docs/readme.md、src/main.dart。',
+        isDangerous: true,
+        run: () async => const OperationOutcome.success('deleted'),
+      ),
+      PlannedRepositoryOperation(
+        id: 'clear-1',
+        kind: PlannedOperationKind.clearRemote,
+        title: '清空远端 origin',
+        description: '将删除 3 个分支和 2 个标签。',
+        isDangerous: true,
+        strongConfirmationText: 'CY68GI/Git_Gui_Expand/main',
+        run: () async => const OperationOutcome.success('cleared'),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: OperationPlanDialog(controller: controller)),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.text('待执行操作计划'), findsOneWidget);
+    expect(find.text('确认前仓库不会发生任何改变'), findsNothing);
+    expect(find.textContaining('确认前仓库不会发生任何改变'), findsOneWidget);
+    expect(find.text('删除 2 个项目'), findsOneWidget);
+    expect(find.text('清空远端 origin'), findsOneWidget);
+    expect(find.text('危险操作确认'), findsOneWidget);
+    expect(find.textContaining('CY68GI/Git_Gui_Expand/main'), findsNWidgets(2));
+  });
+
+  testWidgets('user guide explains the staged operation workflow', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: UserGuideDialog())),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Git GUI Expand 使用指南'), findsNWidgets(2));
+    expect(find.textContaining('所有操作先进入计划'), findsOneWidget);
+    expect(find.textContaining('清空远端仓库'), findsWidgets);
+  });
+
+  testWidgets('commit result snackbar stays readable in dark theme', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(fontFamily: 'Noto Sans SC'),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => Center(
+              child: FilledButton(
+                onPressed: () => showAppOutcomeSnackBar(
+                  context,
+                  const OperationOutcome.success('提交成功'),
+                ),
+                child: const Text('显示结果'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('显示结果'));
+    await tester.pump();
+
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    final message = tester.widget<Text>(find.text('提交成功'));
+    expect(snackBar.duration, const Duration(seconds: 5));
+    expect(snackBar.showCloseIcon, isTrue);
+    expect(snackBar.backgroundColor, const Color(0xFF1C3D35));
+    expect(message.style?.color, Colors.white);
+    expect(message.style?.fontSize, greaterThanOrEqualTo(13));
+    expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
   });
 }
 
