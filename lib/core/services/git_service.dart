@@ -34,8 +34,9 @@ class GitService {
         commandOutput: result.stderr,
       );
     }
-    final root = _normalizeAbsolutePath(result.stdout.trim());
-    final normalizedSelected = _normalizeAbsolutePath(selected);
+    final rootRaw = _normalizeAbsolutePath(result.stdout.trim());
+    final root = await _canonicalDirectoryPath(rootRaw);
+    final normalizedSelected = await _canonicalDirectoryPath(selected);
     final samePath = Platform.isWindows
         ? normalizedSelected.toLowerCase() == root.toLowerCase()
         : normalizedSelected == root;
@@ -43,6 +44,17 @@ class GitService {
       throw GitException('请选择仓库根目录：$root');
     }
     return root;
+  }
+
+  static Future<String> _canonicalDirectoryPath(String path) async {
+    final absolute = Directory(path).absolute.path;
+    try {
+      return _normalizeAbsolutePath(
+        await Directory(absolute).resolveSymbolicLinks(),
+      );
+    } on FileSystemException {
+      return _normalizeAbsolutePath(absolute);
+    }
   }
 
   Future<GitCommandResult> _run(
