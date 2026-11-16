@@ -21,6 +21,7 @@ Future<void> main(List<String> arguments) async {
     GitGuiExpandApp(
       initialRepositoryPath: arguments.isEmpty ? null : arguments.first,
       initialLanguagePreference: settings.languagePreference,
+      initialColorSchemePreference: settings.colorSchemePreference,
     ),
   );
 }

@@ -4,12 +4,16 @@
 
 English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 
+[![Windows Release](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml/badge.svg)](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml)
+![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
+![license](https://img.shields.io/badge/license-MIT-blue)
+
 Git GUI Expand is a Windows-first Flutter desktop application for working with
 an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.3`
+Current version: `0.9.4`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -29,7 +33,8 @@ Current version: `0.9.3`
 - Open a selected file in File Explorer or with its default application.
 - Show project size, file size, branch, status, and pending changes.
 - Switch between IEC/SI size units and byte/bit base units.
-- Use light, dark, or operating-system appearance mode.
+- Use light, dark, or operating-system display mode with Emerald, Ocean,
+  Violet, Amber, and Rose color schemes.
 - Search bundled and installed UI fonts, with a safe 90%–100%–110% text scale.
 - Use English, Simplified Chinese, or Traditional Chinese, or follow the
   operating-system language.
@@ -68,7 +73,7 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.3
+.\tool\package_windows_release.ps1 -Tag v0.9.4
 ```
 
 ## Release layout
@@ -78,7 +83,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.3/
+    0.9.4/
       git_gui_expand.exe
       flutter_windows.dll
       data/
@@ -144,5 +149,4 @@ improving this project.
 
 ## License
 
-No license file is currently included. The project owner should add an explicit
-license before redistribution or commercial use.
+This project is licensed under the [MIT License](LICENSE).

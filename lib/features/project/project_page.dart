@@ -27,6 +27,7 @@ class ProjectPage extends StatefulWidget {
     super.key,
     this.initialRepositoryPath,
     required this.onThemeModeChanged,
+    required this.onColorSchemeChanged,
     required this.onFontFamilyChanged,
     required this.onFontScaleChanged,
     required this.onLanguagePreferenceChanged,
@@ -34,6 +35,7 @@ class ProjectPage extends StatefulWidget {
 
   final String? initialRepositoryPath;
   final ValueChanged<ThemeMode> onThemeModeChanged;
+  final ValueChanged<AppColorSchemePreference> onColorSchemeChanged;
   final ValueChanged<String> onFontFamilyChanged;
   final ValueChanged<double> onFontScaleChanged;
   final ValueChanged<AppLanguagePreference> onLanguagePreferenceChanged;
@@ -50,6 +52,7 @@ class _ProjectPageState extends State<ProjectPage> {
   bool _isOpening = false;
   bool _isCommitFieldFocused = false;
   AppThemePreference _lastThemePreference = AppThemePreference.system;
+  AppColorSchemePreference _lastColorScheme = AppColorSchemePreference.emerald;
   String _lastFontFamily = '';
   double _lastFontScale = AppSettings.defaultFontScale;
   AppLanguagePreference _lastLanguagePreference = AppLanguagePreference.system;
@@ -83,6 +86,7 @@ class _ProjectPageState extends State<ProjectPage> {
   void _onControllerChanged() {
     if (mounted) {
       _syncThemeMode();
+      _syncColorScheme();
       _syncFontFamily();
       _syncFontScale();
       _syncLanguagePreference();
@@ -124,6 +128,17 @@ class _ProjectPageState extends State<ProjectPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onThemeModeChanged(mode);
+      }
+    });
+  }
+
+  void _syncColorScheme() {
+    final colorScheme = _controller.settings.colorSchemePreference;
+    if (_lastColorScheme == colorScheme) return;
+    _lastColorScheme = colorScheme;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onColorSchemeChanged(colorScheme);
       }
     });
   }

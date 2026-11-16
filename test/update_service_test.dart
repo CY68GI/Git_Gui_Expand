@@ -128,6 +128,7 @@ void main() {
     expect(launcherSource, contains('previousVersion'));
     expect(launcherSource, contains('Removed old version directory'));
     expect(launcherSource, contains('DiscoverCurrentVersion'));
+    expect(launcherSource, contains('DiscoverPreviousVersion'));
     expect(launcherSource, contains('TryBuildFlatLaunchPlan'));
     expect(launcherSource, contains('0xEF'));
     expect(cmake, contains('GitGuiExpandLauncher'));
@@ -158,6 +159,7 @@ void main() {
       expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
       expect(source, contains(r'UTF8Encoding]::new($false)'));
       expect(source, contains('"current-version.txt"'));
+      expect(source, contains('"LICENSE"'));
     },
   );
 

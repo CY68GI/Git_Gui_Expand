@@ -228,6 +228,36 @@ void main() {
     );
   });
 
+  testWidgets('appearance settings expose all color schemes without clipping', (
+    WidgetTester tester,
+  ) async {
+    await _setViewport(tester);
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _visualApp(
+        SettingsDialog(
+          controller: controller,
+          fontCatalogService: _FakeFontCatalogService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('外观设置'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('配色方案'), findsWidgets);
+    expect(find.text('经典绿'), findsOneWidget);
+    expect(find.text('海洋蓝'), findsOneWidget);
+    expect(find.text('星夜紫'), findsOneWidget);
+    expect(find.text('琥珀金'), findsOneWidget);
+    expect(find.text('玫瑰红'), findsOneWidget);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/settings_appearance_dark_110.png'),
+    );
+  });
+
   testWidgets('file context menu stays readable in dark 110 percent', (
     WidgetTester tester,
   ) async {

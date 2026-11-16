@@ -43,6 +43,7 @@ Get-ChildItem -LiteralPath $root -Filter "README*.md" |
   Copy-Item -Destination $stage -Force
 Get-ChildItem -LiteralPath $root -Filter "CHANGELOG*.md" |
   Copy-Item -Destination $stage -Force
+Copy-Item -LiteralPath (Join-Path $root "LICENSE") -Destination $stage -Force
 
 $versionJson = @{
   version = $version
@@ -64,6 +65,7 @@ $utf8NoBom = [Text.UTF8Encoding]::new($false)
 $required = @(
   (Join-Path $stage "GitGuiExpandLauncher.exe"),
   (Join-Path $stage "current-version.txt"),
+  (Join-Path $stage "LICENSE"),
   (Join-Path $versionStage "git_gui_expand.exe"),
   (Join-Path $versionStage "flutter_windows.dll"),
   (Join-Path $versionStage "data/app.so"),

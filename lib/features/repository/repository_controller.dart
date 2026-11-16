@@ -215,6 +215,8 @@ class RepositoryController extends ChangeNotifier {
     _log.info(
       'app',
       '设置初始化完成：theme=${settings.themePreference.name} '
+          'color=${settings.colorSchemePreference.name} '
+          'language=${settings.languagePreference.name} '
           'units=${settings.unitSystem.name}/${settings.baseUnit.name} '
           'font=${settings.fontFamily} scale=${settings.fontScale}',
     );
@@ -1209,6 +1211,8 @@ class RepositoryController extends ChangeNotifier {
       _log.detail(
         'settings',
         'theme=${oldSettings.themePreference.name}->${nextSettings.themePreference.name}; '
+            'color=${oldSettings.colorSchemePreference.name}->'
+            '${nextSettings.colorSchemePreference.name}; '
             'language=${oldSettings.languagePreference.name}->'
             '${nextSettings.languagePreference.name}; '
             'units=${oldSettings.unitSystem.name}/${nextSettings.baseUnit.name}; '

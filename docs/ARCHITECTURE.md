@@ -124,6 +124,8 @@ Release 说明由 `tool/generate_release_notes.ps1` 生成。脚本从当前标�
 ## 外观
 
 `AppSettings.themePreference` 保存 `system`、`light` 或 `dark`。
+`AppSettings.colorSchemePreference` 保存 `emerald`、`ocean`、`violet`、
+`amber` 或 `rose`，主题根据所选配色生成 Material ColorScheme。
 `MaterialApp` 同时提供 `theme`、`darkTheme` 和 `ThemeMode`，选择跟随系统时由
 Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` 额外记录外观变化。
 字体默认值是内置字体族 `Noto Sans SC`。选择“系统默认”时，

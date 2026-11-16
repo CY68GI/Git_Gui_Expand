@@ -4,6 +4,8 @@ enum SizeBaseUnit { byte, bit }
 
 enum AppThemePreference { system, light, dark }
 
+enum AppColorSchemePreference { emerald, ocean, violet, amber, rose }
+
 enum AppLanguagePreference {
   system,
   english,
@@ -12,7 +14,7 @@ enum AppLanguagePreference {
 }
 
 class AppSettings {
-  static const int currentSettingsVersion = 3;
+  static const int currentSettingsVersion = 4;
   static const String defaultFontFamily = 'Noto Sans SC';
   static const double minFontScale = 0.9;
   static const double defaultFontScale = 1.0;
@@ -23,6 +25,7 @@ class AppSettings {
     this.baseUnit = SizeBaseUnit.byte,
     this.showHiddenFiles = false,
     this.themePreference = AppThemePreference.system,
+    this.colorSchemePreference = AppColorSchemePreference.emerald,
     this.languagePreference = AppLanguagePreference.system,
     this.fontFamily = defaultFontFamily,
     this.fontScale = defaultFontScale,
@@ -33,6 +36,7 @@ class AppSettings {
   final SizeBaseUnit baseUnit;
   final bool showHiddenFiles;
   final AppThemePreference themePreference;
+  final AppColorSchemePreference colorSchemePreference;
   final AppLanguagePreference languagePreference;
   final String fontFamily;
   final double fontScale;
@@ -43,6 +47,7 @@ class AppSettings {
     SizeBaseUnit? baseUnit,
     bool? showHiddenFiles,
     AppThemePreference? themePreference,
+    AppColorSchemePreference? colorSchemePreference,
     AppLanguagePreference? languagePreference,
     String? fontFamily,
     double? fontScale,
@@ -53,6 +58,8 @@ class AppSettings {
       baseUnit: baseUnit ?? this.baseUnit,
       showHiddenFiles: showHiddenFiles ?? this.showHiddenFiles,
       themePreference: themePreference ?? this.themePreference,
+      colorSchemePreference:
+          colorSchemePreference ?? this.colorSchemePreference,
       languagePreference: languagePreference ?? this.languagePreference,
       fontFamily: fontFamily ?? this.fontFamily,
       fontScale: (fontScale ?? this.fontScale)
@@ -67,6 +74,7 @@ class AppSettings {
     'baseUnit': baseUnit.name,
     'showHiddenFiles': showHiddenFiles,
     'themePreference': themePreference.name,
+    'colorSchemePreference': colorSchemePreference.name,
     'languagePreference': languagePreference.name,
     'fontFamily': fontFamily,
     'fontScale': fontScale,
@@ -89,6 +97,10 @@ class AppSettings {
       themePreference: AppThemePreference.values.firstWhere(
         (value) => value.name == json['themePreference'],
         orElse: () => AppThemePreference.system,
+      ),
+      colorSchemePreference: AppColorSchemePreference.values.firstWhere(
+        (value) => value.name == json['colorSchemePreference'],
+        orElse: () => AppColorSchemePreference.emerald,
       ),
       languagePreference: AppLanguagePreference.values.firstWhere(
         (value) => value.name == json['languagePreference'],
@@ -116,6 +128,7 @@ class AppSettings {
         other.baseUnit == baseUnit &&
         other.showHiddenFiles == showHiddenFiles &&
         other.themePreference == themePreference &&
+        other.colorSchemePreference == colorSchemePreference &&
         other.languagePreference == languagePreference &&
         other.fontFamily == fontFamily &&
         other.fontScale == fontScale &&
@@ -128,6 +141,7 @@ class AppSettings {
     baseUnit,
     showHiddenFiles,
     themePreference,
+    colorSchemePreference,
     languagePreference,
     fontFamily,
     fontScale,

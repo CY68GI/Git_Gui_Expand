@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.9.4 - 2026-11-16
+
+### English
+
+- The project is now licensed under the MIT License.
+- README files include Windows Release, platform, and MIT license badges.
+- Every successful Launcher startup now detects the current and immediately
+  previous installed versions, then removes all older version directories.
+- Renamed Appearance to Appearance settings and added Emerald, Ocean, Violet,
+  Amber, and Rose color schemes. Buttons, selected states, borders, and icons
+  follow the selected scheme.
+
+### 简体中文
+
+- 项目许可证改为 MIT License。
+- 三份 README 增加 Windows Release、平台和 MIT 许可证徽章。
+- Launcher 每次成功启动都会识别当前版本和上一已安装版本，并删除其余旧版本目录。
+- “外观模式”改名为“外观设置”，新增经典绿、海洋蓝、星夜紫、琥珀金和玫瑰红
+  五种配色方案；按钮、选择状态、边框和图标会跟随配色方案。
+
+### 繁體中文
+
+- 專案授權改為 MIT License。
+- 三份 README 新增 Windows Release、平台和 MIT 授權徽章。
+- Launcher 每次成功啟動都會辨識目前版本和上一個已安裝版本，並刪除其餘舊版本目錄。
+- 「外觀模式」改名為「外觀設定」，新增經典綠、海洋藍、星夜紫、琥珀金和玫瑰紅
+  五種配色方案；按鈕、選取狀態、邊框和圖示會跟隨配色方案。
+
 ## 0.9.3 - 2026-11-16
 
 ### English

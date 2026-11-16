@@ -4,11 +4,15 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md) | 繁體中文
 
+[![Windows Release](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml/badge.svg)](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml)
+![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
+![license](https://img.shields.io/badge/license-MIT-blue)
+
 Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，透過左右雙欄
 檔案工作區操作已初始化的 Git 儲存庫。檔案與版本控制變更都交由本機 Git CLI
 執行，軟體提供可視化操作，不會自行取代 Git。
 
-目前版本：`0.9.3`
+目前版本：`0.9.4`
 
 - GitHub：<https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -27,7 +31,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 - 可在檔案總管中定位檔案，或使用系統預設應用程式開啟。
 - 顯示專案大小、檔案大小、目前分支、Git 狀態與待提交變更。
 - 支援 IEC/SI 大小單位與 Byte/bit 基礎單位。
-- 支援跟隨系統、淺色與深色外觀。
+- 支援跟隨系統、淺色與深色顯示模式，並提供五種配色方案。
 - 可搜尋內建與系統 UI 字型，字級限制為 90%、100%、110%。
 - 支援 English、简体中文、繁體中文，預設跟隨作業系統語言。
 - 普通日誌與詳細日誌依目前介面語言產生。
@@ -62,7 +66,7 @@ build\windows\x64\runner\Release\
 建立發布 ZIP：
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.3
+.\tool\package_windows_release.ps1 -Tag v0.9.4
 ```
 
 ## 發布目錄結構
@@ -72,7 +76,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.3/
+    0.9.4/
       git_gui_expand.exe
       flutter_windows.dll
       data/
@@ -119,4 +123,4 @@ Launcher 會下載並驗證 Windows x64 ZIP，解壓縮到獨立版本目錄，�
 
 ## 授權
 
-倉庫目前尚未包含授權條款。散布或商用前，請由專案所有者補充明確授權。
+本專案使用 [MIT License](LICENSE)。

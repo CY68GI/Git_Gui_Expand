@@ -265,6 +265,37 @@ std::wstring DiscoverCurrentVersion(const fs::path& root) {
   return selected;
 }
 
+std::wstring DiscoverPreviousVersion(const fs::path& root,
+                                     const std::wstring& currentVersion) {
+  const fs::path versionsDirectory = root / L"versions";
+  std::error_code error;
+  if (!fs::is_directory(versionsDirectory, error)) {
+    return {};
+  }
+  std::wstring selected;
+  for (fs::directory_iterator iterator(versionsDirectory, error), end;
+       iterator != end; iterator.increment(error)) {
+    if (error) {
+      break;
+    }
+    std::error_code statusError;
+    const fs::file_status status = iterator->symlink_status(statusError);
+    if (statusError || !fs::is_directory(status) ||
+        fs::is_symlink(status)) {
+      continue;
+    }
+    const std::wstring name = iterator->path().filename().wstring();
+    if (!IsLaunchableVersion(root, name, nullptr) ||
+        CompareVersions(name, currentVersion) >= 0) {
+      continue;
+    }
+    if (selected.empty() || CompareVersions(name, selected) > 0) {
+      selected = name;
+    }
+  }
+  return selected;
+}
+
 bool TryBuildFlatLaunchPlan(const fs::path& root, LaunchPlan* plan) {
   const fs::path executable = root / L"git_gui_expand.exe";
   const fs::path appData = root / L"data" / L"app.so";
@@ -463,10 +494,12 @@ DWORD RunLauncher(const fs::path& root, DWORD waitProcessId) {
     const DWORD firstWait = WaitForSingleObject(process.hProcess, 8000);
     if (firstWait == WAIT_TIMEOUT) {
       WriteLog(root, L"Version " + version + L" passed startup check");
-      if (pendingResult.applied) {
-        PruneOldVersionDirectories(root, version,
-                                   pendingResult.previous_version);
+      std::wstring previousVersion = pendingResult.previous_version;
+      if (previousVersion.empty() ||
+          !IsLaunchableVersion(root, previousVersion, nullptr)) {
+        previousVersion = DiscoverPreviousVersion(root, version);
       }
+      PruneOldVersionDirectories(root, version, previousVersion);
       DeleteFileW((root / L"rollback-version.txt").c_str());
       WaitForSingleObject(process.hProcess, INFINITE);
       const DWORD exitCode = ReadExitCode(process.hProcess);

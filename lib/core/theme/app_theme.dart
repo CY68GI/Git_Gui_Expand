@@ -1,19 +1,57 @@
 import 'package:flutter/material.dart';
 
+import '../models/settings_models.dart';
+
+class AppColorPalette {
+  const AppColorPalette({required this.lightSeed, required this.darkAccent});
+
+  final Color lightSeed;
+  final Color darkAccent;
+}
+
 class AppTheme {
   const AppTheme._();
 
   static const Color accent = Color(0xFF087C68);
   static const Color darkAccent = Color(0xFF43D4B4);
 
-  static ThemeData light({String? fontFamily}) {
+  static AppColorPalette palette(AppColorSchemePreference preference) {
+    return switch (preference) {
+      AppColorSchemePreference.emerald => const AppColorPalette(
+        lightSeed: Color(0xFF087C68),
+        darkAccent: Color(0xFF43D4B4),
+      ),
+      AppColorSchemePreference.ocean => const AppColorPalette(
+        lightSeed: Color(0xFF1769AA),
+        darkAccent: Color(0xFF6CC7FF),
+      ),
+      AppColorSchemePreference.violet => const AppColorPalette(
+        lightSeed: Color(0xFF6549C8),
+        darkAccent: Color(0xFFB9A7FF),
+      ),
+      AppColorSchemePreference.amber => const AppColorPalette(
+        lightSeed: Color(0xFF946200),
+        darkAccent: Color(0xFFFFC857),
+      ),
+      AppColorSchemePreference.rose => const AppColorPalette(
+        lightSeed: Color(0xFFB43D62),
+        darkAccent: Color(0xFFFF9BB4),
+      ),
+    };
+  }
+
+  static ThemeData light({
+    String? fontFamily,
+    AppColorSchemePreference colorScheme = AppColorSchemePreference.emerald,
+  }) {
+    final palette = AppTheme.palette(colorScheme);
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: accent,
+          seedColor: palette.lightSeed,
           brightness: Brightness.light,
           surface: Colors.white,
         ).copyWith(
-          primary: accent,
+          primary: palette.lightSeed,
           onPrimary: Colors.white,
           onSurface: const Color(0xFF17211E),
           surfaceContainerLowest: Colors.white,
@@ -30,14 +68,18 @@ class AppTheme {
     );
   }
 
-  static ThemeData dark({String? fontFamily}) {
+  static ThemeData dark({
+    String? fontFamily,
+    AppColorSchemePreference colorScheme = AppColorSchemePreference.emerald,
+  }) {
+    final palette = AppTheme.palette(colorScheme);
     final scheme =
         ColorScheme.fromSeed(
-          seedColor: darkAccent,
+          seedColor: palette.darkAccent,
           brightness: Brightness.dark,
           surface: const Color(0xFF171E1B),
         ).copyWith(
-          primary: darkAccent,
+          primary: palette.darkAccent,
           onPrimary: const Color(0xFF05241D),
           onSurface: const Color(0xFFE8EFEA),
           onSurfaceVariant: const Color(0xFFA9B8B1),

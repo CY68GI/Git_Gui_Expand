@@ -4,11 +4,15 @@
 
 [English](README.md) | 简体中文 | [繁體中文](README.zh-TW.md)
 
+[![Windows Release](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml/badge.svg)](https://github.com/CY68GI/Git_Gui_Expand/actions/workflows/windows-release.yml)
+![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
+![license](https://img.shields.io/badge/license-MIT-blue)
+
 Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。它把 Git
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.3`
+当前版本：`0.9.4`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -35,7 +39,8 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 - 实时显示 Git 状态，可把暂存、取消暂存和提交说明加入执行计划。
 - 显示仓库名称、分支、仓库总大小、文件数量、待提交数量和每个文件大小。
 - 大小单位支持 IEC 二进制、SI 十进制、Byte 和 bit。
-- 支持跟随系统、浅色和深色三种外观模式，系统外观变化会即时同步。
+- 支持跟随系统、浅色和深色三种显示模式，并提供经典绿、海洋蓝、星夜紫、
+  琥珀金和玫瑰红五种配色方案。
 - 设置提供语言页面，支持 English、简体中文和繁體中文；默认跟随操作系统语言。
 - 支持选择当前系统已安装字体，默认使用内置 Noto Sans SC / 思源黑体。
 - 内置 Inter UI、Noto Sans SC、IBM Plex Sans 三款 OFL 开源 UI 字体。
@@ -151,7 +156,7 @@ build\windows\x64\runner\Release\
 字体大小限制为 90%–110%，避免过小或过大导致界面布局损坏。
 字体页面使用常驻滚动条，并在顶部提示下方还有字体预览和字体大小设置。
 
-设置窗口分为五个页面：字体、语言、外观模式、单位设置和关于。保存后设置应用到
+设置窗口分为五个页面：字体、语言、外观设置、单位设置和关于。保存后设置应用到
 整个软件。语言页面使用 `English`、`简体中文` 和 `繁體中文` 自身文字显示选项，
 默认跟随操作系统语言。关于页包含版本、项目仓库入口和人工智能协作致谢。
 
@@ -163,8 +168,8 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.2/                    # 更新成功后保留的上一版本
-    0.9.3/                    # 当前版本
+    0.9.3/                    # 更新成功后保留的上一版本
+    0.9.4/                    # 当前版本
       git_gui_expand.exe
       data/
       version.json
@@ -262,4 +267,4 @@ tool/                # 图标、发布说明等构建辅助脚本
 
 ## 许可证
 
-仓库尚未提供许可证文件。分发或商用前应由项目所有者补充明确许可证。
+本项目使用 [MIT License](LICENSE)。

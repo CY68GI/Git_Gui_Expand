@@ -154,11 +154,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Trilingual UI, desktop shortcut, and clean-extract repair'),
+      find.text(
+        'MIT license, automatic old-version cleanup, and appearance colors',
+      ),
       findsOneWidget,
     );
-    expect(find.text('v0.9.2'), findsNothing);
-    expect(find.text('三语界面、桌面快捷方式与全新解压修复'), findsNothing);
+    expect(find.text('v0.9.3'), findsNothing);
+    expect(find.text('MIT 许可证、自动清理旧版本与外观配色'), findsNothing);
   });
 
   testWidgets('settings page exposes all sections and attribution', (
@@ -199,13 +201,22 @@ void main() {
     expect(find.text('此页还有下方内容'), findsOneWidget);
     expect(find.text('向下滚动可查看字体预览和字体大小设置。'), findsOneWidget);
     expect(find.byType(Scrollbar), findsWidgets);
-    expect(find.text('外观模式'), findsOneWidget);
+    expect(find.text('外观设置'), findsOneWidget);
     expect(find.text('单位设置'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '思源');
     await tester.pump();
     expect(find.text('Noto Sans SC / 思源黑体'), findsOneWidget);
     expect(find.text('Inter UI'), findsNothing);
+
+    await tester.tap(find.text('外观设置'));
+    await tester.pump();
+    expect(find.text('配色方案'), findsWidgets);
+    expect(find.text('经典绿'), findsOneWidget);
+    expect(find.text('海洋蓝'), findsOneWidget);
+    expect(find.text('星夜紫'), findsOneWidget);
+    expect(find.text('琥珀金'), findsOneWidget);
+    expect(find.text('玫瑰红'), findsOneWidget);
 
     await tester.tap(find.text('语言'));
     await tester.pump();
@@ -233,6 +244,7 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('一键发送到桌面'), findsOneWidget);
+    expect(find.text('本项目使用 MIT License 开源许可证。'), findsOneWidget);
   });
 
   testWidgets('remote manager displays multiple repository platforms', (

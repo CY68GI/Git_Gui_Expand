@@ -10,6 +10,7 @@ import 'package:git_gui_expand/core/services/app_storage_service.dart';
 import 'package:git_gui_expand/core/services/desktop_shortcut_service.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
+import 'package:git_gui_expand/core/theme/app_theme.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -43,6 +44,7 @@ void main() {
       unitSystem: SizeUnitSystem.decimal,
       baseUnit: SizeBaseUnit.bit,
       themePreference: AppThemePreference.dark,
+      colorSchemePreference: AppColorSchemePreference.ocean,
       languagePreference: AppLanguagePreference.traditionalChinese,
       fontFamily: 'Noto Sans',
       fontScale: 1.1,
@@ -103,6 +105,15 @@ void main() {
       AppSettings.fromJson({'languagePreference': 'simplifiedChinese'})
           .languagePreference,
       AppLanguagePreference.simplifiedChinese,
+    );
+    expect(
+      AppSettings.fromJson({'colorSchemePreference': 'violet'})
+          .colorSchemePreference,
+      AppColorSchemePreference.violet,
+    );
+    expect(
+      AppSettings.fromJson({}).colorSchemePreference,
+      AppColorSchemePreference.emerald,
     );
   });
 
@@ -198,12 +209,36 @@ void main() {
   testWidgets('application exposes light, dark and system theme modes', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const GitGuiExpandApp());
+    await tester.pumpWidget(
+      const GitGuiExpandApp(
+        initialColorSchemePreference: AppColorSchemePreference.ocean,
+      ),
+    );
     final app = tester.widget<MaterialApp>(find.byType(MaterialApp));
 
     expect(app.themeMode, ThemeMode.system);
     expect(app.theme?.brightness, Brightness.light);
     expect(app.darkTheme?.brightness, Brightness.dark);
+    expect(
+      app.theme?.colorScheme.primary,
+      AppTheme.palette(AppColorSchemePreference.ocean).lightSeed,
+    );
+  });
+
+  test('color schemes change the Material primary color', () {
+    final emerald = AppTheme.light(
+      colorScheme: AppColorSchemePreference.emerald,
+    );
+    final ocean = AppTheme.light(colorScheme: AppColorSchemePreference.ocean);
+    final violetDark = AppTheme.dark(
+      colorScheme: AppColorSchemePreference.violet,
+    );
+
+    expect(ocean.colorScheme.primary, isNot(emerald.colorScheme.primary));
+    expect(
+      violetDark.colorScheme.primary,
+      AppTheme.palette(AppColorSchemePreference.violet).darkAccent,
+    );
   });
 
   test('font catalog returns installed fonts or platform fallbacks', () async {
@@ -285,5 +320,21 @@ void main() {
     expect(result.shortcutPath, isNotNull);
     expect(await File(result.shortcutPath!).exists(), isTrue);
     expect(result.shortcutPath, endsWith('Git GUI Expand.lnk'));
+  });
+
+  test('project uses MIT and READMEs expose project badges', () async {
+    final license = await File(
+      '${Directory.current.path}${Platform.pathSeparator}LICENSE',
+    ).readAsString();
+    expect(license, startsWith('MIT License'));
+
+    for (final name in ['README.md', 'README.zh-CN.md', 'README.zh-TW.md']) {
+      final readme = await File(
+        '${Directory.current.path}${Platform.pathSeparator}$name',
+      ).readAsString();
+      expect(readme, contains('actions/workflows/windows-release.yml'));
+      expect(readme, contains('platform-Windows%2010%20%7C%2011'));
+      expect(readme, contains('license-MIT-blue'));
+    }
   });
 }

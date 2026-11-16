@@ -113,7 +113,7 @@ Settings contains five pages:
 
 - Font
 - Language
-- Appearance
+- Appearance settings
 - Units
 - About
 
@@ -133,8 +133,10 @@ The default UI font is bundled `Noto Sans SC`. Search bundled or installed syste
 fonts by name or purpose. The font page has a permanent scroll bar and a visible
 hint that font preview and size controls continue below.
 
-Text size is limited to 90%, 100%, and 110%. Appearance can follow the operating
-system or use a fixed light or dark theme.
+Text size is limited to 90%, 100%, and 110%. Appearance settings can follow the
+operating system or use a fixed light or dark display mode. It also provides
+Emerald, Ocean, Violet, Amber, and Rose color schemes; buttons, selection
+states, borders, and icons follow the selected scheme.
 
 ### Desktop shortcut
 

@@ -14,10 +14,12 @@ class GitGuiExpandApp extends StatefulWidget {
     super.key,
     this.initialRepositoryPath,
     this.initialLanguagePreference = AppLanguagePreference.system,
+    this.initialColorSchemePreference = AppColorSchemePreference.emerald,
   });
 
   final String? initialRepositoryPath;
   final AppLanguagePreference initialLanguagePreference;
+  final AppColorSchemePreference initialColorSchemePreference;
 
   @override
   State<GitGuiExpandApp> createState() => _GitGuiExpandAppState();
@@ -26,6 +28,7 @@ class GitGuiExpandApp extends StatefulWidget {
 class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     with WidgetsBindingObserver {
   ThemeMode _themeMode = ThemeMode.system;
+  late AppColorSchemePreference _colorScheme;
   String _fontFamily = AppSettings.defaultFontFamily;
   double _fontScale = AppSettings.defaultFontScale;
   late AppLanguagePreference _languagePreference;
@@ -34,6 +37,7 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
   void initState() {
     super.initState();
     _languagePreference = widget.initialLanguagePreference;
+    _colorScheme = widget.initialColorSchemePreference;
     AppLogService.instance.setLocale(
       AppLocalizations.localeForPreference(_languagePreference),
     );
@@ -81,8 +85,14 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     return MaterialApp(
       title: AppInfo.englishName,
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(fontFamily: selectedFont),
-      darkTheme: AppTheme.dark(fontFamily: selectedFont),
+      theme: AppTheme.light(
+        fontFamily: selectedFont,
+        colorScheme: _colorScheme,
+      ),
+      darkTheme: AppTheme.dark(
+        fontFamily: selectedFont,
+        colorScheme: _colorScheme,
+      ),
       themeMode: _themeMode,
       locale: switch (_languagePreference) {
         AppLanguagePreference.system => null,
@@ -115,6 +125,11 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
         onThemeModeChanged: (mode) {
           if (_themeMode != mode) {
             setState(() => _themeMode = mode);
+          }
+        },
+        onColorSchemeChanged: (colorScheme) {
+          if (_colorScheme != colorScheme) {
+            setState(() => _colorScheme = colorScheme);
           }
         },
         onFontFamilyChanged: (fontFamily) {

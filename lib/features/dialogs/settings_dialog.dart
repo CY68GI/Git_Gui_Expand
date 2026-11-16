@@ -9,6 +9,7 @@ import '../../core/services/app_storage_service.dart';
 import '../../core/services/desktop_shortcut_service.dart';
 import '../../core/services/font_catalog_service.dart';
 import '../../core/services/update_service.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
 
@@ -180,7 +181,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         ),
                         _SettingsNavItem(
                           icon: Icons.brightness_6_outlined,
-                          label: context.l10n.tr('外观模式'),
+                          label: context.l10n.tr('外观设置'),
                           selected: _section == _SettingsSection.appearance,
                           onTap: () =>
                               _selectSection(_SettingsSection.appearance),
@@ -532,9 +533,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     return _SettingsPage(
-      title: l10n.tr('外观模式'),
-      subtitle: l10n.tr('跟随系统会根据设备当前的深色或浅色外观自动切换。'),
+      title: l10n.tr('外观设置'),
+      subtitle: l10n.tr('选择显示模式和配色方案；界面图标会跟随当前配色方案变化。'),
       children: [
+        _SectionLabel(
+          title: l10n.tr('显示模式'),
+          caption: l10n.tr('跟随系统会根据设备当前的深色或浅色外观自动切换。'),
+        ),
+        const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<AppThemePreference>(
@@ -597,6 +603,29 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 22),
+        _SectionLabel(
+          title: l10n.tr('配色方案'),
+          caption: l10n.tr('配色方案会应用到按钮、选择状态、边框、图标和强调文字。'),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            for (final preference in AppColorSchemePreference.values)
+              _ColorSchemeOption(
+                preference: preference,
+                label: _colorSchemeLabel(l10n, preference),
+                selected: _draft.colorSchemePreference == preference,
+                onTap: () {
+                  setState(() {
+                    _draft = _draft.copyWith(colorSchemePreference: preference);
+                  });
+                },
+              ),
+          ],
         ),
       ],
     );
@@ -876,7 +905,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 14),
         Text(
-          l10n.tr('本项目为开源项目，未附带许可证；分发或商用前请由项目所有者补充许可证。'),
+          l10n.tr('本项目使用 MIT License 开源许可证。'),
           style: TextStyle(
             fontSize: 11.5,
             height: 1.5,
@@ -892,6 +921,20 @@ class _SettingsDialogState extends State<SettingsDialog> {
       AppThemePreference.system => '跟随系统',
       AppThemePreference.light => '浅色',
       AppThemePreference.dark => '深色',
+    };
+    return l10n.tr(label);
+  }
+
+  String _colorSchemeLabel(
+    AppLocalizations l10n,
+    AppColorSchemePreference preference,
+  ) {
+    final label = switch (preference) {
+      AppColorSchemePreference.emerald => '经典绿',
+      AppColorSchemePreference.ocean => '海洋蓝',
+      AppColorSchemePreference.violet => '星夜紫',
+      AppColorSchemePreference.amber => '琥珀金',
+      AppColorSchemePreference.rose => '玫瑰红',
     };
     return l10n.tr(label);
   }
@@ -1567,6 +1610,80 @@ class _ThemeSwatch extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ColorSchemeOption extends StatelessWidget {
+  const _ColorSchemeOption({
+    required this.preference,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppColorSchemePreference preference;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppTheme.palette(preference);
+    final accent = dark ? palette.darkAccent : palette.lightSeed;
+    return SizedBox(
+      width: 162,
+      child: Material(
+        color: selected
+            ? colors.primary.withValues(alpha: 0.1)
+            : colors.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(
+            color: selected ? colors.primary : colors.outlineVariant,
+            width: selected ? 1.5 : 1,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            child: Row(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Icon(Icons.palette_outlined, size: 19, color: accent),
+                ),
+                const SizedBox(width: 9),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Icon(
+                  selected
+                      ? Icons.check_circle_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 18,
+                  color: selected ? colors.primary : colors.outline,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -14,6 +14,17 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.4',
+    date: '2026-11-16',
+    title: 'MIT 许可证、自动清理旧版本与外观配色',
+    items: [
+      '项目正式采用 MIT License，并在三份 README 中增加项目徽章。',
+      'Launcher 每次成功启动都会保留当前版本和上一已安装版本，删除其余旧版本。',
+      '“外观模式”改名为“外观设置”，新增五种可选配色方案。',
+      '按钮、选择状态、边框、图标和强调文字会随配色方案变化。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.3',
     date: '2026-11-16',
     title: '三语界面、桌面快捷方式与全新解压修复',
