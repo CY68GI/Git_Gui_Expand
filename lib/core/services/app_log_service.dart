@@ -1,5 +1,8 @@
 import 'dart:io';
 
+import 'package:flutter/widgets.dart';
+
+import '../localization/app_localizations.dart';
 import 'app_storage_service.dart';
 
 enum AppLogType { normal, detailed }
@@ -11,8 +14,16 @@ class AppLogService {
 
   final AppStorageService storage;
   Future<void> _writeQueue = Future<void>.value();
+  AppLocalizations _localizations = const AppLocalizations(
+    AppLocalizations.simplifiedChinese,
+  );
 
   String get logsDirectoryPath => storage.logsDirectory.path;
+  String get languageCode => _localizations.languageCode;
+
+  void setLocale(Locale locale) {
+    _localizations = AppLocalizations(AppLocalizations.resolveLocale(locale));
+  }
 
   void info(String area, String message) {
     _enqueue('INFO', area, message, includeInNormal: true);
@@ -95,8 +106,10 @@ class AppLogService {
     required bool includeInNormal,
   }) {
     final now = DateTime.now();
+    final localizedMessage = _localizations.tr(message);
     final line =
-        '${now.toIso8601String()} [$level] [$area] ${_singleLine(message)}';
+        '${now.toIso8601String()} [$level] [$area] '
+        '${_singleLine(localizedMessage)}';
     _writeQueue = _writeQueue
         .then((_) async {
           await storage.ensureLogsDirectory();

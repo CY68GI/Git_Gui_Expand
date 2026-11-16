@@ -1205,14 +1205,15 @@ class RepositoryController extends ChangeNotifier {
     notifyListeners();
     try {
       await _settingsService.save(nextSettings);
-      _log.info(
+      _log.info('settings', '设置已更新');
+      _log.detail(
         'settings',
-        '设置更新：theme ${oldSettings.themePreference.name} -> '
-            '${nextSettings.themePreference.name}; '
-            'units ${nextSettings.unitSystem.name}/${nextSettings.baseUnit.name}; '
-            'font ${oldSettings.fontFamily.isEmpty ? '系统默认' : oldSettings.fontFamily}'
-            ' -> ${nextSettings.fontFamily.isEmpty ? '系统默认' : nextSettings.fontFamily}; '
-            'scale ${oldSettings.fontScale} -> ${nextSettings.fontScale}',
+        'theme=${oldSettings.themePreference.name}->${nextSettings.themePreference.name}; '
+            'language=${oldSettings.languagePreference.name}->'
+            '${nextSettings.languagePreference.name}; '
+            'units=${oldSettings.unitSystem.name}/${nextSettings.baseUnit.name}; '
+            'font=${oldSettings.fontFamily}->${nextSettings.fontFamily}; '
+            'scale=${oldSettings.fontScale}->${nextSettings.fontScale}',
       );
       return const OperationOutcome.success('设置已保存');
     } catch (error) {

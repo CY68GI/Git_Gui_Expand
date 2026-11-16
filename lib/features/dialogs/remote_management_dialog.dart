@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/git_remote.dart';
 import '../repository/repository_controller.dart';
 import 'operation_plan_dialog.dart';
@@ -44,6 +45,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final controller = widget.controller;
     return Dialog(
       insetPadding: const EdgeInsets.all(28),
@@ -83,19 +85,26 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          '远端仓库',
-                          style: TextStyle(
+                        Text(
+                          l10n.tr('远端仓库'),
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Tooltip(
-                          message:
-                              '当前分支：${controller.branch.isEmpty ? '无' : controller.branch}',
+                          message: l10n.tr('当前分支：{branch}', {
+                            'branch': controller.branch.isEmpty
+                                ? l10n.tr('无')
+                                : controller.branch,
+                          }),
                           child: Text(
-                            '当前分支：${controller.branch.isEmpty ? '无' : controller.branch}',
+                            l10n.tr('当前分支：{branch}', {
+                              'branch': controller.branch.isEmpty
+                                  ? l10n.tr('无')
+                                  : controller.branch,
+                            }),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -115,7 +124,11 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                       Icons.playlist_add_check_rounded,
                       size: 16,
                     ),
-                    label: Text('待执行 ${controller.pendingOperations.length}'),
+                    label: Text(
+                      l10n.tr('待执行 {count}', {
+                        'count': controller.pendingOperations.length,
+                      }),
+                    ),
                   ),
                   const SizedBox(width: 6),
                   OutlinedButton.icon(
@@ -126,7 +139,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                         ? null
                         : _confirmPushAll,
                     icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                    label: const Text('全部推送'),
+                    label: Text(l10n.tr('全部推送')),
                   ),
                   const SizedBox(width: 6),
                   IconButton(
@@ -140,12 +153,12 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                               _messageIsError = !outcome.isSuccess;
                             });
                           },
-                    tooltip: '刷新远端',
+                    tooltip: l10n.tr('刷新远端'),
                     icon: const Icon(Icons.refresh_rounded, size: 19),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    tooltip: '关闭',
+                    tooltip: l10n.tr('关闭'),
                     icon: const Icon(Icons.close_rounded, size: 19),
                   ),
                 ],
@@ -165,7 +178,9 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Text(
-                                '尚未配置远端仓库。请在右侧添加 GitHub、Gitee、GitLab 或其他 Git 远端。',
+                                l10n.tr(
+                                  '尚未配置远端仓库。请在右侧添加 GitHub、Gitee、GitLab 或其他 Git 远端。',
+                                ),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12.5,
@@ -200,7 +215,9 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            _editingName == null ? '添加远端' : '编辑远端',
+                            _editingName == null
+                                ? l10n.tr('添加远端')
+                                : l10n.tr('编辑远端'),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -208,9 +225,11 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                           ),
                           const SizedBox(height: 5),
                           Text(
-                            '支持 GitHub、Gitee、GitLab、Bitbucket 和任意标准 Git 远端。'
-                            '所有修改会先加入待执行计划。远端右侧红色垃圾桶用于'
-                            '清空该远端全部分支和标签。',
+                            l10n.tr(
+                              '支持 GitHub、Gitee、GitLab、Bitbucket 和任意标准 Git 远端。'
+                              '所有修改会先加入待执行计划。远端右侧红色垃圾桶用于'
+                              '清空该远端全部分支和标签。',
+                            ),
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.5,
@@ -221,9 +240,9 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                           TextField(
                             controller: _nameController,
                             readOnly: _editingName != null,
-                            decoration: const InputDecoration(
-                              labelText: '远端名称',
-                              hintText: '例如 origin、gitee、gitlab',
+                            decoration: InputDecoration(
+                              labelText: l10n.tr('远端名称'),
+                              hintText: l10n.tr('例如 origin、gitee、gitlab'),
                               isDense: true,
                             ),
                           ),
@@ -232,9 +251,11 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                             controller: _urlController,
                             minLines: 2,
                             maxLines: 3,
-                            decoration: const InputDecoration(
-                              labelText: '远端 URL',
-                              hintText: 'https://... 或 git@host:owner/repo.git',
+                            decoration: InputDecoration(
+                              labelText: l10n.tr('远端 URL'),
+                              hintText: l10n.tr(
+                                'https://... 或 git@host:owner/repo.git',
+                              ),
                               alignLabelWithHint: true,
                               isDense: true,
                             ),
@@ -249,7 +270,9 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                               size: 17,
                             ),
                             label: Text(
-                              _editingName == null ? '加入添加计划' : '加入修改计划',
+                              _editingName == null
+                                  ? l10n.tr('加入添加计划')
+                                  : l10n.tr('加入修改计划'),
                             ),
                           ),
                           if (_editingName != null) ...[
@@ -264,7 +287,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                                         _urlController.clear();
                                       });
                                     },
-                              child: const Text('取消编辑'),
+                              child: Text(l10n.tr('取消编辑')),
                             ),
                           ],
                           if (_message != null) ...[
@@ -280,7 +303,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: SelectableText(
-                                _message!,
+                                l10n.tr(_message!),
                                 style: TextStyle(
                                   fontSize: 12,
                                   height: 1.4,
@@ -324,9 +347,10 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   }
 
   Future<void> _confirmClearRemote(GitRemote remote) async {
+    final l10n = context.l10n;
     setState(() {
       _inspectingClear = true;
-      _message = '正在读取远端 ${remote.name} 的分支和标签…';
+      _message = l10n.tr('正在读取远端 {remote} 的分支和标签…', {'remote': remote.name});
       _messageIsError = false;
     });
     final inspection = await widget.controller.inspectRemoteForClear(
@@ -353,7 +377,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
         final colors = Theme.of(context).colorScheme;
         return AlertDialog(
           icon: Icon(Icons.delete_forever_rounded, color: colors.error),
-          title: Text('清空远端历史 ${remote.name}？'),
+          title: Text(l10n.tr('清空远端历史 {remote}？', {'remote': remote.name})),
           content: SizedBox(
             width: 600,
             child: Column(
@@ -361,25 +385,36 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '这是不可撤销的高风险操作。软件会先备份远端引用，然后把 '
-                  '${preview.targetBranch} 强制替换为一个不含文件的空根提交，'
-                  '删除其他分支和标签，并把本地同名分支与索引同步到该空提交。'
-                  '本地文件不会删除，刷新后会显示为未跟踪。',
+                  l10n.tr(
+                    '这是不可撤销的高风险操作。软件会先备份远端引用，然后把 '
+                    '{branch} 强制替换为一个不含文件的空根提交，删除其他分支和标签，'
+                    '并把本地同名分支与索引同步到该空提交。本地文件不会删除，'
+                    '刷新后会显示为未跟踪。',
+                    {'branch': preview.targetBranch},
+                  ),
                   style: const TextStyle(fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 10),
                 SelectableText(
-                  '项目：${preview.projectName}\n'
-                  '目标分支：${preview.targetBranch}\n'
-                  '空提交说明：${preview.emptyCommitMessage}\n'
-                  '计划执行确认：${preview.confirmationText}',
+                  l10n.tr(
+                    '项目：{project}\n目标分支：{branch}\n'
+                    '空提交说明：{message}\n计划执行确认：{confirmation}',
+                    {
+                      'project': preview.projectName,
+                      'branch': preview.targetBranch,
+                      'message': preview.emptyCommitMessage,
+                      'confirmation': preview.confirmationText,
+                    },
+                  ),
                   style: const TextStyle(fontSize: 12.5, height: 1.55),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${remote.platformLabel} 的默认分支通常受保护。'
-                  '如果服务器拒绝强制更新或删除，整个原子操作不会删除任何引用；'
-                  '需要先在托管平台临时解除默认分支保护。',
+                  l10n.tr(
+                    '{platform} 的默认分支通常受保护。如果服务器拒绝强制更新或删除，'
+                    '整个原子操作不会删除任何引用；需要先在托管平台临时解除默认分支保护。',
+                    {'platform': remote.platformLabel},
+                  ),
                   style: TextStyle(
                     fontSize: 12.5,
                     height: 1.5,
@@ -402,7 +437,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                   child: SingleChildScrollView(
                     child: SelectableText(
                       preview.refs.isEmpty
-                          ? '远端当前没有分支或标签，将直接创建第一个空提交。'
+                          ? l10n.tr('远端当前没有分支或标签，将直接创建第一个空提交。')
                           : preview.refs.join('\n'),
                       style: const TextStyle(fontSize: 12, height: 1.45),
                     ),
@@ -414,12 +449,12 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
+              child: Text(l10n.tr('取消')),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
               icon: const Icon(Icons.playlist_add_rounded, size: 18),
-              label: const Text('加入清空计划'),
+              label: Text(l10n.tr('加入清空计划')),
               style: FilledButton.styleFrom(
                 backgroundColor: colors.error,
                 foregroundColor: colors.onError,
@@ -463,25 +498,32 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   }
 
   Future<void> _confirmPush(GitRemote remote) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('将推送到 ${remote.name} 加入计划'),
+        title: Text(l10n.tr('将推送到 {remote} 加入计划', {'remote': remote.name})),
         content: Text(
-          '现在不会联网推送。执行计划时，将当前分支 '
-          '${widget.controller.branch} 推送到 ${remote.platformLabel}。\n'
-          '${remote.maskedUrl}',
+          l10n.tr(
+            '现在不会联网推送。执行计划时，将当前分支 {branch} 推送到 '
+            '{platform}。\n{url}',
+            {
+              'branch': widget.controller.branch,
+              'platform': remote.platformLabel,
+              'url': remote.maskedUrl,
+            },
+          ),
           style: const TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.tr('取消')),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: const Text('加入推送计划'),
+            label: Text(l10n.tr('加入推送计划')),
           ),
         ],
       ),
@@ -499,26 +541,30 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   }
 
   Future<void> _confirmPushAll() async {
+    final l10n = context.l10n;
     final names = widget.controller.remotes
         .map((remote) => remote.name)
         .join('、');
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('将全部推送加入计划'),
+        title: Text(l10n.tr('将全部推送加入计划')),
         content: Text(
-          '执行计划时，当前分支 ${widget.controller.branch} 将依次推送到：\n$names',
+          l10n.tr('执行计划时，当前分支 {branch} 将依次推送到：\n{remotes}', {
+            'branch': widget.controller.branch,
+            'remotes': names,
+          }),
           style: const TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.tr('取消')),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: const Text('加入全部推送计划'),
+            label: Text(l10n.tr('加入全部推送计划')),
           ),
         ],
       ),
@@ -536,25 +582,26 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   }
 
   Future<void> _confirmRemove(GitRemote remote) async {
+    final l10n = context.l10n;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('将移除远端配置 ${remote.name} 加入计划'),
-        content: const Text(
-          '执行计划时只删除本地 Git remote 配置，不会删除远端平台上的仓库。',
-          style: TextStyle(fontSize: 13, height: 1.5),
+        title: Text(l10n.tr('将移除远端配置 {remote} 加入计划', {'remote': remote.name})),
+        content: Text(
+          l10n.tr('执行计划时只删除本地 Git remote 配置，不会删除远端平台上的仓库。'),
+          style: const TextStyle(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.tr('取消')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('加入移除计划'),
+            child: Text(l10n.tr('加入移除计划')),
           ),
         ],
       ),
@@ -594,6 +641,7 @@ class _RemoteCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final platformColor = _platformColor(remote.platform);
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
@@ -684,7 +732,7 @@ class _RemoteCard extends StatelessWidget {
           TextButton.icon(
             onPressed: busy ? null : onPush,
             icon: const Icon(Icons.cloud_upload_outlined, size: 15),
-            label: const Text('推送'),
+            label: Text(l10n.tr('推送')),
             style: TextButton.styleFrom(
               visualDensity: VisualDensity.compact,
               padding: const EdgeInsets.symmetric(horizontal: 7),
@@ -692,19 +740,19 @@ class _RemoteCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: busy ? null : onEdit,
-            tooltip: '编辑 URL',
+            tooltip: l10n.tr('编辑 URL'),
             icon: const Icon(Icons.edit_outlined, size: 16),
             visualDensity: VisualDensity.compact,
           ),
           IconButton(
             onPressed: busy ? null : onRemove,
-            tooltip: '移除本地远端配置',
+            tooltip: l10n.tr('移除本地远端配置'),
             icon: const Icon(Icons.delete_outline_rounded, size: 16),
             visualDensity: VisualDensity.compact,
           ),
           IconButton(
             onPressed: busy ? null : onClear,
-            tooltip: '清空远端全部分支和标签（危险）',
+            tooltip: l10n.tr('清空远端全部分支和标签（危险）'),
             icon: Icon(
               Icons.delete_forever_rounded,
               size: 18,

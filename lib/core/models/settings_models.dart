@@ -4,8 +4,15 @@ enum SizeBaseUnit { byte, bit }
 
 enum AppThemePreference { system, light, dark }
 
+enum AppLanguagePreference {
+  system,
+  english,
+  simplifiedChinese,
+  traditionalChinese,
+}
+
 class AppSettings {
-  static const int currentSettingsVersion = 2;
+  static const int currentSettingsVersion = 3;
   static const String defaultFontFamily = 'Noto Sans SC';
   static const double minFontScale = 0.9;
   static const double defaultFontScale = 1.0;
@@ -16,6 +23,7 @@ class AppSettings {
     this.baseUnit = SizeBaseUnit.byte,
     this.showHiddenFiles = false,
     this.themePreference = AppThemePreference.system,
+    this.languagePreference = AppLanguagePreference.system,
     this.fontFamily = defaultFontFamily,
     this.fontScale = defaultFontScale,
     this.settingsVersion = currentSettingsVersion,
@@ -25,6 +33,7 @@ class AppSettings {
   final SizeBaseUnit baseUnit;
   final bool showHiddenFiles;
   final AppThemePreference themePreference;
+  final AppLanguagePreference languagePreference;
   final String fontFamily;
   final double fontScale;
   final int settingsVersion;
@@ -34,6 +43,7 @@ class AppSettings {
     SizeBaseUnit? baseUnit,
     bool? showHiddenFiles,
     AppThemePreference? themePreference,
+    AppLanguagePreference? languagePreference,
     String? fontFamily,
     double? fontScale,
     int? settingsVersion,
@@ -43,6 +53,7 @@ class AppSettings {
       baseUnit: baseUnit ?? this.baseUnit,
       showHiddenFiles: showHiddenFiles ?? this.showHiddenFiles,
       themePreference: themePreference ?? this.themePreference,
+      languagePreference: languagePreference ?? this.languagePreference,
       fontFamily: fontFamily ?? this.fontFamily,
       fontScale: (fontScale ?? this.fontScale)
           .clamp(minFontScale, maxFontScale)
@@ -56,6 +67,7 @@ class AppSettings {
     'baseUnit': baseUnit.name,
     'showHiddenFiles': showHiddenFiles,
     'themePreference': themePreference.name,
+    'languagePreference': languagePreference.name,
     'fontFamily': fontFamily,
     'fontScale': fontScale,
     'settingsVersion': settingsVersion,
@@ -78,7 +90,11 @@ class AppSettings {
         (value) => value.name == json['themePreference'],
         orElse: () => AppThemePreference.system,
       ),
-      fontFamily: storedVersion < currentSettingsVersion && storedFont.isEmpty
+      languagePreference: AppLanguagePreference.values.firstWhere(
+        (value) => value.name == json['languagePreference'],
+        orElse: () => AppLanguagePreference.system,
+      ),
+      fontFamily: storedVersion < 2 && storedFont.isEmpty
           ? defaultFontFamily
           : json['fontFamily'] is String
           ? storedFont
@@ -100,6 +116,7 @@ class AppSettings {
         other.baseUnit == baseUnit &&
         other.showHiddenFiles == showHiddenFiles &&
         other.themePreference == themePreference &&
+        other.languagePreference == languagePreference &&
         other.fontFamily == fontFamily &&
         other.fontScale == fontScale &&
         other.settingsVersion == settingsVersion;
@@ -111,6 +128,7 @@ class AppSettings {
     baseUnit,
     showHiddenFiles,
     themePreference,
+    languagePreference,
     fontFamily,
     fontScale,
     settingsVersion,

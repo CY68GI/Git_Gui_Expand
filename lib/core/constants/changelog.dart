@@ -14,6 +14,18 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.3',
+    date: '2026-11-16',
+    title: '三语界面、桌面快捷方式与全新解压修复',
+    items: [
+      '设置支持 English、简体中文和繁體中文；跟随系统时只显示操作系统实际语言。',
+      'README、使用指南、更新日志和普通/详细日志支持三种语言。',
+      '全新解压包缺少版本标记时，Launcher 可自动恢复有效版本目录并直接启动。',
+      '设置关于页新增一键发送桌面快捷方式，优先指向稳定 Launcher。',
+      '更新成功后只保留当前版本与更新前版本，失败或回滚时不会清理版本目录。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.2',
     date: '2026-11-16',
     title: '文件右键菜单与系统打开方式',

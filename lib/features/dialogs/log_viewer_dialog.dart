@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/services/app_log_service.dart';
 
 class LogViewerDialog extends StatefulWidget {
@@ -35,6 +36,7 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return DefaultTabController(
       length: 2,
       child: AlertDialog(
@@ -74,9 +76,9 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '软件操作日志',
-                            style: TextStyle(
+                          Text(
+                            l10n.tr('软件操作日志'),
+                            style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
                             ),
@@ -98,29 +100,29 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                     ),
                     IconButton(
                       onPressed: _refresh,
-                      tooltip: '刷新日志',
+                      tooltip: l10n.tr('刷新日志'),
                       icon: const Icon(Icons.refresh_rounded, size: 19),
                     ),
                     const SizedBox(width: 4),
                     OutlinedButton.icon(
                       onPressed: _openFolder,
                       icon: const Icon(Icons.folder_open_rounded, size: 16),
-                      label: const Text('打开目录'),
+                      label: Text(l10n.tr('打开目录')),
                     ),
                   ],
                 ),
               ),
               Container(
                 color: colors.surfaceContainerLowest,
-                child: const TabBar(
+                child: TabBar(
                   tabs: [
                     Tab(
-                      icon: Icon(Icons.receipt_long_outlined, size: 18),
-                      text: '普通日志',
+                      icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                      text: l10n.tr('普通日志'),
                     ),
                     Tab(
-                      icon: Icon(Icons.manage_search_rounded, size: 18),
-                      text: '详细日志',
+                      icon: const Icon(Icons.manage_search_rounded, size: 18),
+                      text: l10n.tr('详细日志'),
                     ),
                   ],
                 ),
@@ -139,11 +141,15 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                       children: [
                         _LogPane(
                           text: data?.normal ?? '',
-                          emptyMessage: '还没有普通日志。执行打开仓库、文件操作或提交后会记录关键事件。',
+                          emptyMessage: l10n.tr(
+                            '还没有普通日志。执行打开仓库、文件操作或提交后会记录关键事件。',
+                          ),
                         ),
                         _LogPane(
                           text: data?.detailed ?? '',
-                          emptyMessage: '还没有详细日志。详细日志会记录选择、导航和每一条 Git 命令。',
+                          emptyMessage: l10n.tr(
+                            '还没有详细日志。详细日志会记录选择、导航和每一条 Git 命令。',
+                          ),
                         ),
                       ],
                     );
@@ -156,7 +162,7 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(l10n.tr('关闭')),
           ),
         ],
       ),
@@ -173,8 +179,11 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
       await _log.openLogsDirectory();
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('无法打开日志目录：$error')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(context.l10n.tr('无法打开日志目录：{error}', {'error': error})),
+        ),
+      );
     }
   }
 }

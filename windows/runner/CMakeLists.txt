@@ -50,5 +50,3 @@ set_target_properties(git_gui_launcher PROPERTIES
 apply_standard_settings(git_gui_launcher)
 target_compile_options(git_gui_launcher PRIVATE "/utf-8")
 target_link_libraries(git_gui_launcher PRIVATE "shell32.lib")
-install(TARGETS git_gui_launcher RUNTIME DESTINATION "${CMAKE_INSTALL_PREFIX}"
-  COMPONENT Runtime)

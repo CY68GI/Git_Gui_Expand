@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/folder_picker_service.dart';
@@ -28,12 +29,14 @@ class ProjectPage extends StatefulWidget {
     required this.onThemeModeChanged,
     required this.onFontFamilyChanged,
     required this.onFontScaleChanged,
+    required this.onLanguagePreferenceChanged,
   });
 
   final String? initialRepositoryPath;
   final ValueChanged<ThemeMode> onThemeModeChanged;
   final ValueChanged<String> onFontFamilyChanged;
   final ValueChanged<double> onFontScaleChanged;
+  final ValueChanged<AppLanguagePreference> onLanguagePreferenceChanged;
 
   @override
   State<ProjectPage> createState() => _ProjectPageState();
@@ -49,6 +52,7 @@ class _ProjectPageState extends State<ProjectPage> {
   AppThemePreference _lastThemePreference = AppThemePreference.system;
   String _lastFontFamily = '';
   double _lastFontScale = AppSettings.defaultFontScale;
+  AppLanguagePreference _lastLanguagePreference = AppLanguagePreference.system;
   final AppLogService _log = AppLogService.instance;
 
   @override
@@ -81,6 +85,7 @@ class _ProjectPageState extends State<ProjectPage> {
       _syncThemeMode();
       _syncFontFamily();
       _syncFontScale();
+      _syncLanguagePreference();
       setState(() {});
     }
   }
@@ -119,6 +124,17 @@ class _ProjectPageState extends State<ProjectPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         widget.onThemeModeChanged(mode);
+      }
+    });
+  }
+
+  void _syncLanguagePreference() {
+    final preference = _controller.settings.languagePreference;
+    if (_lastLanguagePreference == preference) return;
+    _lastLanguagePreference = preference;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        widget.onLanguagePreferenceChanged(preference);
       }
     });
   }
@@ -204,6 +220,7 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openRepository() async {
     if (_isOpening) return;
+    final l10n = context.l10n;
     _log.detail('repository', '请求打开仓库文件夹选择器');
     setState(() => _isOpening = true);
     try {
@@ -214,7 +231,7 @@ class _ProjectPageState extends State<ProjectPage> {
         _log.detail('repository', '用户取消文件夹选择');
         return;
       }
-      if (!await _confirmDiscardPendingPlan('打开另一个仓库')) {
+      if (!await _confirmDiscardPendingPlan(l10n.tr('打开另一个仓库'))) {
         return;
       }
       _log.info('repository', '用户选择仓库：$path');
@@ -268,7 +285,7 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openRecentRepository(String path) async {
     if (_isOpening) return;
-    if (!await _confirmDiscardPendingPlan('打开另一个仓库')) {
+    if (!await _confirmDiscardPendingPlan(context.l10n.tr('打开另一个仓库'))) {
       return;
     }
     _log.info('history', '从最近仓库打开：$path');
@@ -278,7 +295,7 @@ class _ProjectPageState extends State<ProjectPage> {
   Future<void> _openProjectDirectory() async {
     final path = _controller.repositoryPath;
     if (path == null || path.isEmpty) {
-      _showOutcome(const OperationOutcome.failure('当前没有打开的项目。'));
+      _showOutcome(OperationOutcome.failure(context.l10n.tr('当前没有打开的项目。')));
       return;
     }
     try {
@@ -289,7 +306,12 @@ class _ProjectPageState extends State<ProjectPage> {
       if (mounted) {
         _showOutcome(
           OperationOutcome.failure(
-            '无法打开项目目录：${error.toString().replaceFirst('FileSystemException: ', '')}',
+            context.l10n.tr('无法打开项目目录：{error}', {
+              'error': error.toString().replaceFirst(
+                'FileSystemException: ',
+                '',
+              ),
+            }),
           ),
         );
       }
@@ -314,15 +336,16 @@ class _ProjectPageState extends State<ProjectPage> {
   Future<void> _renameActiveSelection() async {
     final panel = _controller.panelFor(_controller.activeSide);
     if (panel.selectedPaths.isEmpty) {
-      _showOutcome(const OperationOutcome.failure('请先勾选要重命名的项目。'));
+      _showOutcome(OperationOutcome.failure(context.l10n.tr('请先勾选要重命名的项目。')));
       return;
     }
     if (panel.selectedPaths.length > 1) {
-      _showOutcome(const OperationOutcome.failure('重命名时只能勾选一个项目。'));
+      _showOutcome(OperationOutcome.failure(context.l10n.tr('重命名时只能勾选一个项目。')));
       return;
     }
 
     final path = panel.selectedPaths.single;
+    final l10n = context.l10n;
     _log.detail('ui', '打开重命名对话框：$path');
     final currentName = repositoryName(path);
     final textController = TextEditingController(text: currentName);
@@ -337,11 +360,11 @@ class _ProjectPageState extends State<ProjectPage> {
     final newName = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.drive_file_rename_outline_rounded, size: 21),
-            SizedBox(width: 9),
-            Text('重命名'),
+            const Icon(Icons.drive_file_rename_outline_rounded, size: 21),
+            const SizedBox(width: 9),
+            Text(l10n.tr('重命名')),
           ],
         ),
         content: SizedBox(
@@ -363,14 +386,16 @@ class _ProjectPageState extends State<ProjectPage> {
               TextField(
                 controller: textController,
                 autofocus: true,
-                decoration: const InputDecoration(labelText: '新名称'),
+                decoration: InputDecoration(labelText: l10n.tr('新名称')),
                 onSubmitted: (value) => Navigator.pop(context, value),
               ),
               const SizedBox(height: 10),
-              const Text(
-                '此操作只会加入待执行计划。确认并执行计划后，'
-                '软件才会运行 git mv。',
-                style: TextStyle(fontSize: 12.5, height: 1.45),
+              Text(
+                l10n.tr(
+                  '此操作只会加入待执行计划。确认并执行计划后，'
+                  '软件才会运行 git mv。',
+                ),
+                style: const TextStyle(fontSize: 12.5, height: 1.45),
               ),
             ],
           ),
@@ -378,11 +403,11 @@ class _ProjectPageState extends State<ProjectPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.tr('取消')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, textController.text),
-            child: const Text('加入执行计划'),
+            child: Text(l10n.tr('加入执行计划')),
           ),
         ],
       ),
@@ -399,10 +424,11 @@ class _ProjectPageState extends State<ProjectPage> {
   Future<void> _deleteActiveSelection() async {
     final panel = _controller.panelFor(_controller.activeSide);
     if (panel.selectedPaths.isEmpty) {
-      _showOutcome(const OperationOutcome.failure('请先勾选要删除的项目。'));
+      _showOutcome(OperationOutcome.failure(context.l10n.tr('请先勾选要删除的项目。')));
       return;
     }
     final paths = panel.selectedPaths.toList(growable: false);
+    final l10n = context.l10n;
     _log.detail('ui', '打开删除确认：${paths.join(' | ')}');
     final confirmed = await showDialog<bool>(
       context: context,
@@ -411,7 +437,7 @@ class _ProjectPageState extends State<ProjectPage> {
         final preview = paths.take(6).toList(growable: false);
         return AlertDialog(
           icon: Icon(Icons.delete_forever_outlined, color: colors.error),
-          title: Text('将删除 ${paths.length} 个项目加入计划'),
+          title: Text(l10n.tr('将删除 {count} 个项目加入计划', {'count': paths.length})),
           content: SizedBox(
             width: 480,
             child: SingleChildScrollView(
@@ -420,8 +446,10 @@ class _ProjectPageState extends State<ProjectPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '现在不会删除文件。此步骤加入计划后，必须在“待执行操作计划”'
-                    '中再次确认，才会使用 git rm 或 git clean 执行。',
+                    l10n.tr(
+                      '现在不会删除文件。此步骤加入计划后，必须在“待执行操作计划”'
+                      '中再次确认，才会使用 git rm 或 git clean 执行。',
+                    ),
                     style: TextStyle(
                       fontSize: 13,
                       height: 1.5,
@@ -462,7 +490,9 @@ class _ProjectPageState extends State<ProjectPage> {
                             ),
                           if (paths.length > preview.length)
                             Text(
-                              '以及其他 ${paths.length - preview.length} 项',
+                              l10n.tr('以及其他 {count} 项', {
+                                'count': paths.length - preview.length,
+                              }),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.onSurfaceVariant,
@@ -479,12 +509,12 @@ class _ProjectPageState extends State<ProjectPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('取消'),
+              child: Text(l10n.tr('取消')),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
               icon: const Icon(Icons.delete_outline_rounded, size: 17),
-              label: const Text('加入删除计划'),
+              label: Text(l10n.tr('加入删除计划')),
               style: FilledButton.styleFrom(
                 backgroundColor: colors.error,
                 foregroundColor: colors.onError,
@@ -508,29 +538,34 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _pushCurrentBranch() async {
     if (!_controller.hasRepository) return;
-    final branch = _controller.branch.isEmpty ? '当前分支' : _controller.branch;
+    final l10n = context.l10n;
+    final branch = _controller.branch.isEmpty
+        ? l10n.tr('当前分支')
+        : _controller.branch;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.cloud_upload_outlined),
-        title: Text('将推送 $branch 加入计划'),
+        title: Text(l10n.tr('将推送 {branch} 加入计划', {'branch': branch})),
         content: SizedBox(
           width: 430,
-          child: const Text(
-            '现在不会联网推送。执行计划时，已配置 upstream 会运行 git push；'
-            '否则优先使用 origin 并设置当前分支的 upstream。',
-            style: TextStyle(fontSize: 13, height: 1.5),
+          child: Text(
+            l10n.tr(
+              '现在不会联网推送。执行计划时，已配置 upstream 会运行 git push；'
+              '否则优先使用 origin 并设置当前分支的 upstream。',
+            ),
+            style: const TextStyle(fontSize: 13, height: 1.5),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.tr('取消')),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: const Text('加入推送计划'),
+            label: Text(l10n.tr('加入推送计划')),
           ),
         ],
       ),
@@ -614,26 +649,33 @@ class _ProjectPageState extends State<ProjectPage> {
       context: context,
       builder: (context) {
         final colors = Theme.of(context).colorScheme;
+        final l10n = context.l10n;
         return AlertDialog(
           icon: Icon(Icons.warning_amber_rounded, color: colors.error),
-          title: const Text('放弃待执行操作计划？'),
+          title: Text(l10n.tr('放弃待执行操作计划？')),
           content: SizedBox(
             width: 460,
             child: Text(
-              '当前有 ${_controller.pendingOperations.length} 步操作尚未执行。'
-              '$action会清除这些计划，仓库不会发生这些变更。',
+              l10n.tr(
+                '当前有 {count} 步操作尚未执行。{action}会清除这些计划，'
+                '仓库不会发生这些变更。',
+                {
+                  'count': _controller.pendingOperations.length,
+                  'action': action,
+                },
+              ),
               style: const TextStyle(fontSize: 13, height: 1.5),
             ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('返回'),
+              child: Text(l10n.tr('返回')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(backgroundColor: colors.error),
-              child: const Text('放弃计划并继续'),
+              child: Text(l10n.tr('放弃计划并继续')),
             ),
           ],
         );
@@ -647,7 +689,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _closeRepository() async {
-    if (!await _confirmDiscardPendingPlan('关闭仓库')) {
+    if (!await _confirmDiscardPendingPlan(context.l10n.tr('关闭仓库'))) {
       return;
     }
     _controller.closeRepository();
@@ -671,7 +713,7 @@ class _ProjectPageState extends State<ProjectPage> {
     if (mounted) {
       _showOutcome(
         _controller.fatalError == null
-            ? const OperationOutcome.success('仓库视图已刷新')
+            ? OperationOutcome.success(context.l10n.tr('仓库视图已刷新'))
             : OperationOutcome.failure(_controller.fatalError!),
       );
     }
@@ -699,6 +741,7 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Widget _buildTopBar(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
@@ -746,34 +789,34 @@ class _ProjectPageState extends State<ProjectPage> {
             const Spacer(),
           _TopBarButton(
             icon: Icons.folder_open_rounded,
-            label: '打开',
+            label: l10n.tr('打开'),
             onTap: _openRepository,
           ),
           if (_controller.hasRepository)
             _TopBarButton(
               icon: Icons.folder_copy_outlined,
-              label: '项目目录',
+              label: l10n.tr('项目目录'),
               onTap: _openProjectDirectory,
             ),
           _TopBarButton(
             icon: Icons.system_update_alt_rounded,
-            label: '更新',
+            label: l10n.tr('更新'),
             onTap: () => _showUpdates(),
           ),
           _TopBarButton(
             icon: Icons.receipt_long_outlined,
-            label: '操作日志',
+            label: l10n.tr('操作日志'),
             onTap: _showLogs,
           ),
           _TopBarButton(
             icon: Icons.menu_book_outlined,
-            label: '指南',
+            label: l10n.tr('指南'),
             onTap: _showUserGuide,
           ),
           const SizedBox(width: 4),
           IconButton(
             onPressed: _showSettings,
-            tooltip: '设置',
+            tooltip: l10n.tr('设置'),
             icon: const Icon(Icons.settings_outlined, size: 20),
           ),
         ],
@@ -863,6 +906,7 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Widget _buildProjectSummary(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final stats = _controller.repositoryStats;
     final size = stats == null
         ? '—'
@@ -879,7 +923,7 @@ class _ProjectPageState extends State<ProjectPage> {
                   children: [
                     Flexible(
                       child: Text(
-                        _controller.projectName ?? 'Git 仓库',
+                        _controller.projectName ?? l10n.tr('Git 仓库'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -889,14 +933,14 @@ class _ProjectPageState extends State<ProjectPage> {
                     _InfoChip(
                       icon: Icons.account_tree_outlined,
                       label: _controller.branch.isEmpty
-                          ? '无分支'
+                          ? l10n.tr('无分支')
                           : _controller.branch,
                     ),
                   ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  sizeUnitDescription(_controller.settings),
+                  l10n.tr(sizeUnitDescription(_controller.settings)),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: colors.onSurfaceVariant,
@@ -906,19 +950,19 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
           ),
           _SummaryMetric(
-            label: '项目大小',
+            label: l10n.tr('项目大小'),
             value: size,
             icon: Icons.data_usage_rounded,
           ),
           const SizedBox(width: 9),
           _SummaryMetric(
-            label: '文件',
+            label: l10n.tr('文件'),
             value: '${stats?.fileCount ?? 0}',
             icon: Icons.insert_drive_file_outlined,
           ),
           const SizedBox(width: 9),
           _SummaryMetric(
-            label: '待提交',
+            label: l10n.tr('待提交'),
             value: '${_controller.changedFiles.length}',
             icon: Icons.change_circle_outlined,
           ),
@@ -932,6 +976,7 @@ class _ProjectPageState extends State<ProjectPage> {
     final selectedCount = activePanel.selectedPaths.length;
     final clipboard = _controller.clipboard;
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Container(
@@ -946,21 +991,21 @@ class _ProjectPageState extends State<ProjectPage> {
           children: [
             _OperationButton(
               icon: Icons.content_cut_rounded,
-              label: '剪切',
+              label: l10n.tr('剪切'),
               shortcut: 'Ctrl X',
               enabled: selectedCount > 0 && !_controller.isBusy,
               onTap: () => _handleClipboard(ClipboardMode.cut),
             ),
             _OperationButton(
               icon: Icons.content_copy_rounded,
-              label: '复制',
+              label: l10n.tr('复制'),
               shortcut: 'Ctrl C',
               enabled: selectedCount > 0 && !_controller.isBusy,
               onTap: () => _handleClipboard(ClipboardMode.copy),
             ),
             _OperationButton(
               icon: Icons.content_paste_rounded,
-              label: '粘贴',
+              label: l10n.tr('粘贴'),
               shortcut: 'Ctrl V',
               enabled:
                   clipboard != null &&
@@ -970,7 +1015,7 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
             _OperationButton(
               icon: Icons.drive_file_rename_outline_rounded,
-              label: '重命名',
+              label: l10n.tr('重命名'),
               shortcut: 'F2',
               enabled:
                   selectedCount == 1 &&
@@ -980,7 +1025,7 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
             _OperationButton(
               icon: Icons.delete_outline_rounded,
-              label: '删除',
+              label: l10n.tr('删除'),
               shortcut: 'Delete',
               enabled:
                   selectedCount > 0 &&
@@ -1011,8 +1056,8 @@ class _ProjectPageState extends State<ProjectPage> {
                   const SizedBox(width: 5),
                   Text(
                     _controller.activeSide == ExplorerSide.left
-                        ? '粘贴到左侧'
-                        : '粘贴到右侧',
+                        ? l10n.tr('粘贴到左侧')
+                        : l10n.tr('粘贴到右侧'),
                     style: TextStyle(
                       fontSize: 11,
                       color: colors.primary,
@@ -1030,7 +1075,9 @@ class _ProjectPageState extends State<ProjectPage> {
               )
             else
               Text(
-                selectedCount == 0 ? '勾选文件后可剪切或复制' : '已选择 $selectedCount 项',
+                selectedCount == 0
+                    ? l10n.tr('勾选文件后可剪切或复制')
+                    : l10n.tr('已选择 {count} 项', {'count': selectedCount}),
                 style: TextStyle(
                   fontSize: 11.5,
                   color: colors.onSurfaceVariant,
@@ -1038,7 +1085,7 @@ class _ProjectPageState extends State<ProjectPage> {
               ),
             const SizedBox(width: 10),
             Tooltip(
-              message: '查看、移除或确认执行所有待处理操作',
+              message: l10n.tr('查看、移除或确认执行所有待处理操作'),
               child: OutlinedButton.icon(
                 onPressed: _controller.isBusy ? null : _showOperationPlan,
                 icon: Icon(
@@ -1047,7 +1094,11 @@ class _ProjectPageState extends State<ProjectPage> {
                       : Icons.playlist_add_rounded,
                   size: 16,
                 ),
-                label: Text('待执行 ${_controller.pendingOperations.length}'),
+                label: Text(
+                  l10n.tr('待执行 {count}', {
+                    'count': _controller.pendingOperations.length,
+                  }),
+                ),
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
                   padding: const EdgeInsets.symmetric(
@@ -1075,13 +1126,13 @@ class _ProjectPageState extends State<ProjectPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             Text(
-              '双击文件夹进入 · 点击面板切换粘贴目标',
+              l10n.tr('双击文件夹进入 · 点击面板切换粘贴目标'),
               style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
             ),
             const SizedBox(width: 8),
             IconButton(
               onPressed: _refreshRepository,
-              tooltip: '刷新仓库 (Ctrl+R)',
+              tooltip: l10n.tr('刷新仓库 (Ctrl+R)'),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               visualDensity: VisualDensity.compact,
             ),
@@ -1255,6 +1306,7 @@ class _ClipboardView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isCut = selection.mode == ClipboardMode.cut;
+    final l10n = context.l10n;
     final badgeColor = Theme.of(context).brightness == Brightness.dark
         ? const Color(0xFFFFD27A)
         : const Color(0xFF7E651E);
@@ -1268,7 +1320,9 @@ class _ClipboardView extends StatelessWidget {
         ),
         const SizedBox(width: 5),
         Text(
-          '${isCut ? '待移动' : '待复制'} ${selection.paths.length} 项',
+          l10n.tr(isCut ? '待移动 {count} 项' : '待复制 {count} 项', {
+            'count': selection.paths.length,
+          }),
           style: TextStyle(
             fontSize: 11.5,
             color: badgeColor,

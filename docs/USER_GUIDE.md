@@ -1,255 +1,201 @@
-# Git GUI Expand 使用指南
+# Git GUI Expand User Guide
 
-## 1. 最重要的工作方式：所有操作先进入计划
+Languages: English | [简体中文](USER_GUIDE.zh-CN.md) | [繁體中文](USER_GUIDE.zh-TW.md)
 
-软件不会在点击“重命名”“删除”“暂存”或“提交”后立刻修改仓库。
-这些动作会先记录在“待执行操作计划”中。
+## 1. Plan before execution
 
-计划窗口会按顺序列出：
+Git GUI Expand does not immediately move, rename, delete, commit, push, or clear
+remote history. Each requested action is first added to the pending operation
+plan.
 
-- 操作类型；
-- 涉及的完整路径或远端；
-- 移动、复制或重命名的目标；
-- 提交说明；
-- 可能删除的文件、远端分支和标签。
+1. Select files and folders with the checkboxes.
+2. Choose an action from the toolbar, context menu, commit workspace, or remote
+   manager.
+3. Review the pending operation plan.
+4. Remove or clear any unwanted steps.
+5. Confirm the plan to execute it step by step.
 
-在计划窗口确认前：
+If a step fails, execution stops. The failed step and later steps remain in the
+plan. Completed steps are not automatically rolled back.
 
-- 文件不会被移动或删除；
-- Git 索引不会被修改；
-- 不会创建提交；
-- 不会推送；
-- 不会清空远端。
+## 2. Opening a repository
 
-用户可以逐项移除计划步骤，或者点击“清空计划”完整放弃。
-计划按加入先后排列；需要改变顺序时，移除相应步骤后重新加入。
-计划保存在当前运行会话中，关闭软件前应确认执行或清空计划；加入和移除动作仍会
-写入详细日志。
+Click **Open Git repository**. The Windows standard **Open** dialog is shown.
+Choose the root of a folder that already contains `.git`.
 
-## 2. 打开仓库和项目目录
+After opening, **Project folder** opens the current repository root in File
+Explorer. Verified repositories are saved to the recent list; the list stores
+only existing Git roots and keeps at most ten entries.
 
-点击“打开 Git 仓库”后，Windows 会显示标准“打开”对话框。进入已经执行过
-`git init` 的仓库根目录，然后点击系统“打开”按钮。
+Start distributed releases with `GitGuiExpandLauncher.exe`. If
+`current-version.txt` is missing from a freshly extracted package, the Launcher
+automatically discovers a single valid `versions/<version>` directory and
+repairs the marker. A flat development directory containing
+`git_gui_expand.exe`, `flutter_windows.dll`, and `data` can also be launched.
 
-成功打开项目后，顶部会增加“项目目录”按钮。点击它会在 Windows 资源管理器中
-打开当前仓库根目录；它不会移动、删除或提交任何文件。
+## 3. Dual-pane file operations
 
-## 3. 查看和确认计划
+The left and right panes show the same repository but maintain independent
+folders, loading state, and selections.
 
-文件工具栏右侧有一个“待执行 N”按钮。提交工作区和远端管理窗口也有同名入口。
+- Click a pane to make it the paste target.
+- Double-click a folder to enter it.
+- Use checkboxes for one or more items.
+- Use Cut (`Ctrl+X`) or Copy (`Ctrl+C`) on the source pane.
+- Enter the destination folder and click Paste (`Ctrl+V`).
 
-推荐流程：
+Move, copy, rename, and delete operations are added to the plan first.
 
-1. 在文件面板中勾选文件或文件夹。
-2. 使用剪切、复制、粘贴、重命名或删除。
-3. 每项操作会加入计划，仓库内容暂时不变。
-4. 点击“待执行 N”。
-5. 检查每一步的顺序、路径和目标位置。
-6. 删除不需要的步骤，或清空整个计划。
-7. 点击“确认并逐步执行”。
-8. 软件按列表顺序一次执行一步，并为每步显示进度。
+### Context menu
 
-如果某一步失败：
+Right-click a file row to:
 
-- 软件立即停止；
-- 失败步骤和后续步骤继续保留在计划中；
-- 已经完成的步骤不会自动回滚；
-- 详细日志记录每一步开始、成功或失败的原因。
+- reveal and select it in File Explorer;
+- open it with the Windows default application.
 
-## 4. 常见文件操作
+### Rename
 
-### 文件右键菜单
+Select exactly one item, click **Rename** or press `F2`, enter the new name, and
+add it to the plan. The software uses `git mv` after confirmation.
 
-在文件行上单击右键，可使用：
+### Delete
 
-- “用文件资源打开”：打开所在文件夹并选中该文件；
-- “用默认打开方式打开”：使用 Windows 当前为该扩展名设置的应用打开文件。
+Select one or more items and click **Delete** or press `Delete`. After adding the
+step to the plan, select the dangerous-operation confirmation. Tracked files use
+`git rm`; untracked or ignored files use `git clean`. File deletion cannot be
+undone by the application.
 
-如果右键的文件原本未被勾选，软件会把当前面板改为只选中该文件；
-如果文件已勾选，右键菜单只针对被右键的文件，其它勾选不会用于这两个打开动作。
+## 4. Commit workspace
 
-### 剪切和移动
+- **Stage all** plans `git add -A`.
+- **Unstage** restores the index to `HEAD` while keeping workspace files.
+- **Add commit to plan** plans `git add -A` followed by `git commit`.
 
-1. 在左侧或右侧勾选项目。
-2. 点击“剪切”或按 `Ctrl+X`。
-3. 点击目标面板并进入目标目录。
-4. 点击“粘贴”或按 `Ctrl+V`。
-5. 在计划中确认后才执行 `git mv`。
+Enter a meaningful commit message, review the plan, then confirm execution.
+After a commit step is queued, additional file-change steps are blocked until the
+commit step is removed or executed.
 
-剪切本身只保存待移动路径，不会改变文件。
+## 5. Push and remotes
 
-### 复制
+The remote manager supports GitHub, Gitee, GitLab, Bitbucket, and generic Git
+remotes.
 
-复制和移动使用相同流程。复制计划确认后，软件通过 Git 索引写入新文件，
-不会直接复制 `.git` 元数据。
+- Add or update a remote URL.
+- Remove only the local remote configuration.
+- Push the current branch to one remote or all remotes.
+- Refresh the remote list.
 
-### 重命名
+Pushes are planned first. If upstream is configured, the software runs
+`git push`; otherwise it prefers `origin`, configures upstream, and reports
+authentication or network failures.
 
-1. 只勾选一个文件或文件夹。
-2. 点击“重命名”或按 `F2`。
-3. 输入新名称并点击“加入执行计划”。
-4. 在计划窗口中确认。
+## 6. Clearing remote history
 
-### 删除
+This is a dangerous operation. It replaces the selected remote branch with a
+single empty root commit and removes other branches and tags. Local files remain,
+but the local matching branch and index are synchronized to the empty commit, so
+files become untracked after refresh.
 
-删除是高危险操作。
+Before execution:
 
-1. 勾选一个或多个项目。
-2. 点击“删除”或按 `Delete`。
-3. 检查文件清单，点击“加入删除计划”。
-4. 在计划窗口中勾选危险确认。
-5. 点击“确认并逐步执行”。
+1. The local current branch must match the target remote branch.
+2. Review the remote reference list.
+3. Select the dangerous-operation confirmation.
+4. Enter the exact `owner/project/branch` confirmation.
 
-已跟踪内容使用 `git rm`；未跟踪或忽略内容使用 `git clean`。
-文件删除后无法通过本软件的普通操作恢复。
+Reference backups are stored under
+`refs/gitgui-expand/backup/<remote>`. Protected branches, missing permissions,
+network failures, or servers without atomic push can reject the operation.
 
-## 5. 暂存、提交和推送
+## 7. Settings
 
-### 暂存全部
+Settings contains five pages:
 
-“暂存全部”会加入计划。确认执行时才运行 `git add -A`。
+- Font
+- Language
+- Appearance
+- Units
+- About
 
-### 取消暂存
+### Language
 
-“取消暂存”也会加入计划。确认执行时才恢复 Git 索引，
-工作区文件内容不会被删除。
+Choose English, Simplified Chinese, Traditional Chinese, or Follow system.
+When Follow system is selected, the option is displayed only in the actual
+operating-system language instead of showing three labels at once.
 
-### 提交全部更改
+The language change takes effect after saving. New normal and detailed log
+entries use the selected interface language. Git command output and external
+technical error text are preserved as returned by Git.
 
-1. 填写提交说明。
-2. 点击“加入提交计划”。
-3. 提交步骤会加入计划，并自动打开计划窗口。
-4. 确认执行后，软件先运行 `git add -A`，再运行 `git commit -m`。
+### Font and appearance
 
-提交步骤加入计划后，软件会阻止继续加入新的文件修改步骤。
-如果还要修改文件，请先从计划中移除提交步骤。
+The default UI font is bundled `Noto Sans SC`. Search bundled or installed system
+fonts by name or purpose. The font page has a permanent scroll bar and a visible
+hint that font preview and size controls continue below.
 
-### 推送
+Text size is limited to 90%, 100%, and 110%. Appearance can follow the operating
+system or use a fixed light or dark theme.
 
-“推送”区域中的单远端推送、全部推送和 `Ctrl+Shift+U`
-都会先加入计划。执行时：
+### Desktop shortcut
 
-- 已配置 upstream 时运行 `git push`；
-- 没有 upstream 时使用 `origin` 或首个远端，并设置当前分支 upstream。
+Open **Settings → About**, then click **Send shortcut to desktop**. The shortcut
+targets `GitGuiExpandLauncher.exe` when available, with the software directory as
+its working directory.
 
-## 6. 清空远端仓库历史
+## 8. Updates
 
-此功能会删除远端原有提交历史，并把目标分支替换成一个不含文件的空根提交。
-本地文件不会删除；本地同名分支和索引会同步到空提交，因此完成后刷新软件，
-所有未被忽略的文件会显示为未跟踪，可以直接重新暂存和提交。
-托管平台保护目标分支时，通常会拒绝操作。
+The update page checks GitHub Releases and offers **Update and restart now**.
+The application downloads the Windows x64 ZIP, verifies SHA-256, extracts the
+payload into `versions/<version>`, and exits. The stable Launcher switches the
+current version and starts the new application.
 
-入口：提交工作区“远端 N” → 选择远端右侧红色垃圾桶图标。
+If the new version exits during the startup health check, the Launcher rolls
+back. After a successful update, only the current version and the version it was
+updated from remain; older version directories are removed.
 
-执行前，本地当前分支必须与远端目标分支同名。不同名时软件会在修改远端前拒绝操作，
-请先用 Git 切换到目标分支，避免本地和远端历史不同步。
+Use **Open release page** when automatic publication metadata is unavailable or
+network conditions are poor.
 
-执行前，软件会通过 `git ls-remote --refs` 读取远端当前分支和标签，
-并显示项目全称、目标分支、计划生成的空提交说明和完整清单。加入计划后还需要：
+## 9. Logs
 
-1. 在计划窗口勾选危险确认；
-2. 手动输入“远端项目全称/目标分支”，例如
-   `CY68GI/Git_Gui_Expand/main`；
-3. 点击“确认并逐步执行”。
+Open **Logs** from the top bar:
 
-执行过程：
+- **Normal log** contains startup, repository, Git action, warning, and error
+  events.
+- **Detailed log** also contains navigation, selections, settings changes, update
+  checks, and each Git command with its arguments, exit code, stdout, and stderr.
 
-1. 把远端分支和标签抓取到本地
-   `refs/gitgui-expand/backup/<远端>/...`；
-2. 使用 `git mktree` 创建空目录树，再用 `git commit-tree` 创建一个无父提交；
-3. 空提交说明格式为“日期 时间 仓库已清除，这是第一次空提交
-   (用户名/项目名/分支名)，来自软件Git GUI Expand的功能”；
-4. 使用一次 atomic push 把目标分支替换为空提交，并删除其它 heads/tags；
-5. 把本地目标分支重置到同一个空提交，并清空索引但保留磁盘文件；
-6. 再次读取远端，确认只剩目标分支和该空提交。
+Logs are stored in `userdata/logs` beneath the software directory.
 
-完成后软件会刷新本地状态：本地分支指向同一个空提交，索引为空，磁盘文件仍存在
-并显示为未跟踪。需要重新上传内容时，再把这些文件加入暂存和提交计划。
+## 10. Keyboard shortcuts
 
-### 为什么可能失败
+`Ctrl+O` opens a repository.
 
-- GitHub、Gitee 等平台可能保护默认分支；
-- 服务器可能不允许强制更新目标分支；
-- 服务器可能不支持 atomic push；
-- 账号可能没有删除分支或标签的权限；
-- 网络或认证可能失败。
+`Ctrl+X` records a cut selection.
 
-原子推送失败时，服务器应拒绝整批更新，软件会报告失败并不会宣称成功。
-如果平台不支持原子更新，也可能拒绝操作。请先备份必要的仓库。
+`Ctrl+C` records a copy selection.
 
-### 如何恢复引用
+`Ctrl+V` adds a paste operation to the plan.
 
-清空成功后，远端引用已备份到本地 `refs/gitgui-expand/backup/<远端>`。
-可以在了解后果的前提下，使用 Git 命令把这些引用重新推送到远端：
+`F2` adds a rename operation to the plan.
 
-```powershell
-git push origin "refs/gitgui-expand/backup/origin/heads/*:refs/heads/*"
-git push origin "refs/gitgui-expand/backup/origin/tags/*:refs/tags/*"
-```
+`Delete` adds a delete operation to the plan.
 
-恢复操作同样是高风险 Git 操作，请先检查备份引用和目标远端。
+`Ctrl+A` selects all visible items in the active pane.
 
-## 7. 远端配置
+`Ctrl+R` refreshes the repository.
 
-远端管理支持：
+`Ctrl+Shift+U` adds a push of the current branch to the plan.
 
-- 添加远端；
-- 修改远端 URL；
-- 移除本地远端配置；
-- 单项推送；
-- 全部推送；
-- 清空远端历史并保留一个空提交。
+## 11. Safety recommendations
 
-添加、修改、移除和推送都会先进入计划。
-“移除本地配置”不会删除托管平台上的仓库。
+- Back up important repositories before dangerous operations.
+- Review every planned path, branch, remote, and commit message.
+- Do not use remote history clearing as a normal cleanup command.
+- Check protected-branch settings before clearing remote history.
+- Keep Git credentials and the software directory under your control.
 
-## 8. 主题、字体和文字可读性
+## Acknowledgements
 
-设置中可以调整：
-
-- 字体；
-- 字号 90%、100%、110%；
-- 跟随系统、浅色或深色模式；
-- 二进制或十进制大小单位。
-
-关键说明、危险警告和提交结果使用较大的正文样式。
-如果系统外观变化后看不清文字，请检查：
-
-- 是否选择了正确的浅色或深色模式；
-- 字体是否支持中文；
-- 字号是否设置为 100% 或 110%。
-
-默认字体是内置 `Noto Sans SC / 思源黑体`。
-字体设置页使用常驻滚动条，并在顶部显示“此页还有下方内容”，下面可以继续查看
-字体预览和字体大小设置。
-
-## 9. 日志
-
-顶部“操作日志”提供：
-
-- 普通日志：关键事件、成功、警告和错误；
-- 详细日志：导航、选择、快捷键、计划记录以及每条 Git 命令的参数和输出。
-
-每个计划步骤在加入时和执行时都会记录。排查失败时，先查看详细日志。
-
-## 10. 快捷键
-
-| 快捷键 | 操作 |
-| --- | --- |
-| `Ctrl+O` | 打开仓库 |
-| `Ctrl+X` | 记录剪切选择 |
-| `Ctrl+C` | 记录复制选择 |
-| `Ctrl+V` | 把粘贴操作加入计划 |
-| `F2` | 把重命名操作加入计划 |
-| `Delete` | 把删除操作加入计划 |
-| `Ctrl+A` | 全选当前面板 |
-| `Ctrl+R` | 刷新仓库 |
-| `Ctrl+Shift+U` | 把当前分支推送加入计划 |
-
-## 11. 安全建议
-
-- 执行包含删除或远端清空的计划前，先备份仓库。
-- 不要在包含未提交重要修改的仓库中直接清空远端。
-- 计划确认前仔细检查路径、远端项目全称和目标分支。
-- 详细日志保留时间较长，但不要将它作为唯一备份。
-- 清空远端后，先验证备份引用和目标远端，再决定是否恢复。
+Thanks to DeepSeek AI and ChatGPT Codex for jointly creating, writing, and
+improving this project.

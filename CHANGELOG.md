@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.9.3 - 2026-11-16
+
+### English
+
+- Added English, Simplified Chinese, and Traditional Chinese to Settings,
+  README, user guides, update notes, and normal/detailed logs.
+- The Follow system language option now displays only the actual operating-system
+  language instead of showing all translations at once.
+- Added a one-click desktop shortcut action in Settings → About. The shortcut
+  prefers the stable Launcher.
+- A clean extraction with no valid version marker can now recover the unique
+  valid `versions/<version>` directory. Flat Release directories are also
+  launchable.
+- Successful automatic updates retain only the current version and the version it
+  was updated from; failed updates and rollbacks do not prune versions.
+- Release packaging now writes UTF-8 markers without a BOM and validates the
+  complete Launcher/version payload.
+- Fixed settings migration so an intentional “System default” font choice is not
+  overwritten.
+
+### 简体中文
+
+- 设置、README、使用指南、更新日志以及普通/详细日志支持 English、简体中文和繁體中文。
+- “跟随系统”只显示操作系统实际语言，不再同时显示三种语言。
+- 在“设置 → 关于”新增一键发送桌面快捷方式，优先指向稳定 Launcher。
+- 全新解压包缺少有效版本标记时，自动恢复唯一的 `versions/<版本>` 目录；平铺的
+  Release 目录也可以直接启动。
+- 自动更新成功后只保留当前版本与更新前版本；失败和回滚不会清理版本。
+- 发布打包改为无 BOM 的 UTF-8 版本标记，并验证完整 Launcher/版本文件。
+- 修复旧设置迁移，避免主动选择的“系统默认字体”被覆盖。
+
+### 繁體中文
+
+- 設定、README、使用指南、更新日誌以及普通/詳細日誌支援 English、简体中文和繁體中文。
+- 「跟隨系統」只顯示作業系統實際語言，不再同時顯示三種語言。
+- 在「設定 → 關於」新增一鍵傳送桌面捷徑，優先指向穩定 Launcher。
+- 全新解壓縮包缺少有效版本標記時，自動恢復唯一的 `versions/<版本>` 目錄；平鋪的
+  Release 目錄也可以直接啟動。
+- 自動更新成功後只保留目前版本與更新前版本；失敗和回滾不會清理版本。
+- 發布封裝改為無 BOM 的 UTF-8 版本標記，並驗證完整 Launcher/版本檔案。
+- 修復舊設定移轉，避免主動選擇的「系統預設字型」被覆蓋。
+
 ## 0.9.2 - 2026-11-16
 
 ### Added

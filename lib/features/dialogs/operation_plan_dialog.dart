@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../repository/repository_controller.dart';
 
 class OperationPlanDialog extends StatefulWidget {
@@ -30,6 +31,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final operations = widget.controller.pendingOperations;
     final dangerous = operations
         .where((operation) => operation.isDangerous)
@@ -79,7 +81,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _executing ? '正在逐步执行' : '待执行操作计划',
+                          _executing ? l10n.tr('正在逐步执行') : l10n.tr('待执行操作计划'),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -88,8 +90,10 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                         const SizedBox(height: 3),
                         Text(
                           operations.isEmpty
-                              ? '当前没有待执行步骤'
-                              : '共 ${operations.length} 步；确认前仓库不会发生任何改变',
+                              ? l10n.tr('当前没有待执行步骤')
+                              : l10n.tr('共 {count} 步；确认前仓库不会发生任何改变', {
+                                  'count': operations.length,
+                                }),
                           style: TextStyle(
                             fontSize: 12.5,
                             height: 1.35,
@@ -120,7 +124,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                         if (_executing) ...[
                           _ProgressBanner(
                             step: _currentStep,
-                            title: _currentTitle ?? '准备执行',
+                            title: _currentTitle ?? l10n.tr('准备执行'),
                           ),
                           const SizedBox(height: 12),
                         ],
@@ -173,11 +177,13 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
           TextButton.icon(
             onPressed: _clearPlan,
             icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-            label: const Text('清空计划'),
+            label: Text(l10n.tr('清空计划')),
           ),
         TextButton(
           onPressed: _executing ? null : () => Navigator.pop(context),
-          child: Text(_result?.isSuccess == true ? '完成' : '关闭'),
+          child: Text(
+            _result?.isSuccess == true ? l10n.tr('完成') : l10n.tr('关闭'),
+          ),
         ),
         if (operations.isNotEmpty)
           FilledButton.icon(
@@ -192,7 +198,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                     ),
                   )
                 : const Icon(Icons.play_arrow_rounded, size: 19),
-            label: Text(_executing ? '正在执行…' : '确认并逐步执行'),
+            label: Text(_executing ? l10n.tr('正在执行…') : l10n.tr('确认并逐步执行')),
             style: FilledButton.styleFrom(
               backgroundColor: dangerous.isEmpty ? null : colors.error,
               foregroundColor: dangerous.isEmpty ? null : colors.onError,
@@ -204,6 +210,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
 
   Widget _buildEmptyOrResult(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final result = _result;
     if (result != null) {
       return Center(
@@ -221,7 +228,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
               ),
               const SizedBox(height: 14),
               Text(
-                result.isSuccess ? '执行完成' : '执行未全部完成',
+                result.isSuccess ? l10n.tr('执行完成') : l10n.tr('执行未全部完成'),
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -229,7 +236,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
               ),
               const SizedBox(height: 8),
               SelectableText(
-                result.message,
+                context.l10n.tr(result.message),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -250,13 +257,13 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
           children: [
             Icon(Icons.playlist_add_rounded, size: 46, color: colors.outline),
             const SizedBox(height: 12),
-            const Text(
-              '没有待执行操作',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+            Text(
+              l10n.tr('没有待执行操作'),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              '先在文件区、提交区或远端管理中选择操作；所有操作会先进入这里。',
+              l10n.tr('先在文件区、提交区或远端管理中选择操作；所有操作会先进入这里。'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
@@ -295,7 +302,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
     final hasDangerous = operations.any((operation) => operation.isDangerous);
     if (hasDangerous && !_dangerousConfirmed) {
       setState(() {
-        _validationMessage = '请先勾选“我已检查危险操作”。';
+        _validationMessage = context.l10n.tr('请先勾选“我已检查危险操作”。');
       });
       return;
     }
@@ -303,8 +310,10 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
         _confirmationController.text.trim() !=
             strongOperation.strongConfirmationText) {
       setState(() {
-        _validationMessage =
-            '请输入远端名称 ${strongOperation.strongConfirmationText} 进行二次确认。';
+        _validationMessage = context.l10n.tr(
+          '请输入远端项目全称/分支“{confirmation}”进行二次确认。',
+          {'confirmation': strongOperation.strongConfirmationText},
+        );
       });
       return;
     }
@@ -392,7 +401,7 @@ class _OperationCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        operation.title,
+                        context.l10n.tr(operation.title),
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -401,14 +410,14 @@ class _OperationCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     _OperationTag(
-                      label: _kindLabel(operation.kind),
+                      label: _kindLabel(context, operation.kind),
                       dangerous: operation.isDangerous,
                     ),
                   ],
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  operation.description,
+                  context.l10n.tr(operation.description),
                   style: TextStyle(
                     fontSize: 12.5,
                     height: 1.45,
@@ -420,7 +429,7 @@ class _OperationCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: executing ? null : onRemove,
-            tooltip: '从计划移除',
+            tooltip: context.l10n.tr('从计划移除'),
             icon: const Icon(Icons.remove_circle_outline_rounded, size: 19),
           ),
         ],
@@ -428,8 +437,8 @@ class _OperationCard extends StatelessWidget {
     );
   }
 
-  String _kindLabel(PlannedOperationKind kind) {
-    return switch (kind) {
+  String _kindLabel(BuildContext context, PlannedOperationKind kind) {
+    final label = switch (kind) {
       PlannedOperationKind.move => '移动',
       PlannedOperationKind.copy => '复制',
       PlannedOperationKind.rename => '重命名',
@@ -445,6 +454,7 @@ class _OperationCard extends StatelessWidget {
       PlannedOperationKind.removeRemoteConfig => '移除配置',
       PlannedOperationKind.clearRemote => '清空远端',
     };
+    return context.l10n.tr(label);
   }
 }
 
@@ -469,6 +479,7 @@ class _DangerConfirmation extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final confirmationText = strongOperation?.strongConfirmationText;
+    final l10n = context.l10n;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -485,7 +496,7 @@ class _DangerConfirmation extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  '危险操作确认',
+                  l10n.tr('危险操作确认'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -497,9 +508,11 @@ class _DangerConfirmation extends StatelessWidget {
           ),
           const SizedBox(height: 7),
           Text(
-            '此计划包含 ${operations.length} 个危险步骤。'
-            '文件删除无法通过本软件撤销；清空远端会替换全部分支历史，'
-            '只保留一个空提交并删除其它分支和标签。',
+            l10n.tr(
+              '此计划包含 {count} 个危险步骤。文件删除无法通过本软件撤销；'
+              '清空远端会替换全部分支历史，只保留一个空提交并删除其它分支和标签。',
+              {'count': operations.length},
+            ),
             style: TextStyle(
               fontSize: 12.5,
               height: 1.45,
@@ -512,7 +525,9 @@ class _DangerConfirmation extends StatelessWidget {
               controller: confirmationController,
               enabled: enabled,
               decoration: InputDecoration(
-                labelText: '输入项目全称/分支“$confirmationText”以确认',
+                labelText: l10n.tr('输入项目全称/分支“{confirmation}”以确认', {
+                  'confirmation': confirmationText,
+                }),
                 hintText: confirmationText,
               ),
               style: const TextStyle(fontSize: 13),
@@ -527,9 +542,12 @@ class _DangerConfirmation extends StatelessWidget {
               dense: true,
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
-              title: const Text(
-                '我已检查上述操作，确认后立即按顺序执行',
-                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600),
+              title: Text(
+                l10n.tr('我已检查上述操作，确认后立即按顺序执行'),
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
@@ -564,7 +582,10 @@ class _ProgressBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '第 $step 步：$title',
+              context.l10n.tr('第 {step} 步：{title}', {
+                'step': step,
+                'title': context.l10n.tr(title),
+              }),
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
           ),
@@ -591,7 +612,7 @@ class _ResultBanner extends StatelessWidget {
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: SelectableText(
-        result.message,
+        context.l10n.tr(result.message),
         style: TextStyle(
           fontSize: 12.5,
           height: 1.45,

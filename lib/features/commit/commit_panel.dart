@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/app_models.dart';
 import '../repository/repository_controller.dart';
 
@@ -74,13 +75,18 @@ class _CommitPanelState extends State<CommitPanel> {
                   ),
                 ),
                 const SizedBox(width: 9),
-                const Text(
-                  '提交工作区',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                Text(
+                  context.l10n.tr('提交工作区'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 _CountBadge(
-                  text: '${changes.length} 项变更',
+                  text: context.l10n.tr('{count} 项变更', {
+                    'count': changes.length,
+                  }),
                   color: hasChanges
                       ? (isDark
                             ? const Color(0xFFFFD27A)
@@ -89,17 +95,26 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 if (stagedCount > 0) ...[
                   const SizedBox(width: 6),
-                  _CountBadge(text: '$stagedCount 项已暂存', color: colors.primary),
+                  _CountBadge(
+                    text: context.l10n.tr('{count} 项已暂存', {
+                      'count': stagedCount,
+                    }),
+                    color: colors.primary,
+                  ),
                 ],
                 const Spacer(),
                 Tooltip(
-                  message: '查看和管理全部远端仓库',
+                  message: context.l10n.tr('查看和管理全部远端仓库'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
                         : widget.onManageRemotes,
                     icon: const Icon(Icons.hub_outlined, size: 15),
-                    label: Text('远端 ${controller.remotes.length}'),
+                    label: Text(
+                      context.l10n.tr('远端 {count}', {
+                        'count': controller.remotes.length,
+                      }),
+                    ),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
@@ -116,13 +131,13 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 5),
                 Tooltip(
-                  message: '推送当前分支 (Ctrl+Shift+U)',
+                  message: context.l10n.tr('推送当前分支 (Ctrl+Shift+U)'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
                         : widget.onPushRequested,
                     icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                    label: const Text('推送'),
+                    label: Text(context.l10n.tr('推送')),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
@@ -191,7 +206,7 @@ class _CommitPanelState extends State<CommitPanel> {
               ),
               const SizedBox(width: 8),
               Text(
-                '文件变更尚未执行，请在待执行操作计划中确认',
+                context.l10n.tr('文件变更尚未执行，请在待执行操作计划中确认'),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -212,7 +227,7 @@ class _CommitPanelState extends State<CommitPanel> {
             ),
             const SizedBox(width: 8),
             Text(
-              '工作区干净，没有待提交的更改',
+              context.l10n.tr('工作区干净，没有待提交的更改'),
               style: TextStyle(
                 fontSize: 11.5,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -247,9 +262,9 @@ class _CommitPanelState extends State<CommitPanel> {
               minLines: 2,
               maxLines: 3,
               textInputAction: TextInputAction.newline,
-              decoration: const InputDecoration(
-                hintText: '填写本次提交说明…',
-                labelText: '提交说明',
+              decoration: InputDecoration(
+                hintText: context.l10n.tr('填写本次提交说明…'),
+                labelText: context.l10n.tr('提交说明'),
                 alignLabelWithHint: true,
                 isDense: true,
               ),
@@ -272,7 +287,7 @@ class _CommitPanelState extends State<CommitPanel> {
                         }
                       : null,
                   icon: const Icon(Icons.add_task_rounded, size: 16),
-                  label: const Text('暂存全部'),
+                  label: Text(context.l10n.tr('暂存全部')),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -295,7 +310,7 @@ class _CommitPanelState extends State<CommitPanel> {
                         }
                       : null,
                   icon: const Icon(Icons.remove_done_rounded, size: 16),
-                  label: const Text('取消暂存'),
+                  label: Text(context.l10n.tr('取消暂存')),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -335,7 +350,7 @@ class _CommitPanelState extends State<CommitPanel> {
                           ),
                         )
                       : const Icon(Icons.check_rounded, size: 17),
-                  label: const Text('加入提交计划'),
+                  label: Text(context.l10n.tr('加入提交计划')),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -348,7 +363,9 @@ class _CommitPanelState extends State<CommitPanel> {
           ),
           const SizedBox(height: 7),
           Text(
-            '提交不会立即执行。请在待执行操作计划中确认后，再运行 git add -A 和 git commit。',
+            context.l10n.tr(
+              '提交不会立即执行。请在待执行操作计划中确认后，再运行 git add -A 和 git commit。',
+            ),
             style: TextStyle(
               fontSize: 11.5,
               height: 1.4,

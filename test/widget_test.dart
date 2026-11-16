@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/app.dart';
 import 'package:git_gui_expand/core/constants/app_info.dart';
+import 'package:git_gui_expand/core/localization/app_localizations.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
@@ -24,7 +26,16 @@ void main() {
   testWidgets('start screen presents repository opening workflow', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const GitGuiExpandApp());
+    tester.binding.platformDispatcher.localeTestValue = const Locale(
+      'zh',
+      'CN',
+    );
+    addTearDown(tester.binding.platformDispatcher.clearLocaleTestValue);
+    await tester.pumpWidget(
+      const GitGuiExpandApp(
+        initialLanguagePreference: AppLanguagePreference.simplifiedChinese,
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Git GUI Expand'), findsOneWidget);
@@ -32,6 +43,38 @@ void main() {
     expect(find.byIcon(Icons.folder_open_rounded), findsWidgets);
     expect(find.textContaining('左右双栏'), findsOneWidget);
     expect(find.text('v${AppInfo.version}'), findsOneWidget);
+  });
+
+  testWidgets('system language defaults to the operating-system locale', (
+    WidgetTester tester,
+  ) async {
+    tester.binding.platformDispatcher.localeTestValue = const Locale(
+      'en',
+      'US',
+    );
+    addTearDown(tester.binding.platformDispatcher.clearLocaleTestValue);
+
+    await tester.pumpWidget(const GitGuiExpandApp());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Open Git repository'), findsOneWidget);
+    expect(find.text('Dual-pane operations'), findsOneWidget);
+    expect(find.text('打开 Git 仓库'), findsNothing);
+  });
+
+  testWidgets('explicit Traditional Chinese locale renders Traditional UI', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      const GitGuiExpandApp(
+        initialLanguagePreference: AppLanguagePreference.traditionalChinese,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('開啟 Git 儲存庫'), findsOneWidget);
+    expect(find.text('雙欄批次操作'), findsOneWidget);
+    expect(find.text('打开 Git 仓库'), findsNothing);
   });
 
   testWidgets('recent Git repository can be opened from the start screen', (
@@ -87,9 +130,45 @@ void main() {
     },
   );
 
+  testWidgets('update dialog shows the current changelog in English', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: AppLocalizations.english,
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: const Scaffold(body: UpdateDialog(showChangelogFirst: true)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Trilingual UI, desktop shortcut, and clean-extract repair'),
+      findsOneWidget,
+    );
+    expect(find.text('v0.9.2'), findsNothing);
+    expect(find.text('三语界面、桌面快捷方式与全新解压修复'), findsNothing);
+  });
+
   testWidgets('settings page exposes all sections and attribution', (
     WidgetTester tester,
   ) async {
+    tester.binding.platformDispatcher.localeTestValue = const Locale(
+      'en',
+      'US',
+    );
+    addTearDown(tester.binding.platformDispatcher.clearLocaleTestValue);
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
@@ -128,12 +207,32 @@ void main() {
     expect(find.text('Noto Sans SC / 思源黑体'), findsOneWidget);
     expect(find.text('Inter UI'), findsNothing);
 
+    await tester.tap(find.text('语言'));
+    await tester.pump();
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('简体中文'), findsOneWidget);
+    expect(find.text('繁體中文'), findsOneWidget);
+    expect(find.text('Follow system'), findsOneWidget);
+    expect(find.textContaining('Follow system /'), findsNothing);
+    expect(
+      find.text('Use the language selected in the operating system.'),
+      findsOneWidget,
+    );
+    expect(find.text('使用操作系统设置的语言。'), findsNothing);
+    expect(
+      find.text('Use English for the application interface.'),
+      findsOneWidget,
+    );
+    expect(find.text('使用简体中文显示软件界面。'), findsOneWidget);
+    expect(find.text('使用繁體中文顯示軟體介面。'), findsOneWidget);
+
     await tester.tap(find.text('关于'));
     await tester.pump();
     expect(
       find.text('感谢 DeepSeek 人工智能和 ChatGPT Codex，两者合力创建、编写、修改此项目。'),
       findsOneWidget,
     );
+    expect(find.text('一键发送到桌面'), findsOneWidget);
   });
 
   testWidgets('remote manager displays multiple repository platforms', (
@@ -222,6 +321,9 @@ void main() {
   testWidgets('user guide explains the staged operation workflow', (
     WidgetTester tester,
   ) async {
+    expect(UserGuideDialog.assetPathFor('en'), 'docs/USER_GUIDE.md');
+    expect(UserGuideDialog.assetPathFor('zh'), 'docs/USER_GUIDE.zh-CN.md');
+    expect(UserGuideDialog.assetPathFor('zh_Hant'), 'docs/USER_GUIDE.zh-TW.md');
     tester.view.physicalSize = const Size(1200, 800);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);

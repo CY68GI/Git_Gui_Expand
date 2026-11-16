@@ -48,6 +48,10 @@ class AppStorageService {
   File get rollbackVersionFile =>
       File('$softwareDirectory${Platform.pathSeparator}rollback-version.txt');
 
+  File get launcherFile => File(
+    '$softwareDirectory${Platform.pathSeparator}GitGuiExpandLauncher.exe',
+  );
+
   Future<Directory> ensureDataDirectory() async {
     if (!await dataDirectory.exists()) {
       await dataDirectory.create(recursive: true);

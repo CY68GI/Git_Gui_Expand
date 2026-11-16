@@ -39,19 +39,31 @@ if ($previousTag) {
 
 $versionChanges = @($lines[$startIndex..($endIndex - 1)] | Select-Object -Skip 1)
 $commits = @(git log $range --pretty=format:"- %s")
-$base = if ($previousTag) {
-  "自 $previousTag 以来"
+$scopeEnglish = if ($previousTag) {
+  "changes from $previousTag to $Tag"
+} else {
+  "the first public release"
+}
+$scopeSimplified = if ($previousTag) {
+  "$previousTag 到 $Tag 之间的更新"
 } else {
   "首个发布版本"
+}
+$scopeTraditional = if ($previousTag) {
+  "$previousTag 到 $Tag 之間的更新"
+} else {
+  "首個發布版本"
 }
 $notes = @(
   "## Git GUI Expand $version"
   ""
-  "> 本页仅展示${base}的更新内容。"
+  "> English: This page contains only $scopeEnglish."
+  "> 简体中文：本页仅展示$scopeSimplified。"
+  "> 繁體中文：本頁僅展示$scopeTraditional。"
   ""
   ($versionChanges -join "`n")
   ""
-  "### 提交记录"
+  "### Commits / 提交记录 / 提交記錄"
   ""
   ($commits -join "`n")
 ) -join "`n"

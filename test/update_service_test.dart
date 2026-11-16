@@ -124,8 +124,42 @@ void main() {
     expect(launcherSource, contains('current-version.txt'));
     expect(launcherSource, contains('GIT_GUI_EXPAND_ROOT'));
     expect(launcherSource, contains('rollback-version.txt'));
+    expect(launcherSource, contains('PruneOldVersionDirectories'));
+    expect(launcherSource, contains('previousVersion'));
+    expect(launcherSource, contains('Removed old version directory'));
+    expect(launcherSource, contains('DiscoverCurrentVersion'));
+    expect(launcherSource, contains('TryBuildFlatLaunchPlan'));
+    expect(launcherSource, contains('0xEF'));
     expect(cmake, contains('GitGuiExpandLauncher'));
   });
+
+  test(
+    'release packaging script parses and writes marker without BOM',
+    () async {
+      if (!Platform.isWindows) return;
+      final script = File(
+        '${Directory.current.path}${Platform.pathSeparator}tool'
+        '${Platform.pathSeparator}package_windows_release.ps1',
+      );
+      final source = await script.readAsString();
+      final result = await Process.run(
+        'pwsh',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          r'[scriptblock]::Create([IO.File]::ReadAllText($env:PACKAGE_SCRIPT)) | Out-Null',
+        ],
+        environment: {'PACKAGE_SCRIPT': script.path},
+        includeParentEnvironment: true,
+        runInShell: false,
+      );
+
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+      expect(source, contains(r'UTF8Encoding]::new($false)'));
+      expect(source, contains('"current-version.txt"'));
+    },
+  );
 
   test('release notes include only the previous-tag commit range', () async {
     if (!Platform.isWindows) return;
@@ -152,7 +186,9 @@ void main() {
 
     expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
     final notes = await output.readAsString();
-    expect(notes, contains('自 v0.4.0 以来'));
+    expect(notes, contains('v0.4.0 到 v0.5.0 之间的更新'));
+    expect(notes, contains('changes from v0.4.0 to v0.5.0'));
+    expect(notes, contains('v0.4.0 到 v0.5.0 之間的更新'));
     expect(notes, contains('- feat: add verified automatic updates'));
     expect(notes, isNot(contains('## 0.2.1')));
   });

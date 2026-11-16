@@ -33,7 +33,9 @@ GitService ───────── SettingsService
 | `RecentRepositoriesService` | 仓库验证、最近打开排序、去重、清理与 JSON 持久化 |
 | `AppStorageService` | 把设置、日志与临时数据定位到可执行文件旁的 `userdata` |
 | `AppLogService` | 写入普通日志和详细日志，提供读取与打开目录 |
+| `DesktopShortcutService` | 通过 Windows WScript.Shell 创建当前用户桌面快捷方式 |
 | `AppTheme` | 浅色、深色主题；`ThemeMode.system` 跟随设备 |
+| `AppLocalizations` | English、简体中文、繁體中文文案与操作系统语言解析 |
 | `UpdateService` | GitHub Releases API 检查与 HTTPS 外链打开 |
 | `UpdateInstallerService` | 下载、SHA-256 校验、准备独立版本目录并写入 pending 标记 |
 | `GitGuiExpandLauncher` | 原生 Windows 启动器，切换版本、重启和失败回滚 |
@@ -65,6 +67,8 @@ GitService ───────── SettingsService
 
 普通日志接收 `info`、`warning` 和 `error`。详细日志额外接收 `detail`，并包含
 普通日志全部内容。日志写入采用串行队列，单次失败不会中断 Git 操作。
+`AppLogService` 在写入前使用当前本地化器转换已知事件文案，因此新日志跟随所选
+界面语言；Git 命令、stdout/stderr 和外部技术错误保持原始内容。
 
 ## 操作计划
 
@@ -101,9 +105,17 @@ GitService ───────── SettingsService
 4. 验证 EXE、`data/app.so`、`data/flutter_assets` 和 `version.json`。
 5. 将已验证目录移动到根目录 `versions/<version>`，写入 `pending-version.txt`。
 6. 主应用退出后，Launcher 切换 `current-version.txt` 并启动新版本。
-7. 新版本若在 8 秒内退出，Launcher 恢复 `rollback-version.txt`。
+7. 新版本若在 8 秒内退出，Launcher 恢复 `rollback-version.txt`，不删除版本目录。
+8. 新版本通过启动检查后，Launcher 只保留当前版本和本次更新前版本，其余版本目录
+   递归删除；清理失败只写 `userdata/updates/launcher.log`。
 
 运行中的版本不会被覆盖。`userdata` 位于 Launcher 根目录，由全部版本共享。
+回滚路径和未实际应用更新时的启动不会触发旧版本清理。
+
+`ReadVersionFile` 兼容 UTF-8 BOM、UTF-16 LE/BE BOM。若
+`current-version.txt` 缺失或无效，Launcher 会从 `versions` 中选择有效目录并重建
+标记；多个有效目录时按数字版本段选择最高版本。根目录直接包含
+`git_gui_expand.exe` 与 `data/app.so` 时，提供平铺 Release 兼容启动。
 
 Release 说明由 `tool/generate_release_notes.ps1` 生成。脚本从当前标签的父提交
 寻找上一个标签，读取 CHANGELOG 中当前标签之前、上个标签之后的全部版本小节，并收集
@@ -130,6 +142,18 @@ Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` �
 全局字号通过 `MediaQuery.textScaler` 应用，模型只接受 0.9–1.1 的范围，
 设置页只提供 90%、100%、110% 三档。
 
+## 本地化
+
+`AppSettings.languagePreference` 保存 `system`、`english`、
+`simplifiedChinese` 或 `traditionalChinese`，默认值为 `system`。
+`MaterialApp` 注册 Flutter 官方 Material/Widgets/Cupertino 本地化代理以及软件
+自有 `AppLocalizations` 代理。
+
+选择系统语言时把 `MaterialApp.locale` 设为 null，由
+`localeListResolutionCallback` 读取平台语言列表。英文解析为 `en`；简体中文区域
+解析为 `zh-CN`；繁体中文脚本或台湾、香港、澳门区域解析为 `zh-Hant`；其它语言
+回退到英文。语言偏好和字体迁移使用独立设置版本，当前版本为 3。
+
 ## 图标
 
 `tool/generate_app_icons.ps1` 从同一几何规则生成多尺寸 Windows ICO、macOS
@@ -148,6 +172,10 @@ userdata/
 
 Launcher 和 `userdata` 在版本切换时保持不变。版本字符串只允许字母、数字、点、横线和
 下划线，防止目录穿越。
+
+Launcher 从 `pending-version.txt` 获取本次新版本，从切换前的
+`current-version.txt` 获取更新前版本。新版本通过启动检查后，仅这两个目录被保留，
+其它同级版本目录会被清理。符号链接目录不会被递归删除。
 
 ## 文件枚举
 

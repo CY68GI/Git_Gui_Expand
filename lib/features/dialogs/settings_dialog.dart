@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_info.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/bundled_font.dart';
 import '../../core/models/settings_models.dart';
+import '../../core/services/app_log_service.dart';
 import '../../core/services/app_storage_service.dart';
+import '../../core/services/desktop_shortcut_service.dart';
 import '../../core/services/font_catalog_service.dart';
 import '../../core/services/update_service.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
 
-enum _SettingsSection { font, appearance, units, about }
+enum _SettingsSection { font, language, appearance, units, about }
 
 class SettingsDialog extends StatefulWidget {
   const SettingsDialog({
     super.key,
     required this.controller,
     this.fontCatalogService,
+    this.desktopShortcutService,
   });
 
   final RepositoryController controller;
   final FontCatalogService? fontCatalogService;
+  final DesktopShortcutService? desktopShortcutService;
 
   @override
   State<SettingsDialog> createState() => _SettingsDialogState();
@@ -29,11 +34,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
   late AppSettings _draft = widget.controller.settings;
   late final FontCatalogService _fontCatalog =
       widget.fontCatalogService ?? FontCatalogService();
+  late final DesktopShortcutService _desktopShortcuts =
+      widget.desktopShortcutService ?? const DesktopShortcutService();
   final UpdateService _externalLinks = const UpdateService();
   final TextEditingController _fontSearchController = TextEditingController();
   List<String> _fontFamilies = const [];
   bool _loadingFonts = true;
   bool _saving = false;
+  bool _creatingShortcut = false;
   _SettingsSection _section = _SettingsSection.font;
 
   @override
@@ -130,14 +138,17 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     ),
                   ),
                   const SizedBox(width: 11),
-                  const Text(
-                    '设置',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                  Text(
+                    context.l10n.tr('设置'),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const Spacer(),
                   IconButton(
                     onPressed: _saving ? null : () => Navigator.pop(context),
-                    tooltip: '关闭',
+                    tooltip: context.l10n.tr('关闭'),
                     icon: const Icon(Icons.close_rounded, size: 19),
                   ),
                 ],
@@ -156,26 +167,33 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       children: [
                         _SettingsNavItem(
                           icon: Icons.font_download_outlined,
-                          label: '字体',
+                          label: context.l10n.tr('字体'),
                           selected: _section == _SettingsSection.font,
                           onTap: () => _selectSection(_SettingsSection.font),
                         ),
                         _SettingsNavItem(
+                          icon: Icons.translate_rounded,
+                          label: context.l10n.tr('语言'),
+                          selected: _section == _SettingsSection.language,
+                          onTap: () =>
+                              _selectSection(_SettingsSection.language),
+                        ),
+                        _SettingsNavItem(
                           icon: Icons.brightness_6_outlined,
-                          label: '外观模式',
+                          label: context.l10n.tr('外观模式'),
                           selected: _section == _SettingsSection.appearance,
                           onTap: () =>
                               _selectSection(_SettingsSection.appearance),
                         ),
                         _SettingsNavItem(
                           icon: Icons.straighten_rounded,
-                          label: '单位设置',
+                          label: context.l10n.tr('单位设置'),
                           selected: _section == _SettingsSection.units,
                           onTap: () => _selectSection(_SettingsSection.units),
                         ),
                         _SettingsNavItem(
                           icon: Icons.info_outline_rounded,
-                          label: '关于',
+                          label: context.l10n.tr('关于'),
                           selected: _section == _SettingsSection.about,
                           onTap: () => _selectSection(_SettingsSection.about),
                         ),
@@ -219,8 +237,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
                             children: [
                               Text(
                                 _section == _SettingsSection.about
-                                    ? '关于信息不会修改设置'
-                                    : '设置将在点击保存后应用到整个软件',
+                                    ? context.l10n.tr('关于信息不会修改设置')
+                                    : context.l10n.tr('设置将在点击保存后应用到整个软件'),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: colors.onSurfaceVariant,
@@ -231,7 +249,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                 onPressed: _saving
                                     ? null
                                     : () => Navigator.pop(context),
-                                child: const Text('取消'),
+                                child: Text(context.l10n.tr('取消')),
                               ),
                               const SizedBox(width: 4),
                               FilledButton.icon(
@@ -246,7 +264,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                         ),
                                       )
                                     : const Icon(Icons.check_rounded, size: 17),
-                                label: const Text('保存设置'),
+                                label: Text(context.l10n.tr('保存设置')),
                               ),
                             ],
                           ),
@@ -266,36 +284,67 @@ class _SettingsDialogState extends State<SettingsDialog> {
   Widget _buildSection(BuildContext context) {
     return switch (_section) {
       _SettingsSection.font => _buildFontPage(context),
+      _SettingsSection.language => _buildLanguagePage(context),
       _SettingsSection.appearance => _buildAppearancePage(context),
       _SettingsSection.units => _buildUnitsPage(context),
       _SettingsSection.about => _buildAboutPage(context),
     };
   }
 
+  Widget _buildLanguagePage(BuildContext context) {
+    final l10n = context.l10n;
+    final systemLocale = WidgetsBinding.instance.platformDispatcher.locale;
+    return _SettingsPage(
+      title: l10n.tr('语言设置'),
+      subtitle: l10n.tr('选择软件显示语言。默认跟随操作系统语言。'),
+      children: [
+        _SectionLabel(
+          title: l10n.tr('界面语言'),
+          caption: l10n.tr('语言更改会在保存设置后立即生效。'),
+        ),
+        const SizedBox(height: 12),
+        for (final preference in AppLanguagePreference.values) ...[
+          _LanguageOptionCard(
+            preference: preference,
+            systemLocale: systemLocale,
+            selected: _draft.languagePreference == preference,
+            onTap: () {
+              setState(() {
+                _draft = _draft.copyWith(languagePreference: preference);
+              });
+            },
+          ),
+          const SizedBox(height: 10),
+        ],
+      ],
+    );
+  }
+
   Widget _buildFontPage(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final bundledFonts = _filteredBundledFonts;
     final systemFonts = _filteredSystemFonts;
     final resultCount = bundledFonts.length + systemFonts.length + 1;
     return _SettingsPage(
-      title: '字体',
-      subtitle: '默认使用内置的 Noto Sans SC / 思源黑体，也可搜索系统字体或其他内置字体。',
+      title: l10n.tr('字体'),
+      subtitle: l10n.tr('默认使用内置的 Noto Sans SC / 思源黑体，也可搜索系统字体或其他内置字体。'),
       children: [
-        const _SettingsScrollHint(
-          title: '此页还有下方内容',
-          message: '向下滚动可查看字体预览和字体大小设置。',
+        _SettingsScrollHint(
+          title: l10n.tr('此页还有下方内容'),
+          message: l10n.tr('向下滚动可查看字体预览和字体大小设置。'),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _fontSearchController,
           onChanged: (value) => setState(() => _fontQuery = value),
           decoration: InputDecoration(
-            hintText: '搜索字体名称或用途，例如 Inter、思源、中文',
+            hintText: l10n.tr('搜索字体名称或用途，例如 Inter、思源、中文'),
             prefixIcon: const Icon(Icons.search_rounded, size: 19),
             suffixIcon: _fontQuery.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: '清除搜索',
+                    tooltip: l10n.tr('清除搜索'),
                     onPressed: () {
                       _fontSearchController.clear();
                       setState(() => _fontQuery = '');
@@ -308,7 +357,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         Row(
           children: [
             Text(
-              '找到 $resultCount 个选项',
+              l10n.tr('找到 {count} 个选项', {'count': resultCount}),
               style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
             ),
             const Spacer(),
@@ -320,7 +369,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               )
             else
               Text(
-                '输入名称可快速筛选',
+                l10n.tr('输入名称可快速筛选'),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
           ],
@@ -339,11 +388,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
             children: [
               _FontGroupHeader(
                 icon: Icons.inventory_2_outlined,
-                label: '软件内置 UI 字体',
+                label: l10n.tr('软件内置 UI 字体'),
                 count: bundledFonts.length,
               ),
               if (bundledFonts.isEmpty)
-                const _FontEmptyRow(label: '没有匹配的内置字体')
+                _FontEmptyRow(label: l10n.tr('没有匹配的内置字体'))
               else
                 for (final font in bundledFonts)
                   _BundledFontRow(
@@ -361,12 +410,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
               _FontGroupHeader(
                 icon: Icons.computer_rounded,
-                label: '系统自带',
+                label: l10n.tr('系统自带'),
                 count: systemFonts.length + 1,
               ),
               _SystemFontRow(
-                label: '系统默认（自动适配）',
-                detail: '跟随当前操作系统，不固定字体族',
+                label: l10n.tr('系统默认（自动适配）'),
+                detail: l10n.tr('跟随当前操作系统，不固定字体族'),
                 fontFamily: null,
                 selected: _draft.fontFamily.isEmpty,
                 onTap: () {
@@ -376,12 +425,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 },
               ),
               if (systemFonts.isEmpty)
-                const _FontEmptyRow(label: '没有匹配的系统字体')
+                _FontEmptyRow(label: l10n.tr('没有匹配的系统字体'))
               else
                 for (final font in systemFonts)
                   _SystemFontRow(
                     label: font,
-                    detail: '系统已安装字体',
+                    detail: l10n.tr('系统已安装字体'),
                     fontFamily: font,
                     selected: _draft.fontFamily == font,
                     onTap: () {
@@ -395,18 +444,21 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 10),
         Text(
-          '内置字体均来自 Google Fonts，使用 SIL Open Font License 并随程序分发。',
+          l10n.tr('内置字体均来自 Google Fonts，使用 SIL Open Font License 并随程序分发。'),
           style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 18),
-        const _SectionLabel(title: '字体预览', caption: '保存后会应用到菜单、资源面板、对话框和提交说明。'),
+        _SectionLabel(
+          title: l10n.tr('字体预览'),
+          caption: l10n.tr('保存后会应用到菜单、资源面板、对话框和提交说明。'),
+        ),
         const SizedBox(height: 10),
         _SettingsCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Git GUI Expand · 文件提交',
+                l10n.tr('Git GUI Expand · 文件提交'),
                 style: TextStyle(
                   fontFamily: _draft.fontFamily.isEmpty
                       ? null
@@ -417,7 +469,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
               const SizedBox(height: 7),
               Text(
-                '剪切、复制、重命名、推送与提交   0123456789',
+                l10n.tr('剪切、复制、重命名、推送与提交   0123456789'),
                 style: TextStyle(
                   fontFamily: _draft.fontFamily.isEmpty
                       ? null
@@ -430,9 +482,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ),
         ),
         const SizedBox(height: 22),
-        const _SectionLabel(
-          title: '字体大小',
-          caption: '仅在安全范围内提供三档，避免出现过小或过大字号导致界面布局异常。',
+        _SectionLabel(
+          title: l10n.tr('字体大小'),
+          caption: l10n.tr('仅在安全范围内提供三档，避免出现过小或过大字号导致界面布局异常。'),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -466,8 +518,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 8),
         Text(
-          '允许范围：${(AppSettings.minFontScale * 100).round()}%–'
-          '${(AppSettings.maxFontScale * 100).round()}%',
+          l10n.tr('允许范围：{min}%–{max}%', {
+            'min': (AppSettings.minFontScale * 100).round(),
+            'max': (AppSettings.maxFontScale * 100).round(),
+          }),
           style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
         ),
       ],
@@ -476,28 +530,29 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Widget _buildAppearancePage(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return _SettingsPage(
-      title: '外观模式',
-      subtitle: '跟随系统会根据设备当前的深色或浅色外观自动切换。',
+      title: l10n.tr('外观模式'),
+      subtitle: l10n.tr('跟随系统会根据设备当前的深色或浅色外观自动切换。'),
       children: [
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<AppThemePreference>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: AppThemePreference.system,
-                label: Text('跟随系统'),
-                icon: Icon(Icons.brightness_auto_rounded, size: 18),
+                label: Text(l10n.tr('跟随系统')),
+                icon: const Icon(Icons.brightness_auto_rounded, size: 18),
               ),
               ButtonSegment(
                 value: AppThemePreference.light,
-                label: Text('浅色'),
-                icon: Icon(Icons.light_mode_outlined, size: 18),
+                label: Text(l10n.tr('浅色')),
+                icon: const Icon(Icons.light_mode_outlined, size: 18),
               ),
               ButtonSegment(
                 value: AppThemePreference.dark,
-                label: Text('深色'),
-                icon: Icon(Icons.dark_mode_outlined, size: 18),
+                label: Text(l10n.tr('深色')),
+                icon: const Icon(Icons.dark_mode_outlined, size: 18),
               ),
             ],
             selected: {_draft.themePreference},
@@ -515,7 +570,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             children: [
               _ThemeSwatch(
                 icon: Icons.light_mode_rounded,
-                label: '浅色',
+                label: l10n.tr('浅色'),
                 background: Colors.white,
                 foreground: const Color(0xFF17211E),
                 border: const Color(0xFFDDE4E0),
@@ -523,7 +578,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(width: 12),
               _ThemeSwatch(
                 icon: Icons.dark_mode_rounded,
-                label: '深色',
+                label: l10n.tr('深色'),
                 background: const Color(0xFF171E1B),
                 foreground: const Color(0xFFE8EFEA),
                 border: const Color(0xFF33413B),
@@ -531,7 +586,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  '当前选择：${_themeLabel(_draft.themePreference)}',
+                  l10n.tr('当前选择：{theme}', {
+                    'theme': _themeLabel(l10n, _draft.themePreference),
+                  }),
                   style: TextStyle(
                     color: colors.onSurfaceVariant,
                     fontSize: 11,
@@ -547,29 +604,30 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Widget _buildUnitsPage(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final dataPath = const AppStorageService().dataDirectory.path;
     return _SettingsPage(
-      title: '单位设置',
-      subtitle: '控制项目大小和每个文件大小的显示方式。',
+      title: l10n.tr('单位设置'),
+      subtitle: l10n.tr('控制项目大小和每个文件大小的显示方式。'),
       children: [
-        const _SectionLabel(
-          title: '容量单位制',
-          caption: '二进制使用 1024 进位，十进制使用 1000 进位。',
+        _SectionLabel(
+          title: l10n.tr('容量单位制'),
+          caption: l10n.tr('二进制使用 1024 进位，十进制使用 1000 进位。'),
         ),
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<SizeUnitSystem>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: SizeUnitSystem.binary,
-                label: Text('IEC 二进制'),
-                icon: Icon(Icons.memory_rounded, size: 17),
+                label: Text(l10n.tr('IEC 二进制')),
+                icon: const Icon(Icons.memory_rounded, size: 17),
               ),
               ButtonSegment(
                 value: SizeUnitSystem.decimal,
-                label: Text('SI 十进制'),
-                icon: Icon(Icons.straighten_rounded, size: 17),
+                label: Text(l10n.tr('SI 十进制')),
+                icon: const Icon(Icons.straighten_rounded, size: 17),
               ),
             ],
             selected: {_draft.unitSystem},
@@ -582,17 +640,23 @@ class _SettingsDialogState extends State<SettingsDialog> {
           ),
         ),
         const SizedBox(height: 22),
-        const _SectionLabel(
-          title: '基础单位',
-          caption: 'Byte 显示 B、KiB 或 KB；bit 会先乘以 8。',
+        _SectionLabel(
+          title: l10n.tr('基础单位'),
+          caption: l10n.tr('Byte 显示 B、KiB 或 KB；bit 会先乘以 8。'),
         ),
         const SizedBox(height: 10),
         SizedBox(
           width: double.infinity,
           child: SegmentedButton<SizeBaseUnit>(
-            segments: const [
-              ButtonSegment(value: SizeBaseUnit.byte, label: Text('Byte（B）')),
-              ButtonSegment(value: SizeBaseUnit.bit, label: Text('bit（b）')),
+            segments: [
+              ButtonSegment(
+                value: SizeBaseUnit.byte,
+                label: Text(l10n.tr('Byte（B）')),
+              ),
+              ButtonSegment(
+                value: SizeBaseUnit.bit,
+                label: Text(l10n.tr('bit（b）')),
+              ),
             ],
             selected: {_draft.baseUnit},
             onSelectionChanged: (value) {
@@ -617,7 +681,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                   const SizedBox(width: 7),
                   Text(
-                    '单位预览',
+                    l10n.tr('单位预览'),
                     style: TextStyle(
                       fontSize: 11.5,
                       color: colors.primary,
@@ -632,22 +696,22 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 runSpacing: 10,
                 children: [
                   _PreviewValue(
-                    label: '小文件',
+                    label: l10n.tr('小文件'),
                     value: formatFileSize(1536, _draft),
                   ),
                   _PreviewValue(
-                    label: '中文件',
+                    label: l10n.tr('中文件'),
                     value: formatFileSize(1572864, _draft),
                   ),
                   _PreviewValue(
-                    label: '大文件',
+                    label: l10n.tr('大文件'),
                     value: formatFileSize(1610612736, _draft),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
               Text(
-                sizeUnitDescription(_draft),
+                l10n.tr(sizeUnitDescription(_draft)),
                 style: TextStyle(
                   fontSize: 11.5,
                   color: colors.onSurfaceVariant,
@@ -658,7 +722,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 14),
         Text(
-          '设置数据目录',
+          l10n.tr('设置数据目录'),
           style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 3),
@@ -672,9 +736,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Widget _buildAboutPage(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return _SettingsPage(
-      title: '关于',
-      subtitle: 'Windows 优先的 Flutter Git 图形化文件工作区。',
+      title: l10n.tr('关于'),
+      subtitle: l10n.tr('Windows 优先的 Flutter Git 图形化文件工作区。'),
       children: [
         _SettingsCard(
           child: Row(
@@ -699,7 +764,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '版本 v${AppInfo.version}',
+                      l10n.tr('版本 v{version}', {'version': AppInfo.version}),
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.primary,
@@ -708,7 +773,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     ),
                     const SizedBox(height: 7),
                     Text(
-                      '通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。',
+                      l10n.tr('通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。'),
                       style: TextStyle(
                         fontSize: 12,
                         color: colors.onSurfaceVariant,
@@ -722,7 +787,45 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 onPressed: () =>
                     _externalLinks.openExternalUrl(AppInfo.repositoryUrl),
                 icon: const Icon(Icons.code_rounded, size: 16),
-                label: const Text('打开仓库'),
+                label: Text(l10n.tr('打开仓库')),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+        _SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                l10n.tr('桌面快捷方式'),
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                l10n.tr('在当前用户桌面创建 Git GUI Expand 快捷方式，并通过稳定 Launcher 启动。'),
+                style: TextStyle(
+                  fontSize: 11.5,
+                  height: 1.5,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 11),
+              FilledButton.tonalIcon(
+                onPressed: _creatingShortcut ? null : _createDesktopShortcut,
+                icon: _creatingShortcut
+                    ? const SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.add_to_drive_rounded, size: 17),
+                label: Text(
+                  l10n.tr(_creatingShortcut ? '正在创建快捷方式…' : '一键发送到桌面'),
+                ),
               ),
             ],
           ),
@@ -740,17 +843,22 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     color: colors.primary,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    '致谢',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                  Text(
+                    l10n.tr('致谢'),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              const Text(
-                '感谢 DeepSeek 人工智能和 ChatGPT Codex，'
-                '两者合力创建、编写、修改此项目。',
-                style: TextStyle(fontSize: 11.5, height: 1.65),
+              Text(
+                l10n.tr(
+                  '感谢 DeepSeek 人工智能和 ChatGPT Codex，'
+                  '两者合力创建、编写、修改此项目。',
+                ),
+                style: const TextStyle(fontSize: 11.5, height: 1.65),
               ),
               const SizedBox(height: 10),
               Wrap(
@@ -768,7 +876,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 14),
         Text(
-          '本项目为开源项目，未附带许可证；分发或商用前请由项目所有者补充许可证。',
+          l10n.tr('本项目为开源项目，未附带许可证；分发或商用前请由项目所有者补充许可证。'),
           style: TextStyle(
             fontSize: 11.5,
             height: 1.5,
@@ -779,12 +887,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
     );
   }
 
-  String _themeLabel(AppThemePreference preference) {
-    return switch (preference) {
+  String _themeLabel(AppLocalizations l10n, AppThemePreference preference) {
+    final label = switch (preference) {
       AppThemePreference.system => '跟随系统',
       AppThemePreference.light => '浅色',
       AppThemePreference.dark => '深色',
     };
+    return l10n.tr(label);
   }
 
   void _selectSection(_SettingsSection section) {
@@ -794,6 +903,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    AppLogService.instance.setLocale(
+      AppLocalizations.localeForPreference(_draft.languagePreference),
+    );
     final outcome = await widget.controller.updateSettings(_draft);
     if (!mounted) return;
     setState(() => _saving = false);
@@ -803,8 +915,26 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(outcome.message),
+        content: Text(context.l10n.tr(outcome.message)),
         backgroundColor: const Color(0xFF7B3434),
+      ),
+    );
+  }
+
+  Future<void> _createDesktopShortcut() async {
+    setState(() => _creatingShortcut = true);
+    final result = await _desktopShortcuts.create();
+    if (!mounted) return;
+    setState(() => _creatingShortcut = false);
+    final colors = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(context.l10n.tr(result.message)),
+        backgroundColor: result.isSuccess
+            ? const Color(0xFF1C3D35)
+            : colors.error,
+        duration: const Duration(seconds: 5),
+        showCloseIcon: true,
       ),
     );
   }
@@ -944,7 +1074,7 @@ class _BundledFontRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        font.description,
+                        context.l10n.tr(font.description),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1165,6 +1295,104 @@ class _SettingsScrollHint extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _LanguageOptionCard extends StatelessWidget {
+  const _LanguageOptionCard({
+    required this.preference,
+    required this.systemLocale,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final AppLanguagePreference preference;
+  final Locale systemLocale;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Material(
+      color: selected
+          ? colors.primary.withValues(alpha: 0.08)
+          : colors.surfaceContainerLow.withValues(alpha: 0.55),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(
+          color: selected ? colors.primary : colors.outlineVariant,
+          width: selected ? 1.5 : 1,
+        ),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                child: Icon(
+                  preference == AppLanguagePreference.system
+                      ? Icons.computer_rounded
+                      : Icons.language_rounded,
+                  size: 19,
+                  color: colors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppLocalizations.languageOptionLabel(
+                        preference,
+                        systemLocale: systemLocale,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        height: 1.35,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      AppLocalizations.languageOptionDescription(
+                        preference,
+                        systemLocale: systemLocale,
+                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        height: 1.5,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Icon(
+                selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                size: 20,
+                color: selected ? colors.primary : colors.outline,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

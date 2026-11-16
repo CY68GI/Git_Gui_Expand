@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_info.dart';
 import '../../core/constants/changelog.dart';
+import '../../core/localization/app_localizations.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/update_installer_service.dart';
 import '../../core/services/update_service.dart';
@@ -47,6 +48,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final currentEntries = builtInChangelog.where(
+      (entry) => entry.version == AppInfo.version,
+    );
     return AlertDialog(
       clipBehavior: Clip.antiAlias,
       contentPadding: EdgeInsets.zero,
@@ -96,15 +101,15 @@ class _UpdateDialogState extends State<UpdateDialog> {
                           children: [
                             Text(
                               _isInstalling
-                                  ? '正在自动更新'
+                                  ? l10n.tr('正在自动更新')
                                   : _isChecking
-                                  ? '正在检查更新'
-                                  : '更新与发布日志',
+                                  ? l10n.tr('正在检查更新')
+                                  : l10n.tr('更新与发布日志'),
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '${AppInfo.englishName} · 当前 v${AppInfo.version}',
+                              '${AppInfo.englishName} · ${l10n.tr('当前 v{version}', {'version': AppInfo.version})}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.onSurfaceVariant,
@@ -128,10 +133,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
                             : const Icon(Icons.refresh_rounded, size: 16),
                         label: Text(
                           _isInstalling
-                              ? '更新中'
+                              ? l10n.tr('更新中')
                               : _isChecking
-                              ? '检查中'
-                              : '检查更新',
+                              ? l10n.tr('检查中')
+                              : l10n.tr('检查更新'),
                         ),
                       ),
                     ],
@@ -150,17 +155,17 @@ class _UpdateDialogState extends State<UpdateDialog> {
                         _buildInstallProgress(context),
                         const SizedBox(height: 18),
                       ],
-                      const _SectionTitle(
+                      _SectionTitle(
                         icon: Icons.auto_awesome_rounded,
-                        title: '当前版本亮点',
+                        title: l10n.tr('当前版本亮点'),
                       ),
                       const SizedBox(height: 9),
-                      ...builtInChangelog.map(_buildChangelogCard),
+                      ...currentEntries.map(_buildChangelogCard),
                       if (_result?.releaseNotes.isNotEmpty == true) ...[
                         const SizedBox(height: 18),
-                        const _SectionTitle(
+                        _SectionTitle(
                           icon: Icons.receipt_long_outlined,
-                          title: '线上发布说明',
+                          title: l10n.tr('线上发布说明'),
                         ),
                         const SizedBox(height: 9),
                         Container(
@@ -181,10 +186,12 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       ],
                       const SizedBox(height: 14),
                       Text(
-                        '自动更新会从 GitHub 下载 Windows x64 ZIP 并校验 SHA-256，'
-                        '解压到 versions/<版本>。应用退出后由 GitGuiExpandLauncher '
-                        '切换版本并自动重启；新版本启动失败时会回滚。'
-                        '根目录 userdata 和正在运行的版本不会被覆盖。',
+                        l10n.tr(
+                          '自动更新会从 GitHub 下载 Windows x64 ZIP 并校验 SHA-256，'
+                          '解压到 versions/<版本>。应用退出后由 GitGuiExpandLauncher '
+                          '切换版本并自动重启；新版本启动失败时会回滚。'
+                          '根目录 userdata 和正在运行的版本不会被覆盖。',
+                        ),
                         style: TextStyle(
                           fontSize: 12,
                           color: colors.onSurfaceVariant,
@@ -205,7 +212,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               ? null
               : () => _service.openExternalUrl(AppInfo.repositoryUrl),
           icon: const Icon(Icons.code_rounded, size: 16),
-          label: const Text('打开仓库'),
+          label: Text(l10n.tr('打开仓库')),
         ),
         if (_result?.releaseUrl.isNotEmpty == true)
           TextButton.icon(
@@ -213,7 +220,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 ? null
                 : () => _service.openExternalUrl(_result!.releaseUrl),
             icon: const Icon(Icons.open_in_new_rounded, size: 16),
-            label: const Text('打开发布页'),
+            label: Text(l10n.tr('打开发布页')),
           ),
         if (_result?.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
@@ -228,11 +235,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     ),
                   )
                 : const Icon(Icons.rocket_launch_outlined, size: 17),
-            label: Text(_isInstalling ? '正在安装…' : '立即更新并重启'),
+            label: Text(_isInstalling ? l10n.tr('正在安装…') : l10n.tr('立即更新并重启')),
           ),
         TextButton(
           onPressed: _isInstalling ? null : () => Navigator.pop(context),
-          child: const Text('关闭'),
+          child: Text(l10n.tr('关闭')),
         ),
       ],
     );
@@ -240,21 +247,22 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   Widget _buildResult(BuildContext context, UpdateCheckResult result) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final (title, message, icon, color) = switch (result.status) {
       UpdateCheckStatus.updateAvailable => (
-        '发现新版本 v${result.latestVersion}',
+        l10n.tr('发现新版本 v{version}', {'version': result.latestVersion}),
         result.releaseName.isEmpty ? result.message : result.releaseName,
         Icons.new_releases_rounded,
         colors.primary,
       ),
       UpdateCheckStatus.upToDate => (
-        '已经是最新版本',
+        l10n.tr('已经是最新版本'),
         result.message,
         Icons.check_circle_outline_rounded,
         const Color(0xFF16836C),
       ),
       UpdateCheckStatus.unavailable => (
-        '暂时无法获取线上版本',
+        l10n.tr('暂时无法获取线上版本'),
         result.message,
         Icons.cloud_off_outlined,
         const Color(0xFF9A7116),
@@ -302,6 +310,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
 
   Widget _buildInstallProgress(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final color = _installFailed ? colors.error : colors.primary;
     final percent = _installPercent;
     return Container(
@@ -326,7 +335,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _installMessage ?? '正在准备更新…',
+                  _installMessage ?? l10n.tr('正在准备更新…'),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: color,
@@ -384,16 +393,17 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 entry.date,
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
-              const Spacer(),
-              Text(
-                entry.title,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ],
+          ),
+          const SizedBox(height: 5),
+          Text(
+            context.l10n.tr(entry.title),
+            style: TextStyle(
+              fontSize: 12,
+              height: 1.4,
+              color: colors.primary,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 8),
           ...entry.items.map(
@@ -413,7 +423,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   ),
                   Expanded(
                     child: Text(
-                      item,
+                      context.l10n.tr(item),
                       style: const TextStyle(fontSize: 12, height: 1.5),
                     ),
                   ),

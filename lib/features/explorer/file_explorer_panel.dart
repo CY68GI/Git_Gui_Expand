@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/app_models.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/folder_picker_service.dart';
@@ -46,7 +47,9 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final label = widget.side == ExplorerSide.left ? '左侧资源' : '右侧资源';
+    final label = widget.side == ExplorerSide.left
+        ? context.l10n.tr('左侧资源')
+        : context.l10n.tr('右侧资源');
     final selectedCount = widget.state.selectedPaths.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
@@ -136,7 +139,7 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    '粘贴目标',
+                    context.l10n.tr('粘贴目标'),
                     style: TextStyle(
                       fontSize: 10.5,
                       color: colors.primary,
@@ -147,19 +150,19 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
               const Spacer(),
               _HeaderIconButton(
                 icon: Icons.arrow_upward_rounded,
-                tooltip: '上一级',
+                tooltip: context.l10n.tr('上一级'),
                 onPressed: widget.state.relativePath.isEmpty
                     ? null
                     : () => widget.controller.goUp(widget.side),
               ),
               _HeaderIconButton(
                 icon: Icons.refresh_rounded,
-                tooltip: '刷新',
+                tooltip: context.l10n.tr('刷新'),
                 onPressed: widget.controller.refresh,
               ),
               _HeaderIconButton(
                 icon: Icons.deselect_rounded,
-                tooltip: '清除选择',
+                tooltip: context.l10n.tr('清除选择'),
                 onPressed: selectedCount == 0
                     ? null
                     : () => widget.controller.clearSelection(widget.side),
@@ -237,9 +240,9 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
             ),
           ),
           const SizedBox(width: 5),
-          const Expanded(child: _ColumnLabel('名称')),
-          const SizedBox(width: 100, child: _ColumnLabel('大小')),
-          const SizedBox(width: 64, child: _ColumnLabel('状态')),
+          Expanded(child: _ColumnLabel(context.l10n.tr('名称'))),
+          SizedBox(width: 100, child: _ColumnLabel(context.l10n.tr('大小'))),
+          SizedBox(width: 64, child: _ColumnLabel(context.l10n.tr('状态'))),
         ],
       ),
     );
@@ -258,15 +261,15 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
     if (widget.state.error != null) {
       return _ExplorerMessage(
         icon: Icons.error_outline_rounded,
-        title: '无法读取目录',
+        title: context.l10n.tr('无法读取目录'),
         message: widget.state.error!,
       );
     }
     if (widget.state.entries.isEmpty) {
-      return const _ExplorerMessage(
+      return _ExplorerMessage(
         icon: Icons.folder_off_outlined,
-        title: '这里没有文件',
-        message: '切换目录或刷新以查看仓库内容。',
+        title: context.l10n.tr('这里没有文件'),
+        message: context.l10n.tr('切换目录或刷新以查看仓库内容。'),
       );
     }
 
@@ -322,14 +325,14 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
         Rect.fromLTWH(localPosition.dx, localPosition.dy, 0, 0),
         Offset.zero & overlay.size,
       ),
-      items: const [
+      items: [
         PopupMenuItem(
           value: _FileContextAction.revealInExplorer,
           child: ListTile(
             dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.folder_open_rounded, size: 19),
-            title: Text('用文件资源打开'),
+            leading: const Icon(Icons.folder_open_rounded, size: 19),
+            title: Text(context.l10n.tr('用文件资源打开')),
           ),
         ),
         PopupMenuItem(
@@ -337,8 +340,8 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
           child: ListTile(
             dense: true,
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.open_in_new_rounded, size: 19),
-            title: Text('用默认打开方式打开'),
+            leading: const Icon(Icons.open_in_new_rounded, size: 19),
+            title: Text(context.l10n.tr('用默认打开方式打开')),
           ),
         ),
       ],
@@ -359,7 +362,12 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
       if (mounted) {
         widget.showOutcome(
           OperationOutcome.failure(
-            '无法打开文件：${error.toString().replaceFirst('FileSystemException: ', '')}',
+            context.l10n.tr('无法打开文件：{error}', {
+              'error': error.toString().replaceFirst(
+                'FileSystemException: ',
+                '',
+              ),
+            }),
           ),
         );
       }
@@ -377,12 +385,16 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
       child: Row(
         children: [
           Text(
-            '${widget.state.entries.length} 项',
+            context.l10n.tr('{count} 项', {
+              'count': widget.state.entries.length,
+            }),
             style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
           ),
           const Spacer(),
           Text(
-            selectedCount == 0 ? '双击文件夹进入' : '已选 $selectedCount 项',
+            selectedCount == 0
+                ? context.l10n.tr('双击文件夹进入')
+                : context.l10n.tr('已选 {count} 项', {'count': selectedCount}),
             style: TextStyle(
               fontSize: 11.5,
               color: selectedCount == 0
@@ -506,7 +518,7 @@ class _ExplorerRowState extends State<_ExplorerRow> {
                 width: 100,
                 child: Text(
                   isDirectory || entry.size == null
-                      ? '文件夹'
+                      ? context.l10n.tr('文件夹')
                       : formatFileSize(entry.size!, widget.settings),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

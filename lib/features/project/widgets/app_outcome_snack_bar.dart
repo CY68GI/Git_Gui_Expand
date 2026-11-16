@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/localization/app_localizations.dart';
 import '../../repository/repository_controller.dart';
 
 void showAppOutcomeSnackBar(
@@ -8,10 +9,11 @@ void showAppOutcomeSnackBar(
   VoidCallback? onViewLogs,
 }) {
   final messenger = ScaffoldMessenger.of(context);
-  final isLongFailure = !outcome.isSuccess && outcome.message.length > 520;
+  final localizedMessage = context.l10n.tr(outcome.message);
+  final isLongFailure = !outcome.isSuccess && localizedMessage.length > 520;
   final displayMessage = isLongFailure
-      ? '${outcome.message.substring(0, 520)}…\n详细原因已写入操作日志。'
-      : outcome.message;
+      ? '${localizedMessage.substring(0, 520)}…\n${context.l10n.tr('详细原因已写入操作日志。')}'
+      : localizedMessage;
   messenger
     ..hideCurrentSnackBar()
     ..showSnackBar(
@@ -51,7 +53,7 @@ void showAppOutcomeSnackBar(
         closeIconColor: Colors.white,
         action: isLongFailure && onViewLogs != null
             ? SnackBarAction(
-                label: '查看日志',
+                label: context.l10n.tr('查看日志'),
                 textColor: Colors.white,
                 onPressed: onViewLogs,
               )

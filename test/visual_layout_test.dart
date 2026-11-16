@@ -195,6 +195,39 @@ void main() {
     );
   });
 
+  testWidgets('language settings describe every option in its own language', (
+    WidgetTester tester,
+  ) async {
+    await _setViewport(tester);
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      _visualApp(
+        SettingsDialog(
+          controller: controller,
+          fontCatalogService: _FakeFontCatalogService(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('语言'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('English'), findsOneWidget);
+    expect(find.text('简体中文'), findsOneWidget);
+    expect(find.text('繁體中文'), findsOneWidget);
+    expect(
+      find.text('Use English for the application interface.'),
+      findsOneWidget,
+    );
+    expect(find.text('使用简体中文显示软件界面。'), findsOneWidget);
+    expect(find.text('使用繁體中文顯示軟體介面。'), findsOneWidget);
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/settings_language_dark_110.png'),
+    );
+  });
+
   testWidgets('file context menu stays readable in dark 110 percent', (
     WidgetTester tester,
   ) async {

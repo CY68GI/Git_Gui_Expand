@@ -40,31 +40,7 @@ jobs:
       - name: Package Windows release
         shell: pwsh
         run: |
-          $stage = "dist/package"
-          $version = $env:GITHUB_REF_NAME.TrimStart("v")
-          $versionStage = Join-Path $stage "versions/$version"
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          New-Item -ItemType Directory -Force -Path $versionStage | Out-Null
-          Get-ChildItem "build/windows/x64/runner/Release" -Force |
-            Where-Object {
-              $_.Name -notin @("userdata", "GitGuiExpandLauncher.exe")
-            } |
-            Copy-Item -Destination $versionStage -Recurse
-          Copy-Item "build/windows/x64/runner/Release/GitGuiExpandLauncher.exe" `
-            -Destination $stage
-          Copy-Item README.md, CHANGELOG.md -Destination $stage
-          @{
-            version = $version
-            tag = $env:GITHUB_REF_NAME
-            builtAt = (Get-Date).ToUniversalTime().ToString("o")
-          } | ConvertTo-Json |
-            Set-Content -LiteralPath "$versionStage/version.json" -Encoding utf8
-          Set-Content -LiteralPath "$stage/current-version.txt" `
-            -Value $version -Encoding utf8
-          Compress-Archive `
-            -Path "$stage/*" `
-            -DestinationPath "dist/Git_Gui_Expand-${{ github.ref_name }}-windows-x64.zip" `
-            -CompressionLevel Optimal
+          ./tool/package_windows_release.ps1 -Tag $env:GITHUB_REF_NAME
 
       - name: Generate release notes for this version
         shell: pwsh

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/localization/app_localizations.dart';
 import '../../core/models/recent_repository.dart';
 import '../../core/utils/path_utils.dart';
 
@@ -24,6 +25,7 @@ class StartView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Stack(
       children: [
         Positioned(
@@ -73,7 +75,7 @@ class StartView extends StatelessWidget {
                   ),
                   const SizedBox(height: 26),
                   Text(
-                    '把 Git 文件操作，\n变成一次直观的移动。',
+                    l10n.tr('把 Git 文件操作，\n变成一次直观的移动。'),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       color: colors.onSurface,
@@ -82,8 +84,10 @@ class StartView extends StatelessWidget {
                   ),
                   const SizedBox(height: 17),
                   Text(
-                    '左右双栏浏览同一仓库，勾选、剪切、粘贴和重命名。'
-                    '\n每一步文件变更都通过 Git，最后填写说明直接提交。',
+                    l10n.tr(
+                      '左右双栏浏览同一仓库，勾选、剪切、粘贴和重命名。'
+                      '\n每一步文件变更都通过 Git，最后填写说明直接提交。',
+                    ),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
@@ -103,7 +107,9 @@ class StartView extends StatelessWidget {
                             ),
                           )
                         : const Icon(Icons.folder_open_rounded, size: 20),
-                    label: Text(isOpening ? '正在读取仓库…' : '打开 Git 仓库'),
+                    label: Text(
+                      isOpening ? l10n.tr('正在读取仓库…') : l10n.tr('打开 Git 仓库'),
+                    ),
                     style: FilledButton.styleFrom(
                       minimumSize: const Size(220, 52),
                       backgroundColor: colors.primary,
@@ -111,7 +117,7 @@ class StartView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '请选择已经执行过 git init 的文件夹根目录',
+                    l10n.tr('请选择已经执行过 git init 的文件夹根目录'),
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: colors.onSurfaceVariant),
                   ),
@@ -150,7 +156,7 @@ class StartView extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '最近打开',
+                          l10n.tr('最近打开'),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
@@ -165,7 +171,9 @@ class StartView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
-                            '${recentRepositories.length} 个 Git 仓库',
+                            l10n.tr('{count} 个 Git 仓库', {
+                              'count': recentRepositories.length,
+                            }),
                             style: TextStyle(
                               fontSize: 11,
                               color: colors.primary,
@@ -175,7 +183,7 @@ class StartView extends StatelessWidget {
                         ),
                         const Spacer(),
                         Text(
-                          '仅保存验证成功的仓库根目录',
+                          l10n.tr('仅保存验证成功的仓库根目录'),
                           style: TextStyle(
                             fontSize: 11,
                             color: colors.onSurfaceVariant,
@@ -199,25 +207,25 @@ class StartView extends StatelessWidget {
                     ),
                   ],
                   const SizedBox(height: 42),
-                  const Wrap(
+                  Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 12,
                     runSpacing: 12,
                     children: [
                       _FeatureCard(
                         icon: Icons.splitscreen_rounded,
-                        title: '双栏批量操作',
-                        caption: '独立浏览，跨栏移动',
+                        title: l10n.tr('双栏批量操作'),
+                        caption: l10n.tr('独立浏览，跨栏移动'),
                       ),
                       _FeatureCard(
                         icon: Icons.drive_file_rename_outline_rounded,
-                        title: 'Git 原生变更',
-                        caption: 'git mv · index · commit',
+                        title: l10n.tr('Git 原生变更'),
+                        caption: l10n.tr('git mv · index · commit'),
                       ),
                       _FeatureCard(
                         icon: Icons.straighten_rounded,
-                        title: '精确大小视图',
-                        caption: 'IEC / SI，可切换 bit',
+                        title: l10n.tr('精确大小视图'),
+                        caption: l10n.tr('IEC / SI，可切换 bit'),
                       ),
                     ],
                   ),
@@ -226,13 +234,14 @@ class StartView extends StatelessWidget {
                     spacing: 20,
                     runSpacing: 8,
                     alignment: WrapAlignment.center,
-                    children: const [
-                      _ShortcutHint(keys: 'Ctrl O', label: '打开仓库'),
+                    children: [
+                      _ShortcutHint(keys: 'Ctrl O', label: l10n.tr('打开仓库')),
                       _ShortcutHint(
                         keys: 'Ctrl X / C / V',
-                        label: '剪切 · 复制 · 粘贴',
+                        label:
+                            '${l10n.tr('剪切')} · ${l10n.tr('复制')} · ${l10n.tr('粘贴')}',
                       ),
-                      _ShortcutHint(keys: 'F2', label: '重命名'),
+                      _ShortcutHint(keys: 'F2', label: l10n.tr('重命名')),
                     ],
                   ),
                 ],
@@ -261,6 +270,7 @@ class _RecentRepositoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     final name = repositoryBasename(repository.path);
     return SizedBox(
       width: 405,
@@ -322,7 +332,7 @@ class _RecentRepositoryCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  _formatRecentTime(repository.lastOpened),
+                  _formatRecentTime(repository.lastOpened, l10n),
                   style: TextStyle(
                     fontSize: 10.5,
                     color: colors.onSurfaceVariant,
@@ -330,7 +340,7 @@ class _RecentRepositoryCard extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: disabled ? null : onRemove,
-                  tooltip: '从历史记录移除',
+                  tooltip: l10n.tr('从历史记录移除'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close_rounded, size: 15),
                   constraints: const BoxConstraints.tightFor(
@@ -347,14 +357,17 @@ class _RecentRepositoryCard extends StatelessWidget {
     );
   }
 
-  String _formatRecentTime(DateTime value) {
+  String _formatRecentTime(DateTime value, AppLocalizations l10n) {
     final local = value.toLocal();
     final now = DateTime.now();
     if (local.year == now.year &&
         local.month == now.month &&
         local.day == now.day) {
-      return '今天 ${local.hour.toString().padLeft(2, '0')}:'
-          '${local.minute.toString().padLeft(2, '0')}';
+      return l10n.tr('今天 {time}', {
+        'time':
+            '${local.hour.toString().padLeft(2, '0')}:'
+            '${local.minute.toString().padLeft(2, '0')}',
+      });
     }
     return '${local.year}-${local.month.toString().padLeft(2, '0')}-'
         '${local.day.toString().padLeft(2, '0')}';

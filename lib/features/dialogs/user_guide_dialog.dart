@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/localization/app_localizations.dart';
+
 class UserGuideDialog extends StatelessWidget {
   const UserGuideDialog({super.key});
 
-  static const String assetPath = 'docs/USER_GUIDE.md';
+  static const String defaultAssetPath = 'docs/USER_GUIDE.md';
+
+  static String assetPathFor(String languageCode) {
+    return switch (languageCode) {
+      'zh' => 'docs/USER_GUIDE.zh-CN.md',
+      'zh_Hant' => 'docs/USER_GUIDE.zh-TW.md',
+      _ => defaultAssetPath,
+    };
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final assetPath = assetPathFor(l10n.languageCode);
     final screen = MediaQuery.sizeOf(context);
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
@@ -42,28 +54,28 @@ class UserGuideDialog extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Git GUI Expand 使用指南',
-                          style: TextStyle(
+                          l10n.tr('Git GUI Expand 使用指南'),
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          '重点：所有 Git 修改先进入执行计划，确认后才运行',
-                          style: TextStyle(fontSize: 12.5),
+                          l10n.tr('重点：所有 Git 修改先进入执行计划，确认后才运行'),
+                          style: const TextStyle(fontSize: 12.5),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    tooltip: '关闭使用指南',
+                    tooltip: l10n.tr('关闭使用指南'),
                     icon: const Icon(Icons.close_rounded),
                   ),
                 ],
@@ -83,7 +95,9 @@ class UserGuideDialog extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(30),
                         child: SelectableText(
-                          '无法读取使用指南：${snapshot.error}',
+                          l10n.tr('无法读取使用指南：{error}', {
+                            'error': snapshot.error,
+                          }),
                           style: TextStyle(fontSize: 13, color: colors.error),
                         ),
                       ),
@@ -108,7 +122,9 @@ class UserGuideDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      '可在本窗口中选中并复制文字。完整指南也保存在 docs/USER_GUIDE.md。',
+                      l10n.tr('可在本窗口中选中并复制文字。完整指南保存在 {path}。', {
+                        'path': assetPath,
+                      }),
                       style: TextStyle(
                         fontSize: 11.5,
                         color: colors.onSurfaceVariant,
@@ -118,7 +134,7 @@ class UserGuideDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   FilledButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('我知道了'),
+                    child: Text(l10n.tr('我知道了')),
                   ),
                 ],
               ),

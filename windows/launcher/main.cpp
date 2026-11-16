@@ -64,6 +64,43 @@ std::wstring ReadVersionFile(const fs::path& path) {
   }
   std::string line;
   std::getline(stream, line);
+  if (line.size() >= 2 &&
+      static_cast<unsigned char>(line[0]) == 0xFF &&
+      static_cast<unsigned char>(line[1]) == 0xFE) {
+    std::wstring value;
+    for (size_t index = 2; index + 1 < line.size(); index += 2) {
+      const wchar_t character =
+          static_cast<wchar_t>(static_cast<unsigned char>(line[index]) |
+                               (static_cast<unsigned char>(line[index + 1])
+                                << 8));
+      if (character == L'\0') {
+        break;
+      }
+      value.push_back(character);
+    }
+    return Trim(value);
+  }
+  if (line.size() >= 2 &&
+      static_cast<unsigned char>(line[0]) == 0xFE &&
+      static_cast<unsigned char>(line[1]) == 0xFF) {
+    std::wstring value;
+    for (size_t index = 2; index + 1 < line.size(); index += 2) {
+      const wchar_t character =
+          static_cast<wchar_t>((static_cast<unsigned char>(line[index]) << 8) |
+                               static_cast<unsigned char>(line[index + 1]));
+      if (character == L'\0') {
+        break;
+      }
+      value.push_back(character);
+    }
+    return Trim(value);
+  }
+  if (line.size() >= 3 &&
+      static_cast<unsigned char>(line[0]) == 0xEF &&
+      static_cast<unsigned char>(line[1]) == 0xBB &&
+      static_cast<unsigned char>(line[2]) == 0xBF) {
+    line.erase(0, 3);
+  }
   const int required = MultiByteToWideChar(CP_UTF8, 0, line.data(),
                                            static_cast<int>(line.size()),
                                            nullptr, 0);
@@ -84,6 +121,48 @@ bool IsSafeVersion(const std::wstring& version) {
     return std::iswalnum(character) != 0 || character == L'.' ||
            character == L'-' || character == L'_';
   });
+}
+
+int CompareVersions(const std::wstring& left, const std::wstring& right) {
+  std::vector<long long> leftParts;
+  std::vector<long long> rightParts;
+  auto parse = [](const std::wstring& value, std::vector<long long>* parts) {
+    size_t start = 0;
+    while (start <= value.size()) {
+      const size_t end = value.find(L'.', start);
+      const std::wstring part =
+          value.substr(start, end == std::wstring::npos ? std::wstring::npos
+                                                        : end - start);
+      if (!part.empty() &&
+          std::all_of(part.begin(), part.end(), [](wchar_t character) {
+            return std::iswdigit(character) != 0;
+          })) {
+        parts->push_back(std::wcstoll(part.c_str(), nullptr, 10));
+      } else {
+        parts->push_back(0);
+      }
+      if (end == std::wstring::npos) {
+        break;
+      }
+      start = end + 1;
+    }
+  };
+  parse(left, &leftParts);
+  parse(right, &rightParts);
+  const size_t length = (std::max)(leftParts.size(), rightParts.size());
+  for (size_t index = 0; index < length; ++index) {
+    const long long leftPart =
+        index < leftParts.size() ? leftParts[index] : 0;
+    const long long rightPart =
+        index < rightParts.size() ? rightParts[index] : 0;
+    if (leftPart < rightPart) {
+      return -1;
+    }
+    if (leftPart > rightPart) {
+      return 1;
+    }
+  }
+  return left.compare(right);
 }
 
 bool WriteVersionFile(const fs::path& path, const std::wstring& version) {
@@ -147,6 +226,55 @@ bool IsLaunchableVersion(const fs::path& root,
     plan->root = root;
     plan->version = version;
     plan->version_directory = directory;
+    plan->executable = executable;
+  }
+  return true;
+}
+
+std::wstring DiscoverCurrentVersion(const fs::path& root) {
+  const fs::path versionsDirectory = root / L"versions";
+  std::error_code error;
+  if (!fs::is_directory(versionsDirectory, error)) {
+    return {};
+  }
+  std::wstring selected;
+  for (fs::directory_iterator iterator(versionsDirectory, error), end;
+       iterator != end; iterator.increment(error)) {
+    if (error) {
+      break;
+    }
+    std::error_code statusError;
+    const fs::file_status status = iterator->symlink_status(statusError);
+    if (statusError || !fs::is_directory(status) ||
+        fs::is_symlink(status)) {
+      continue;
+    }
+    const std::wstring name = iterator->path().filename().wstring();
+    if (!IsLaunchableVersion(root, name, nullptr)) {
+      continue;
+    }
+    if (selected.empty() || CompareVersions(name, selected) > 0) {
+      selected = name;
+    }
+  }
+  if (!selected.empty()) {
+    WriteVersionFile(root / L"current-version.txt", selected);
+    WriteLog(root, L"Recovered current version from versions directory: " +
+                       selected);
+  }
+  return selected;
+}
+
+bool TryBuildFlatLaunchPlan(const fs::path& root, LaunchPlan* plan) {
+  const fs::path executable = root / L"git_gui_expand.exe";
+  const fs::path appData = root / L"data" / L"app.so";
+  if (!fs::is_regular_file(executable) || !fs::is_regular_file(appData)) {
+    return false;
+  }
+  if (plan != nullptr) {
+    plan->root = root;
+    plan->version = L"portable";
+    plan->version_directory = root;
     plan->executable = executable;
   }
   return true;
@@ -242,6 +370,51 @@ DWORD ReadExitCode(HANDLE process) {
   return exitCode;
 }
 
+void PruneOldVersionDirectories(const fs::path& root,
+                                const std::wstring& currentVersion,
+                                const std::wstring& previousVersion) {
+  const fs::path versionsDirectory = root / L"versions";
+  std::error_code error;
+  if (!fs::is_directory(versionsDirectory, error)) {
+    if (error) {
+      WriteLog(root, L"Could not inspect versions directory, error=" +
+                         std::to_wstring(error.value()));
+    }
+    return;
+  }
+
+  for (fs::directory_iterator iterator(versionsDirectory, error), end;
+       iterator != end; iterator.increment(error)) {
+    if (error) {
+      WriteLog(root, L"Could not enumerate versions directory, error=" +
+                         std::to_wstring(error.value()));
+      return;
+    }
+    const fs::directory_entry& entry = *iterator;
+    std::error_code statusError;
+    const fs::file_status status = entry.symlink_status(statusError);
+    if (statusError || !fs::is_directory(status) || fs::is_symlink(status)) {
+      continue;
+    }
+    const std::wstring name = entry.path().filename().wstring();
+    if (name == currentVersion ||
+        (!previousVersion.empty() && name == previousVersion)) {
+      WriteLog(root, L"Retained version directory " + name);
+      continue;
+    }
+
+    std::error_code removeError;
+    fs::remove_all(entry.path(), removeError);
+    if (removeError) {
+      WriteLog(root, L"Could not remove old version directory " + name +
+                         L", error=" +
+                         std::to_wstring(removeError.value()));
+    } else {
+      WriteLog(root, L"Removed old version directory " + name);
+    }
+  }
+}
+
 DWORD RunLauncher(const fs::path& root, DWORD waitProcessId) {
   if (!WaitForOtherProcess(waitProcessId)) {
     WriteLog(root, L"Timed out waiting for previous application process");
@@ -254,15 +427,31 @@ DWORD RunLauncher(const fs::path& root, DWORD waitProcessId) {
     LaunchPlan plan;
     if (!IsLaunchableVersion(root, version, &plan)) {
       const std::wstring rollback = ReadVersionFile(root / L"rollback-version.txt");
-      if (!IsLaunchableVersion(root, rollback, &plan)) {
-        WriteLog(root, L"Current version is invalid: " + version);
+      if (IsLaunchableVersion(root, rollback, &plan)) {
+        WriteVersionFile(root / L"current-version.txt", rollback);
+        version = rollback;
+      } else {
+        version = DiscoverCurrentVersion(root);
+      }
+      if (!IsLaunchableVersion(root, version, &plan) &&
+          !TryBuildFlatLaunchPlan(root, &plan)) {
+        WriteLog(root, L"Current version is invalid: " + version +
+                           L"; versions directory could not be recovered");
+        const std::wstring errorMessage =
+            L"无法确定要启动的 Git GUI Expand 版本。\n\n"
+            L"已检查：\n"
+            L"- current-version.txt / rollback-version.txt\n"
+            L"- versions\\<版本>\\git_gui_expand.exe\n"
+            L"- versions\\<版本>\\data\\app.so\n\n"
+            L"请确认发布包已完整解压，且 GitGuiExpandLauncher.exe "
+            L"与 versions 文件夹位于同一目录。\n"
+            L"详细原因：userdata\\updates\\launcher.log";
         MessageBoxW(nullptr,
-                    L"当前版本目录无效。请重新安装 Git GUI Expand。",
+                    errorMessage.c_str(),
                     L"Git GUI Expand Launcher", MB_OK | MB_ICONERROR);
         return ERROR_FILE_NOT_FOUND;
       }
-      WriteVersionFile(root / L"current-version.txt", rollback);
-      version = rollback;
+      version = plan.version;
     }
 
     PROCESS_INFORMATION process{};
@@ -273,8 +462,12 @@ DWORD RunLauncher(const fs::path& root, DWORD waitProcessId) {
 
     const DWORD firstWait = WaitForSingleObject(process.hProcess, 8000);
     if (firstWait == WAIT_TIMEOUT) {
-      DeleteFileW((root / L"rollback-version.txt").c_str());
       WriteLog(root, L"Version " + version + L" passed startup check");
+      if (pendingResult.applied) {
+        PruneOldVersionDirectories(root, version,
+                                   pendingResult.previous_version);
+      }
+      DeleteFileW((root / L"rollback-version.txt").c_str());
       WaitForSingleObject(process.hProcess, INFINITE);
       const DWORD exitCode = ReadExitCode(process.hProcess);
       CloseHandle(process.hProcess);
