@@ -33,13 +33,6 @@ try {
 }
 
 if ($null -eq $release) {
-  $releases = Invoke-RestMethod -Method Get `
-    -Uri "$baseUrl/releases?per_page=50" `
-    -Headers $headers
-  $release = @($releases) | Where-Object { $_.tag_name -eq $Tag } | Select-Object -First 1
-}
-
-if ($null -eq $release) {
   if ([string]::IsNullOrWhiteSpace($TargetCommitish)) {
     $TargetCommitish = (git rev-parse HEAD).Trim()
   }
