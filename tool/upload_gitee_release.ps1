@@ -4,7 +4,7 @@ param(
   [Parameter(Mandatory = $true)][string]$NotesPath,
   [string]$Owner = "CY68EWZRY",
   [string]$Repo = "Git_Gui_Expand",
-  [string]$TargetCommitish = "main",
+  [string]$TargetCommitish = "",
   [string]$Token = $env:GITEE_TOKEN
 )
 
@@ -33,6 +33,16 @@ try {
 }
 
 if ($null -eq $release) {
+  $releases = Invoke-RestMethod -Method Get `
+    -Uri "$baseUrl/releases?per_page=50" `
+    -Headers $headers
+  $release = @($releases) | Where-Object { $_.tag_name -eq $Tag } | Select-Object -First 1
+}
+
+if ($null -eq $release) {
+  if ([string]::IsNullOrWhiteSpace($TargetCommitish)) {
+    $TargetCommitish = (git rev-parse HEAD).Trim()
+  }
   $release = Invoke-RestMethod -Method Post `
     -Uri "$baseUrl/releases" `
     -Headers $headers `
