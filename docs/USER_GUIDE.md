@@ -27,6 +27,15 @@ After opening, **Project folder** opens the current repository root in File
 Explorer. Verified repositories are saved to the recent list; the list stores
 only existing Git roots and keeps at most ten entries.
 
+Use **Open empty folder** to select a directory without `.git`. The application
+asks whether to initialize it with `git init`. Use **Clone Git repository** to
+enter an HTTPS/SSH/local URL, a parent directory, and a project folder name.
+
+The top bar **Git metadata** action can remove `.git` only when the repository
+has no configured remote. It deletes commit history, branches, tags, index,
+stashes, refs, remote configuration, and repository Git settings, while preserving
+working files. Type `CLEAR GIT` to confirm.
+
 Start distributed releases with `GitGuiExpandLauncher.exe`. If
 `current-version.txt` is missing from a freshly extracted package, the Launcher
 automatically discovers a single valid `versions/<version>` directory and
@@ -82,6 +91,13 @@ The window lists local branches and supports creating, switching, renaming,
 safely deleting merged branches, and force-deleting unmerged branches after an
 explicit option is enabled. Every action is added to the operation plan first.
 The current branch cannot be deleted.
+
+### Stash management
+
+Click **Stash** in the commit workspace to open Stash management. It supports
+creating a stash with an optional message, including untracked files, applying,
+popping, or dropping a stash. Changes are queued in the operation plan first;
+dropping a stash requires dangerous-operation confirmation.
 
 ## 6. Push and remotes
 

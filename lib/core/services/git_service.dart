@@ -46,6 +46,117 @@ class GitService {
     return root;
   }
 
+  static Future<void> initializeRepository(String folderPath) async {
+    final folder = Directory(folderPath).absolute.path;
+    if (!await Directory(folder).exists()) {
+      throw const GitException('要初始化的文件夹不存在。');
+    }
+    final result = await _runStandaloneGit(['init'], folder);
+    if (!result.success) {
+      throw GitException('git init 初始化失败。', commandOutput: result.output);
+    }
+    AppLogService.instance.info('repository', '已初始化 Git 仓库：$folder');
+  }
+
+  static Future<void> cloneRepository(
+    String remoteUrl,
+    String destinationPath,
+  ) async {
+    _validateCloneUrl(remoteUrl);
+    final destination = Directory(destinationPath).absolute;
+    final parent = destination.parent;
+    if (!await parent.exists()) {
+      throw GitException('克隆目标父目录不存在：${parent.path}');
+    }
+    if (await destination.exists()) {
+      final entries = await destination
+          .list(followLinks: false)
+          .take(1)
+          .toList();
+      if (entries.isNotEmpty) {
+        throw GitException('克隆目标目录不是空目录：${destination.path}');
+      }
+    }
+    final result = await _runStandaloneGit([
+      'clone',
+      '--',
+      remoteUrl.trim(),
+      destination.path,
+    ], parent.path);
+    if (!result.success) {
+      throw GitException('git clone 克隆失败。', commandOutput: result.output);
+    }
+    AppLogService.instance.info(
+      'repository',
+      '已克隆 Git 仓库：${remoteUrl.trim()} -> ${destination.path}',
+    );
+  }
+
+  static Future<void> clearRepositoryMetadata(String folderPath) async {
+    final root = Directory(folderPath).absolute.path;
+    final gitPath = '$root${Platform.pathSeparator}.git';
+    final type = await FileSystemEntity.type(gitPath, followLinks: false);
+    if (type == FileSystemEntityType.notFound) {
+      throw const GitException('当前文件夹没有 Git 元数据。');
+    }
+    if (type != FileSystemEntityType.directory) {
+      throw const GitException('当前 `.git` 不是普通目录，可能是 worktree 或子模块，已拒绝清理。');
+    }
+    final remotes = await _runStandaloneGit(['remote'], root);
+    if (!remotes.success) {
+      throw const GitException('无法检查仓库远端，已拒绝清理。');
+    }
+    if (remotes.stdout.trim().isNotEmpty) {
+      throw const GitException('当前仓库已经连接远程仓库，不能清除 Git 元数据。');
+    }
+    await Directory(gitPath).delete(recursive: true);
+    AppLogService.instance.warning(
+      'repository',
+      '已清除未连接远端的 Git 元数据，工作文件保留：$root',
+    );
+  }
+
+  static String repositoryNameFromRemote(String remoteUrl) {
+    var value = remoteUrl.trim();
+    if (value.endsWith('/') || value.endsWith('\\')) {
+      value = value.substring(0, value.length - 1);
+    }
+    final slash = value.lastIndexOf(RegExp(r'[/:\\\\]'));
+    final name = slash >= 0 ? value.substring(slash + 1) : value;
+    return name.endsWith('.git') ? name.substring(0, name.length - 4) : name;
+  }
+
+  static void _validateCloneUrl(String remoteUrl) {
+    final value = remoteUrl.trim();
+    if (value.isEmpty) {
+      throw const GitException('克隆地址不能为空。');
+    }
+    final uri = Uri.tryParse(value);
+    final scpStyle = RegExp(r'^[A-Za-z0-9._-]+@[A-Za-z0-9.-]+:.+')
+        .hasMatch(value);
+    final supportedScheme =
+        uri != null &&
+        const {'https', 'ssh', 'git', 'file'}.contains(uri.scheme);
+    final localPath =
+        !value.contains('://') &&
+        !scpStyle &&
+        (value.contains('\\') ||
+            value.startsWith('.') ||
+            value.startsWith('/'));
+    if (!scpStyle && !supportedScheme && !localPath) {
+      throw const GitException(
+        '克隆地址仅支持 HTTPS、SSH、git@host:path、file:// 或本地路径。',
+      );
+    }
+  }
+
+  static Future<GitCommandResult> _runStandaloneGit(
+    List<String> arguments,
+    String workingDirectory,
+  ) {
+    return _runProcess(arguments, workingDirectory: workingDirectory);
+  }
+
   static Future<String> _canonicalDirectoryPath(String path) async {
     final absolute = Directory(path).absolute.path;
     try {
@@ -336,6 +447,71 @@ class GitService {
   Future<void> deleteBranch(String name, {bool force = false}) async {
     await validateBranchName(name);
     await _run(['branch', force ? '-D' : '-d', name.trim()]);
+  }
+
+  Future<void> createStash({
+    String? message,
+    bool includeUntracked = true,
+  }) async {
+    final args = ['stash', 'push'];
+    if (includeUntracked) {
+      args.add('--include-untracked');
+    }
+    final trimmed = message?.trim() ?? '';
+    if (trimmed.isNotEmpty) {
+      args
+        ..add('-m')
+        ..add(trimmed);
+    }
+    final result = await _run(args);
+    if (result.output.toLowerCase().contains('no local changes')) {
+      throw const GitException('当前没有可暂存的更改。');
+    }
+  }
+
+  Future<List<GitStashEntry>> listStashes() async {
+    final result = await _run([
+      'stash',
+      'list',
+      '--format=%gd%x1f%gs%x1f%ci%x1e',
+    ], allowFailure: true);
+    if (!result.success) return const [];
+    final entries = <GitStashEntry>[];
+    for (final record in result.stdout.split('\x1e')) {
+      final trimmed = record.trim();
+      if (trimmed.isEmpty) continue;
+      final parts = trimmed.split('\x1f');
+      if (parts.length < 2) continue;
+      entries.add(
+        GitStashEntry(
+          selector: parts[0].trim(),
+          message: parts[1].trim(),
+          createdAt: parts.length > 2 ? parts[2].trim() : '',
+        ),
+      );
+    }
+    return entries;
+  }
+
+  Future<void> applyStash(String selector) async {
+    _validateStashSelector(selector);
+    await _run(['stash', 'apply', selector]);
+  }
+
+  Future<void> popStash(String selector) async {
+    _validateStashSelector(selector);
+    await _run(['stash', 'pop', selector]);
+  }
+
+  Future<void> dropStash(String selector) async {
+    _validateStashSelector(selector);
+    await _run(['stash', 'drop', selector]);
+  }
+
+  void _validateStashSelector(String selector) {
+    if (!RegExp(r'^stash@\{\d+\}$').hasMatch(selector.trim())) {
+      throw const GitException('Stash 选择器无效。');
+    }
   }
 
   Future<String> pushCurrentBranch() async {

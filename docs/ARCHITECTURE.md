@@ -237,6 +237,17 @@ Git 状态使用 `git status --porcelain=v1 -z --untracked-files=all`。
 安全删除使用 `git branch -d`，用户明确选择后才使用 `git branch -D`。
 所有分支操作先进入 `RepositoryController` 的执行计划。
 
+## 初始化、克隆与 Stash
+
+空白目录初始化通过 `git init`，克隆通过 `git clone -- <url> <destination>`；
+两者都先验证目录和远程地址。Stash 使用 `git stash push`、`list`、`apply`、
+`pop` 和 `drop`，`--include-untracked` 由用户选择。Stash 操作经过执行计划，
+选择器必须符合 `stash@{n}`。
+
+清除 Git 元数据会再次执行 `git remote`；只要存在任何 remote 就拒绝。确认后仅
+递归删除仓库根目录的 `.git` 普通目录，工作文件保留。worktree/子模块的 `.git`
+文件以及符号链接不会作为清理目标。
+
 ## 复制
 
 Git 没有复制命令，因此复制使用 Git plumbing：

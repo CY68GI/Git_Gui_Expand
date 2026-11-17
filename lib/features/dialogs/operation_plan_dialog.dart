@@ -457,6 +457,10 @@ class _OperationCard extends StatelessWidget {
       PlannedOperationKind.switchBranch => '切换分支',
       PlannedOperationKind.renameBranch => '重命名分支',
       PlannedOperationKind.deleteBranch => '删除分支',
+      PlannedOperationKind.createStash => '创建 Stash',
+      PlannedOperationKind.applyStash => '应用 Stash',
+      PlannedOperationKind.popStash => '弹出 Stash',
+      PlannedOperationKind.dropStash => '删除 Stash',
     };
     return context.l10n.tr(label);
   }

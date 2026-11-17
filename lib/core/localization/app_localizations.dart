@@ -384,6 +384,66 @@ class AppLocalizations {
           ? 'Deleted branch ${match.group(1)}'
           : '已刪除分支 ${match.group(1)}';
     }
+    match = RegExp(r'^创建 Stash(?:：(.+))?$').firstMatch(source);
+    if (match != null) {
+      final message = match.group(1);
+      return english
+          ? (message == null ? 'Create stash' : 'Create stash: $message')
+          : (message == null ? '建立 Stash' : '建立 Stash：$message');
+    }
+    match = RegExp(r'^执行 git stash push( --include-untracked)?( -m .+)?。$')
+        .firstMatch(source);
+    if (match != null) {
+      final suffix = '${match.group(1) ?? ''}${match.group(2) ?? ''}';
+      return english
+          ? 'Run git stash push$suffix.'
+          : '執行 git stash push$suffix。';
+    }
+    match = RegExp(r'^应用 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Apply ${match.group(1)}' : '套用 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git stash apply (stash@\{\d+\})，并保留 Stash 记录。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git stash apply ${match.group(1)} and keep the stash entry.'
+          : '執行 git stash apply ${match.group(1)}，並保留 Stash 記錄。';
+    }
+    match = RegExp(r'^已应用 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Applied ${match.group(1)}' : '已套用 ${match.group(1)}';
+    }
+    match = RegExp(r'^弹出 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Pop ${match.group(1)}' : '彈出 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git stash pop (stash@\{\d+\})，应用后删除该 Stash。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git stash pop ${match.group(1)} and remove the stash entry after applying it.'
+          : '執行 git stash pop ${match.group(1)}，套用後刪除該 Stash。';
+    }
+    match = RegExp(r'^已弹出 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Popped ${match.group(1)}' : '已彈出 ${match.group(1)}';
+    }
+    match = RegExp(r'^删除 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Drop ${match.group(1)}' : '刪除 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git stash drop (stash@\{\d+\})，此操作无法通过本软件撤销。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git stash drop ${match.group(1)}. This action cannot be undone here.'
+          : '執行 git stash drop ${match.group(1)}。此操作無法透過本軟體復原。';
+    }
+    match = RegExp(r'^已删除 (stash@\{\d+\})$').firstMatch(source);
+    if (match != null) {
+      return english ? 'Dropped ${match.group(1)}' : '已刪除 ${match.group(1)}';
+    }
 
     match = RegExp(r'^(移动|复制) (\d+) 项到 (.+)$').firstMatch(source);
     if (match != null) {
@@ -839,6 +899,76 @@ class AppLocalizations {
       '关于页显示 git_gui_expand 和 GitGuiExpandLauncher 实际版本。': 'About now shows the actual git_gui_expand and GitGuiExpandLauncher file versions.',
       '新增分支创建、切换、重命名、安全删除和强制删除。': 'Added local branch creation, switching, renaming, safe deletion, and force deletion.',
       '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。': 'Updates now support GitHub and Gitee sources with SHA-256 verification.',
+      '打开空白文件夹': 'Open empty folder',
+      '克隆 Git 仓库': 'Clone Git repository',
+      '打开现有仓库、初始化空白目录，或克隆远程仓库': 'Open an existing repository, initialize an empty folder, or clone a remote repository.',
+      '是否马上初始化 Git 仓库？': 'Initialize a Git repository now?',
+      '当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。': 'This folder is not a Git repository yet. Run git init now to manage and commit it here.',
+      '暂不初始化': 'Not now',
+      '立即初始化': 'Initialize now',
+      '选择克隆父目录': 'Choose clone parent folder',
+      '选择文件夹': 'Choose folder',
+      '请填写克隆地址、父目录和项目名称。':
+          'Enter the clone URL, parent folder, and project name.',
+      '远程仓库地址': 'Remote repository URL',
+      '克隆到父目录': 'Clone into parent folder',
+      '项目文件夹名称': 'Project folder name',
+      '目标目录：{path}': 'Destination: {path}',
+      '克隆会创建新的本地 Git 仓库，并保留远端已有的提交和分支。': 'Cloning creates a new local Git repository and preserves the remote commits and branches.',
+      '正在克隆…': 'Cloning…',
+      '开始克隆': 'Start clone',
+      'Stash 管理': 'Stash management',
+      '刷新 Stash': 'Refresh stashes',
+      'Stash 说明（可选）': 'Stash message (optional)',
+      '例如 临时保存未完成修改': 'For example: temporary work in progress',
+      '同时保存未跟踪文件（git stash --include-untracked）':
+          'Include untracked files (git stash --include-untracked)',
+      '创建 Stash': 'Create stash',
+      '当前仓库没有 Stash。': 'This repository has no stashes.',
+      '应用 Stash': 'Apply stash',
+      '弹出 Stash': 'Pop stash',
+      '删除 Stash': 'Drop stash',
+      'Stash': 'Stash',
+      'Stash 已创建': 'Stash created',
+      '当前没有可暂存的更改。': 'There are no changes to stash.',
+      '空白目录初始化、克隆与 Stash 管理':
+          'Empty-folder initialization, cloning, and Stash management',
+      '打开空白文件夹时可立即询问是否执行 git init。':
+          'Opening an empty folder now offers an immediate git init prompt.',
+      '新增克隆仓库窗口，可填写远程地址、父目录和项目名称。': 'Added a clone window for the remote URL, parent folder, and project name.',
+      '新增 Stash 创建、查看、应用、弹出、删除和包含未跟踪文件。': 'Added Stash creation, listing, apply, pop, drop, and optional untracked files.',
+      '无远端仓库可清除 .git 元数据，工作文件保留并显示完整风险说明。': 'Repositories without remotes can clear .git metadata while preserving working files and showing the full risk explanation.',
+      '清除 Git 元数据': 'Clear Git metadata',
+      'Git 元数据': 'Git metadata',
+      '仓库：{path}': 'Repository: {path}',
+      '此操作会删除仓库根目录中的 .git 文件夹。':
+          'This action deletes the .git folder from the repository root.',
+      '工作文件不会被删除，但以下 Git 内容会永久丢失：\n'
+              '• 全部提交历史和 reflog\n'
+              '• 本地分支、标签和当前分支状态\n'
+              '• 暂存索引、Stash、未被工作文件保留的已提交内容\n'
+              '• 引用、远端配置以及仓库级 Git 配置和 hooks':
+          'Working files are preserved, but the following Git data is permanently lost:\n'
+          '• all commit history and reflog\n'
+          '• local branches, tags, and current branch state\n'
+          '• index, stashes, and committed content not represented in working files\n'
+          '• refs, remote configuration, repository Git config, and hooks',
+      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。': 'The folder becomes a normal directory and can be initialized again with Open empty folder.',
+      '远端检查': 'Remote check',
+      '检测到远端仓库，已禁止清除：{remotes}':
+          'Remotes detected; cleanup is blocked: {remotes}',
+      '未检测到任何远端仓库。': 'No remote repositories were detected.',
+      '当前有待执行操作计划，请先清空或执行后再清除 Git。':
+          'Clear or execute the pending operation plan before clearing Git.',
+      '输入 CLEAR GIT 以确认': 'Enter CLEAR GIT to confirm',
+      '请输入 CLEAR GIT 以确认。': 'Enter CLEAR GIT to confirm.',
+      '永久清除 Git': 'Permanently clear Git',
+      '请先清空或执行当前待执行操作计划。': 'Clear or execute the pending operation plan first.',
+      '当前仓库已连接远端，禁止清除 Git 元数据。':
+          'This repository has remotes; Git metadata cleanup is blocked.',
+      'Git 元数据已清除；工作文件保留，但提交历史、分支和索引已经移除。': 'Git metadata cleared; working files remain, but commit history, branches, and the index were removed.',
+      '当前仓库没有配置远端，可以清除 Git 元数据。':
+          'No remotes are configured; Git metadata can be cleared.',
     },
     'zh_Hant': {
       '当前操作尚未完成。': '目前操作尚未完成。',
@@ -970,6 +1100,72 @@ class AppLocalizations {
       '新增分支创建、切换、重命名、安全删除和强制删除。': '新增本機分支建立、切換、重新命名、安全刪除和強制刪除。',
       '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。':
           '更新支援 GitHub 與 Gitee 雙來源，並使用 SHA-256 校驗。',
+      '打开空白文件夹': '開啟空白資料夾',
+      '克隆 Git 仓库': '複製 Git 儲存庫',
+      '打开现有仓库、初始化空白目录，或克隆远程仓库': '開啟現有儲存庫、初始化空白目錄，或複製遠端儲存庫。',
+      '是否马上初始化 Git 仓库？': '是否立即初始化 Git 儲存庫？',
+      '当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。':
+          '目前資料夾還不是 Git 儲存庫。現在執行 git init 後即可在軟體中管理和提交。',
+      '暂不初始化': '暫不初始化',
+      '立即初始化': '立即初始化',
+      '选择克隆父目录': '選擇複製父目錄',
+      '选择文件夹': '選擇資料夾',
+      '请填写克隆地址、父目录和项目名称。': '請填寫複製網址、父目錄和專案名稱。',
+      '远程仓库地址': '遠端儲存庫網址',
+      '克隆到父目录': '複製到父目錄',
+      '项目文件夹名称': '專案資料夾名稱',
+      '目标目录：{path}': '目標目錄：{path}',
+      '克隆会创建新的本地 Git 仓库，并保留远端已有的提交和分支。': '複製會建立新的本機 Git 儲存庫，並保留遠端已有的提交和分支。',
+      '正在克隆…': '正在複製…',
+      '开始克隆': '開始複製',
+      'Stash 管理': 'Stash 管理',
+      '刷新 Stash': '重新整理 Stash',
+      'Stash 说明（可选）': 'Stash 說明（選填）',
+      '例如 临时保存未完成修改': '例如 暫時儲存未完成修改',
+      '同时保存未跟踪文件（git stash --include-untracked）':
+          '同時儲存未追蹤檔案（git stash --include-untracked）',
+      '创建 Stash': '建立 Stash',
+      '当前仓库没有 Stash。': '目前儲存庫沒有 Stash。',
+      '应用 Stash': '套用 Stash',
+      '弹出 Stash': '彈出 Stash',
+      '删除 Stash': '刪除 Stash',
+      'Stash': 'Stash',
+      'Stash 已创建': 'Stash 已建立',
+      '当前没有可暂存的更改。': '目前沒有可暫存的變更。',
+      '空白目录初始化、克隆与 Stash 管理': '空白目錄初始化、複製與 Stash 管理',
+      '打开空白文件夹时可立即询问是否执行 git init。': '開啟空白資料夾時可立即詢問是否執行 git init。',
+      '新增克隆仓库窗口，可填写远程地址、父目录和项目名称。': '新增複製儲存庫視窗，可填寫遠端網址、父目錄和專案名稱。',
+      '新增 Stash 创建、查看、应用、弹出、删除和包含未跟踪文件。': '新增 Stash 建立、檢視、套用、彈出、刪除和包含未追蹤檔案。',
+      '无远端仓库可清除 .git 元数据，工作文件保留并显示完整风险说明。':
+          '無遠端儲存庫可清除 .git 中繼資料，工作檔案保留並顯示完整風險說明。',
+      '清除 Git 元数据': '清除 Git 中繼資料',
+      'Git 元数据': 'Git 中繼資料',
+      '仓库：{path}': '儲存庫：{path}',
+      '此操作会删除仓库根目录中的 .git 文件夹。': '此操作會刪除儲存庫根目錄中的 .git 資料夾。',
+      '工作文件不会被删除，但以下 Git 内容会永久丢失：\n'
+              '• 全部提交历史和 reflog\n'
+              '• 本地分支、标签和当前分支状态\n'
+              '• 暂存索引、Stash、未被工作文件保留的已提交内容\n'
+              '• 引用、远端配置以及仓库级 Git 配置和 hooks':
+          '工作檔案不會被刪除，但以下 Git 內容會永久遺失：\n'
+          '• 全部提交歷史和 reflog\n'
+          '• 本機分支、標籤和目前分支狀態\n'
+          '• 暫存索引、Stash、未被工作檔案保留的已提交內容\n'
+          '• 參照、遠端設定以及儲存庫層級 Git 設定和 hooks',
+      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。':
+          '清理後該資料夾會變成一般目錄，仍可用「開啟空白資料夾」重新執行 git init。',
+      '远端检查': '遠端檢查',
+      '检测到远端仓库，已禁止清除：{remotes}': '偵測到遠端儲存庫，已禁止清除：{remotes}',
+      '未检测到任何远端仓库。': '未偵測到任何遠端儲存庫。',
+      '当前有待执行操作计划，请先清空或执行后再清除 Git。': '目前有待執行操作計畫，請先清除或執行後再清除 Git。',
+      '输入 CLEAR GIT 以确认': '輸入 CLEAR GIT 以確認',
+      '请输入 CLEAR GIT 以确认。': '請輸入 CLEAR GIT 以確認。',
+      '永久清除 Git': '永久清除 Git',
+      '请先清空或执行当前待执行操作计划。': '請先清除或執行目前待執行操作計畫。',
+      '当前仓库已连接远端，禁止清除 Git 元数据。': '目前儲存庫已連接遠端，禁止清除 Git 中繼資料。',
+      'Git 元数据已清除；工作文件保留，但提交历史、分支和索引已经移除。':
+          'Git 中繼資料已清除；工作檔案保留，但提交歷史、分支和索引已移除。',
+      '当前仓库没有配置远端，可以清除 Git 元数据。': '目前儲存庫沒有設定遠端，可以清除 Git 中繼資料。',
       '可在本窗口中选中并复制文字。完整指南保存在 {path}。': '可在此視窗中選取並複製文字。完整指南保存在 {path}。',
     },
   };

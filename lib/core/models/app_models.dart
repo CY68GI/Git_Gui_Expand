@@ -18,6 +18,18 @@ class RepositoryEntry {
   bool get isDirectory => kind == EntryKind.directory;
 }
 
+class GitStashEntry {
+  const GitStashEntry({
+    required this.selector,
+    required this.message,
+    required this.createdAt,
+  });
+
+  final String selector;
+  final String message;
+  final String createdAt;
+}
+
 class GitFileStatus {
   const GitFileStatus({
     required this.path,

@@ -8,11 +8,21 @@
 ![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
+## 软件截图
+
+| 主页面 | 操作计划 |
+| --- | --- |
+| <img src="docs/images/start-page.png" width="480" alt="主页面"> | <img src="docs/images/operation-plan.png" width="480" alt="操作计划"> |
+
+| 远端管理 | 外观设置 |
+| --- | --- |
+| <img src="docs/images/remote-management.png" width="480" alt="远端管理"> | <img src="docs/images/appearance-settings.png" width="480" alt="外观设置"> |
+
 Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。它把 Git
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.6`
+当前版本：`0.9.7`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -21,6 +31,10 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 
 - Windows 10/11 为当前开发和验证平台。
 - 选择并打开已经初始化的 Git 仓库根目录。
+- 可打开空白文件夹，并询问是否立即执行 `git init`。
+- 可从 HTTPS、SSH 或本地 Git 地址克隆仓库。
+- 对没有配置任何远端的仓库，可清除 `.git` 元数据；工作文件保留，
+  软件会明确说明历史、分支和索引将永久丢失。
 - Windows 使用标准“打开”对话框选择仓库根目录，而不是“浏览文件夹”对话框。
 - 启动页显示最近打开的 Git 仓库，可快速重新打开或移除记录。
 - 打开项目后可从顶部“项目目录”直接在 Windows 资源管理器中打开当前仓库。
@@ -38,6 +52,7 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
   本地文件不变，但本地分支与索引同步为空，文件随后显示为未跟踪；受保护分支会阻止操作。
 - 实时显示 Git 状态，可把暂存、取消暂存和提交说明加入执行计划。
 - 可创建、切换、重命名和删除本地分支，分支操作同样先进入执行计划。
+- 可创建、查看、应用、弹出和删除 Git Stash，并支持包含未跟踪文件。
 - 显示仓库名称、分支、仓库总大小、文件数量、待提交数量和每个文件大小。
 - 大小单位支持 IEC 二进制、SI 十进制、Byte 和 bit。
 - 支持跟随系统、浅色和深色三种显示模式，并提供经典绿、海洋蓝、星夜紫、
@@ -69,8 +84,9 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 | Git 功能 | 状态 | 说明 |
 | --- | --- | --- |
 | 打开已初始化仓库 | ✅ | Windows 标准选择器和最近仓库记录 |
-| `git init` 初始化仓库 | ❌ | 当前只打开现有仓库 |
-| `git clone` 克隆仓库 | ❌ | 未实现 |
+| `git init` 初始化仓库 | ✅ | 打开非 Git 空文件夹时询问是否初始化 |
+| `git clone` 克隆仓库 | ✅ | 提供地址与目标目录对话框 |
+| 清除 Git 元数据（`.git`） | ✅ | 仅在未配置远端时允许，工作文件保留 |
 | `git status` 状态 | ✅ | 显示分支、暂存、未暂存和未跟踪状态 |
 | 列出已跟踪和未跟踪文件 | ✅ | 遵循 `.gitignore` |
 | 选择性暂存 / 按块暂存 | ❌ | 当前暂存全部或不暂存 |
@@ -86,7 +102,7 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 | 创建、切换、重命名、删除分支 | ✅ | 本地操作先进入执行计划 |
 | Merge、rebase、cherry-pick | ❌ | 未实现 |
 | Reset、revert、restore 界面 | ❌ | 内部 reset 仅供清空远端历史使用 |
-| `git stash` | ❌ | 未实现 |
+| `git stash` | ✅ | 支持创建、应用、弹出、删除和包含未跟踪文件 |
 | 创建、删除、推送标签 | ❌ | Release 标签由外部工具管理 |
 | Git 日志、分支图、blame、reflog | ❌ | 软件操作日志不是 Git 历史 |
 | Git grep / bisect | ❌ | 未实现 |
@@ -211,7 +227,7 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.6/                    # 当前唯一保留的版本
+    0.9.7/                    # 当前唯一保留的版本
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe

@@ -13,6 +13,7 @@ class CommitPanel extends StatefulWidget {
     required this.onPushRequested,
     required this.onManageRemotes,
     required this.onManageBranches,
+    required this.onManageStashes,
     required this.onPlanRequested,
   });
 
@@ -22,6 +23,7 @@ class CommitPanel extends StatefulWidget {
   final VoidCallback onPushRequested;
   final VoidCallback onManageRemotes;
   final VoidCallback onManageBranches;
+  final VoidCallback onManageStashes;
   final Future<void> Function() onPlanRequested;
 
   @override
@@ -150,6 +152,29 @@ class _CommitPanelState extends State<CommitPanel> {
                   ),
                 ),
                 const SizedBox(width: 8),
+                Tooltip(
+                  message: context.l10n.tr('Stash 管理'),
+                  child: TextButton.icon(
+                    onPressed: controller.isBusy
+                        ? null
+                        : widget.onManageStashes,
+                    icon: const Icon(Icons.inventory_2_outlined, size: 15),
+                    label: Text(context.l10n.tr('Stash')),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 5,
+                      ),
+                      textStyle: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
                 if (controller.branch.isNotEmpty)
                   Tooltip(
                     message: context.l10n.tr('分支管理'),

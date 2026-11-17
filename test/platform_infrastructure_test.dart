@@ -278,7 +278,8 @@ void main() {
       ).readAsString();
 
       expect(source, contains('System.Windows.Forms.OpenFileDialog'));
-      expect(source, contains(r"$dialog.Title = '打开 Git 仓库'"));
+      expect(source, contains(r"\$dialog.Title = '$escapedTitle'"));
+      expect(source, contains("title: '打开 Git 仓库'"));
       expect(source, isNot(contains('FolderBrowserDialog')));
       expect(source, contains("'explorer.exe'"));
       expect(source, contains(r"'/select,$file'"));

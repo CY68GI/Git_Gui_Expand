@@ -17,8 +17,11 @@ import 'package:git_gui_expand/core/theme/app_theme.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/installation_cleanup_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/clone_repository_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/git_metadata_clear_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/update_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/stash_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/user_guide_dialog.dart';
 import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
@@ -43,6 +46,8 @@ void main() {
 
     expect(find.text('Git GUI Expand'), findsOneWidget);
     expect(find.text('打开 Git 仓库'), findsOneWidget);
+    expect(find.text('打开空白文件夹'), findsOneWidget);
+    expect(find.text('克隆 Git 仓库'), findsOneWidget);
     expect(find.byIcon(Icons.folder_open_rounded), findsWidgets);
     expect(find.textContaining('左右双栏'), findsOneWidget);
     expect(find.text('v${AppInfo.version}'), findsOneWidget);
@@ -89,6 +94,8 @@ void main() {
         home: Scaffold(
           body: StartView(
             onOpenRepository: () {},
+            onOpenEmptyFolder: () {},
+            onCloneRepository: () {},
             isOpening: false,
             recentRepositories: [
               RecentRepository(
@@ -159,11 +166,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Fixed root Launcher updates and added cleanup scanning'),
+      find.text('Empty-folder initialization, cloning, and Stash management'),
       findsOneWidget,
     );
-    expect(find.text('v0.9.5'), findsNothing);
-    expect(find.text('修复根目录 Launcher 未更新并提供清理扫描'), findsNothing);
+    expect(find.text('v0.9.6'), findsNothing);
+    expect(find.text('空白目录初始化、克隆与 Stash 管理'), findsNothing);
   });
 
   testWidgets('settings page exposes all sections and attribution', (
@@ -249,8 +256,8 @@ void main() {
     );
     expect(find.text('一键发送到桌面'), findsOneWidget);
     expect(find.text('扫描旧版本与安装包'), findsOneWidget);
-    expect(find.text('0.9.6+19'), findsOneWidget);
-    expect(find.text('0.9.6.19'), findsOneWidget);
+    expect(find.text('0.9.7+20'), findsOneWidget);
+    expect(find.text('0.9.7.20'), findsOneWidget);
     expect(find.text('本项目使用 MIT License 开源许可证。'), findsOneWidget);
   });
 
@@ -467,6 +474,63 @@ void main() {
     expect(find.textContaining('已清除 1 项'), findsOneWidget);
     expect(service.cleanupCalls, 1);
   });
+
+  testWidgets('clone dialog exposes URL, parent folder, and project name', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1200, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: Scaffold(body: CloneRepositoryDialog())),
+    );
+    await tester.pump();
+
+    expect(find.text('克隆 Git 仓库'), findsOneWidget);
+    expect(find.text('远程仓库地址'), findsOneWidget);
+    expect(find.text('克隆到父目录'), findsOneWidget);
+    expect(find.text('项目文件夹名称'), findsOneWidget);
+    expect(find.text('开始克隆'), findsOneWidget);
+  });
+
+  testWidgets('stash dialog exposes create and restore workflow', (
+    WidgetTester tester,
+  ) async {
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: StashManagementDialog(controller: controller)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Stash 管理'), findsOneWidget);
+    expect(find.text('创建 Stash'), findsOneWidget);
+    expect(find.text('应用 Stash'), findsOneWidget);
+    expect(find.text('弹出 Stash'), findsOneWidget);
+    expect(find.text('删除 Stash'), findsOneWidget);
+  });
+
+  testWidgets('Git metadata dialog explains destructive consequences', (
+    WidgetTester tester,
+  ) async {
+    final controller = RepositoryController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: GitMetadataClearDialog(controller: controller)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('清除 Git 元数据'), findsOneWidget);
+    expect(find.text('此操作会删除仓库根目录中的 .git 文件夹。'), findsOneWidget);
+    expect(find.textContaining('全部提交历史和 reflog'), findsOneWidget);
+    expect(find.text('永久清除 Git'), findsOneWidget);
+  });
 }
 
 class _FakeUpdateService extends UpdateService {
@@ -526,9 +590,9 @@ class _FakeExecutableVersionService extends ExecutableVersionService {
   @override
   Future<ExecutableVersionInfo> load() async {
     return const ExecutableVersionInfo(
-      applicationVersion: '0.9.6+19',
-      launcherVersion: '0.9.6.19',
-      applicationPath: 'C:\\Software\\versions\\0.9.6\\git_gui_expand.exe',
+      applicationVersion: '0.9.7+20',
+      launcherVersion: '0.9.7.20',
+      applicationPath: 'C:\\Software\\versions\\0.9.7\\git_gui_expand.exe',
       launcherPath: 'C:\\Software\\GitGuiExpandLauncher.exe',
     );
   }

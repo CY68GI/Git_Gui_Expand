@@ -118,6 +118,79 @@ void main() {
     expect(await service.localBranches(), isNot(contains('feature/renamed')));
   });
 
+  test('initializes and clones repositories', () async {
+    final parent = await Directory.systemTemp.createTemp('git_gui_clone_test_');
+    addTearDown(() async {
+      if (await parent.exists()) await parent.delete(recursive: true);
+    });
+    final empty = Directory('${parent.path}${Platform.pathSeparator}empty');
+    await empty.create();
+    await GitService.initializeRepository(empty.path);
+    expect(
+      await GitService.resolveRepositoryRoot(empty.path),
+      endsWith('empty'),
+    );
+
+    final destination = Directory(
+      '${parent.path}${Platform.pathSeparator}cloned',
+    );
+    await GitService.cloneRepository(repository.path, destination.path);
+    expect(await destination.exists(), isTrue);
+    expect(
+      await GitService.resolveRepositoryRoot(destination.path),
+      destination.path,
+    );
+  });
+
+  test('clears Git metadata only when no remote is configured', () async {
+    final original = File(
+      '${repository.path}${Platform.pathSeparator}alpha.txt',
+    );
+    await GitService.clearRepositoryMetadata(repository.path);
+    expect(
+      await Directory('${repository.path}${Platform.pathSeparator}.git')
+          .exists(),
+      isFalse,
+    );
+    expect(await original.readAsString(), 'alpha');
+
+    await _git(repository, ['init', '-b', 'main']);
+    await _git(repository, ['remote', 'add', 'origin', repository.path]);
+    await expectLater(
+      GitService.clearRepositoryMetadata(repository.path),
+      throwsA(isA<GitException>()),
+    );
+    expect(
+      await Directory('${repository.path}${Platform.pathSeparator}.git')
+          .exists(),
+      isTrue,
+    );
+  });
+
+  test('creates, applies and drops git stashes', () async {
+    await File('${repository.path}${Platform.pathSeparator}alpha.txt')
+        .writeAsString('changed');
+    final untracked = File(
+      '${repository.path}${Platform.pathSeparator}stash-untracked.txt',
+    );
+    await untracked.writeAsString('untracked');
+
+    await service.createStash(message: 'work in progress');
+    final stashes = await service.listStashes();
+    expect(stashes, hasLength(1));
+    expect(stashes.first.message, contains('work in progress'));
+    expect(await untracked.exists(), isFalse);
+
+    await service.popStash(stashes.first.selector);
+    expect(await untracked.readAsString(), 'untracked');
+    expect(await service.listStashes(), isEmpty);
+
+    await service.createStash(message: 'drop me');
+    final second = (await service.listStashes()).first;
+    await service.dropStash(second.selector);
+    expect(await service.listStashes(), isEmpty);
+  });
+
   test('stages and unstages modified files', () async {
     await File('${repository.path}${Platform.pathSeparator}alpha.txt')
         .writeAsString('alpha changed');

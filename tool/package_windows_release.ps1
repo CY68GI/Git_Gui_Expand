@@ -48,6 +48,10 @@ Get-ChildItem -LiteralPath $root -Filter "README*.md" |
 Get-ChildItem -LiteralPath $root -Filter "CHANGELOG*.md" |
   Copy-Item -Destination $stage -Force
 Copy-Item -LiteralPath (Join-Path $root "LICENSE") -Destination $stage -Force
+$imagesStage = Join-Path $stage "docs/images"
+New-Item -ItemType Directory -Path $imagesStage -Force | Out-Null
+Copy-Item -Path (Join-Path $root "docs/images/*.png") `
+  -Destination $imagesStage -Force
 
 $versionJson = @{
   version = $version

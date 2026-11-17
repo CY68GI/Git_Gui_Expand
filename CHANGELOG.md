@@ -1,5 +1,38 @@
 # Changelog
 
+## 0.9.7 - 2026-11-17
+
+### English
+
+- Added an Open empty folder workflow with an immediate `git init` prompt.
+- Added Git clone with remote URL, parent directory, and project-name selection.
+- Added Stash management for create, list, apply, pop, and drop, including
+  optional untracked files.
+- Added a destructive Git metadata cleanup action, restricted to repositories
+  without any configured remote. Working files are preserved.
+- Updated the Git feature matrix and user guides for init, clone, and stash.
+- Added application screenshots and detailed live/destructive Git test reports.
+
+### 简体中文
+
+- 新增“打开空白文件夹”，并询问是否立即执行 `git init`。
+- 新增 Git 克隆窗口，可填写远程地址、父目录和项目名称。
+- 新增 Stash 管理，支持创建、查看、应用、弹出、删除和包含未跟踪文件。
+- 新增 Git 元数据清除，仅允许未连接远端的仓库执行；工作文件保留并明确列出
+  历史、分支、标签、索引和 Stash 会丢失。
+- README 的 Git 功能表和使用指南同步更新 init、clone 与 stash。
+- README 新增软件截图，并补充实时与破坏性 Git 功能测试报告。
+
+### 繁體中文
+
+- 新增「開啟空白資料夾」，並詢問是否立即執行 `git init`。
+- 新增 Git 複製視窗，可填寫遠端網址、父目錄和專案名稱。
+- 新增 Stash 管理，支援建立、檢視、套用、彈出、刪除和包含未追蹤檔案。
+- 新增 Git 中繼資料清除，僅允許未連接遠端的儲存庫執行；工作檔案保留並明確列出
+  歷史、分支、標籤、索引和 Stash 會遺失。
+- README 的 Git 功能表和使用指南同步更新 init、clone 與 stash。
+- README 新增軟體截圖，並補充即時與破壞性 Git 功能測試報告。
+
 ## 0.9.6 - 2026-11-17
 
 ### English

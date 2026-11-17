@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
+import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
@@ -14,6 +15,7 @@ import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
 import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
+import 'package:git_gui_expand/features/start/start_view.dart';
 
 void main() {
   setUpAll(() async {
@@ -87,6 +89,37 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/operation_plan_dark_110.png'),
+    );
+  });
+
+  testWidgets('start page screenshot in dark 110 percent layout', (
+    WidgetTester tester,
+  ) async {
+    await _setViewport(tester);
+    final today = DateTime.now();
+    await tester.pumpWidget(
+      _visualApp(
+        StartView(
+          onOpenRepository: () {},
+          onOpenEmptyFolder: () {},
+          onCloneRepository: () {},
+          isOpening: false,
+          recentRepositories: [
+            RecentRepository(
+              path: 'C:\\Projects\\Git_Gui_Expand_Test_Repository',
+              lastOpened: DateTime(today.year, today.month, today.day, 10, 30),
+            ),
+          ],
+          onOpenRecent: (_) async {},
+          onRemoveRecent: (_) async {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('goldens/start_page_dark_110.png'),
     );
   });
 

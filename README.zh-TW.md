@@ -8,11 +8,21 @@
 ![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
+## 軟體截圖
+
+| 主頁面 | 操作計畫 |
+| --- | --- |
+| <img src="docs/images/start-page.png" width="480" alt="主頁面"> | <img src="docs/images/operation-plan.png" width="480" alt="操作計畫"> |
+
+| 遠端管理 | 外觀設定 |
+| --- | --- |
+| <img src="docs/images/remote-management.png" width="480" alt="遠端管理"> | <img src="docs/images/appearance-settings.png" width="480" alt="外觀設定"> |
+
 Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，透過左右雙欄
 檔案工作區操作已初始化的 Git 儲存庫。檔案與版本控制變更都交由本機 Git CLI
 執行，軟體提供可視化操作，不會自行取代 Git。
 
-目前版本：`0.9.6`
+目前版本：`0.9.7`
 
 - GitHub：<https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -20,6 +30,10 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 ## 主要功能
 
 - 使用 Windows 標準「開啟」對話框開啟儲存庫。
+- 可開啟空白資料夾，並詢問是否立即執行 `git init`。
+- 可從 HTTPS、SSH 或本機 Git 網址複製儲存庫。
+- 對沒有設定任何遠端的儲存庫，可清除 `.git` 中繼資料；工作檔案保留，
+  軟體會明確說明歷史、分支和索引將永久遺失。
 - 從最近開啟記錄快速重新開啟已驗證的 Git 儲存庫。
 - 左右資源面板可獨立瀏覽同一個儲存庫。
 - 使用核取方塊選取檔案與資料夾，支援批次操作。
@@ -27,6 +41,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 - 所有會修改儲存庫的操作先進入待執行計畫，確認後才逐步執行。
 - 支援暫存、取消暫存、提交、推送與多平台遠端管理。
 - 可建立、切換、重新命名和刪除本機分支，分支操作同樣先進入執行計畫。
+- 可建立、檢視、套用、彈出和刪除 Git Stash，並支援包含未追蹤檔案。
 - 可管理 GitHub、Gitee、GitLab、Bitbucket 與一般 Git 遠端。
 - 輸入「遠端擁有者/專案/分支」確認後，可用原子空根提交清除指定遠端歷史。
 - 可在檔案總管中定位檔案，或使用系統預設應用程式開啟。
@@ -49,8 +64,9 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 | Git 功能 | 狀態 | 說明 |
 | --- | --- | --- |
 | 開啟已初始化儲存庫 | ✅ | Windows 標準選擇器與最近儲存庫記錄 |
-| `git init` 初始化儲存庫 | ❌ | 目前只開啟現有儲存庫 |
-| `git clone` 複製儲存庫 | ❌ | 未實現 |
+| `git init` 初始化儲存庫 | ✅ | 開啟非 Git 空白資料夾時詢問是否初始化 |
+| `git clone` 複製儲存庫 | ✅ | 提供網址與目標目錄對話框 |
+| 清除 Git 中繼資料（`.git`） | ✅ | 僅在未設定遠端時允許，工作檔案保留 |
 | `git status` 狀態 | ✅ | 顯示分支、暫存、未暫存和未追蹤狀態 |
 | 列出已追蹤和未追蹤檔案 | ✅ | 遵循 `.gitignore` |
 | 選擇性暫存 / 按區塊暫存 | ❌ | 目前只能全部暫存或全部取消 |
@@ -66,7 +82,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 | 建立、切換、重新命名、刪除分支 | ✅ | 本機操作先進入執行計畫 |
 | Merge、rebase、cherry-pick | ❌ | 未實現 |
 | Reset、revert、restore 介面 | ❌ | 內部 reset 僅供清除遠端歷史使用 |
-| `git stash` | ❌ | 未實現 |
+| `git stash` | ✅ | 支援建立、套用、彈出、刪除和包含未追蹤檔案 |
 | 建立、刪除、推送標籤 | ❌ | Release 標籤由外部工具管理 |
 | Git 日誌、分支圖、blame、reflog | ❌ | 軟體操作日誌不是 Git 歷史 |
 | Git grep / bisect | ❌ | 未實現 |
@@ -108,7 +124,7 @@ build\windows\x64\runner\Release\
 建立發布 ZIP：
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.6
+.\tool\package_windows_release.ps1 -Tag v0.9.7
 ```
 
 ## 發布目錄結構
@@ -118,7 +134,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.6/
+    0.9.7/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe

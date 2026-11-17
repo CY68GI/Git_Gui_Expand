@@ -8,6 +8,8 @@ class StartView extends StatelessWidget {
   const StartView({
     super.key,
     required this.onOpenRepository,
+    required this.onOpenEmptyFolder,
+    required this.onCloneRepository,
     required this.isOpening,
     required this.recentRepositories,
     required this.onOpenRecent,
@@ -16,6 +18,8 @@ class StartView extends StatelessWidget {
   });
 
   final VoidCallback onOpenRepository;
+  final VoidCallback onOpenEmptyFolder;
+  final VoidCallback onCloneRepository;
   final bool isOpening;
   final List<RecentRepository> recentRepositories;
   final Future<void> Function(String path) onOpenRecent;
@@ -95,29 +99,52 @@ class StartView extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 30),
-                  FilledButton.icon(
-                    onPressed: isOpening ? null : onOpenRepository,
-                    icon: isOpening
-                        ? SizedBox(
-                            width: 17,
-                            height: 17,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: colors.onPrimary,
-                            ),
-                          )
-                        : const Icon(Icons.folder_open_rounded, size: 20),
-                    label: Text(
-                      isOpening ? l10n.tr('正在读取仓库…') : l10n.tr('打开 Git 仓库'),
-                    ),
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size(220, 52),
-                      backgroundColor: colors.primary,
-                    ),
+                  Wrap(
+                    alignment: WrapAlignment.center,
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: [
+                      FilledButton.icon(
+                        onPressed: isOpening ? null : onOpenRepository,
+                        icon: isOpening
+                            ? SizedBox(
+                                width: 17,
+                                height: 17,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: colors.onPrimary,
+                                ),
+                              )
+                            : const Icon(Icons.folder_open_rounded, size: 20),
+                        label: Text(
+                          isOpening ? l10n.tr('正在读取仓库…') : l10n.tr('打开 Git 仓库'),
+                        ),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(200, 52),
+                          backgroundColor: colors.primary,
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: isOpening ? null : onOpenEmptyFolder,
+                        icon: const Icon(Icons.create_new_folder_outlined),
+                        label: Text(l10n.tr('打开空白文件夹')),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(180, 52),
+                        ),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: isOpening ? null : onCloneRepository,
+                        icon: const Icon(Icons.download_rounded),
+                        label: Text(l10n.tr('克隆 Git 仓库')),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(180, 52),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    l10n.tr('请选择已经执行过 git init 的文件夹根目录'),
+                    l10n.tr('打开现有仓库、初始化空白目录，或克隆远程仓库'),
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: colors.onSurfaceVariant),
                   ),

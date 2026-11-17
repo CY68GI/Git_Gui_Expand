@@ -8,12 +8,22 @@ English | [简体中文](README.zh-CN.md) | [繁體中文](README.zh-TW.md)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0078D4)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
+## Screenshots
+
+| Main page | Operation plan |
+| --- | --- |
+| <img src="docs/images/start-page.png" width="480" alt="Main page"> | <img src="docs/images/operation-plan.png" width="480" alt="Operation plan"> |
+
+| Remote management | Appearance settings |
+| --- | --- |
+| <img src="docs/images/remote-management.png" width="480" alt="Remote management"> | <img src="docs/images/appearance-settings.png" width="480" alt="Appearance settings"> |
+
 Git GUI Expand is a Windows-first Flutter desktop application for working with
 an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.6`
+Current version: `0.9.7`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -21,6 +31,10 @@ Current version: `0.9.6`
 ## Features
 
 - Open a repository with the native Windows **Open** dialog.
+- Open an empty folder and optionally run `git init` immediately.
+- Clone a repository from HTTPS, SSH, or a local Git URL.
+- Clear `.git` metadata only for repositories without any configured remote;
+  working files are preserved and the destructive consequences are explained.
 - Reopen verified Git repositories from the recent-repository list.
 - Browse the same repository in independent left and right panes.
 - Select files and folders with checkboxes and perform batch operations.
@@ -28,6 +42,7 @@ Current version: `0.9.6`
 - Review every repository mutation in a pending operation plan before execution.
 - Stage, unstage, commit, push, manage multiple remotes, and create, switch,
   rename, or delete local branches.
+- Create, list, apply, pop, and drop Git stashes.
 - Manage GitHub, Gitee, GitLab, Bitbucket, and generic Git remotes.
 - Clear a selected remote history with an atomic empty-root commit after an
   explicit project/branch confirmation.
@@ -57,8 +72,9 @@ Legend: `✅` implemented in the application, `❌` not currently implemented.
 | Git capability | Status | Notes |
 | --- | --- | --- |
 | Open an existing initialized repository | ✅ | Native Windows picker and recent-repository history |
-| `git init` | ❌ | The app opens existing repositories only |
-| `git clone` | ❌ | Not implemented |
+| `git init` | ✅ | Offered when opening a non-Git empty folder |
+| `git clone` | ✅ | URL and destination dialog |
+| Remove Git metadata (`.git`) | ✅ | Only when no remote is configured; working files remain |
 | `git status` | ✅ | Branch, staged, unstaged, and untracked state |
 | List tracked and untracked files | ✅ | `.gitignore`-aware enumeration |
 | Selective staging / hunk staging | ❌ | Staging is currently all-or-nothing |
@@ -74,7 +90,7 @@ Legend: `✅` implemented in the application, `❌` not currently implemented.
 | Create, switch, rename, delete branches | ✅ | Planned locally before execution |
 | Merge, rebase, cherry-pick | ❌ | Not implemented |
 | Reset, revert, restore UI | ❌ | Internal reset is used only by remote-history clearing |
-| `git stash` | ❌ | Not implemented |
+| `git stash` | ✅ | Create, apply, pop, drop, and include untracked files |
 | Create, delete, or push tags | ❌ | Release tags are managed outside the UI |
 | Git log, graph, blame, reflog | ❌ | Application logs are not Git history |
 | Git grep / bisect | ❌ | Not implemented |
@@ -117,7 +133,7 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.6
+.\tool\package_windows_release.ps1 -Tag v0.9.7
 ```
 
 ## Release layout
@@ -127,7 +143,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.6/
+    0.9.7/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe

@@ -14,6 +14,17 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.7',
+    date: '2026-11-17',
+    title: '空白目录初始化、克隆与 Stash 管理',
+    items: [
+      '打开空白文件夹时可立即询问是否执行 git init。',
+      '新增克隆仓库窗口，可填写远程地址、父目录和项目名称。',
+      '新增 Stash 创建、查看、应用、弹出、删除和包含未跟踪文件。',
+      '无远端仓库可清除 .git 元数据，工作文件保留并显示完整风险说明。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.6',
     date: '2026-11-17',
     title: '修复根目录 Launcher 未更新并提供清理扫描',

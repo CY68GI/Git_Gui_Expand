@@ -15,6 +15,13 @@ class FolderPickerService {
   AppLogService get _log => logService ?? AppLogService.instance;
 
   Future<String?> pickRepositoryFolder({String? initialDirectory}) async {
+    return pickFolder(initialDirectory: initialDirectory, title: '打开 Git 仓库');
+  }
+
+  Future<String?> pickFolder({
+    String? initialDirectory,
+    String title = '选择文件夹',
+  }) async {
     if (!Platform.isWindows) {
       throw UnsupportedError('当前版本仅支持 Windows 文件夹选择。');
     }
@@ -27,11 +34,12 @@ class FolderPickerService {
     );
     final selectedPath = _escapePowerShell(initialDirectory ?? '');
     final outputPath = _escapePowerShell(resultFile.path);
+    final escapedTitle = _escapePowerShell(title);
     final script =
         '''
 Add-Type -AssemblyName System.Windows.Forms
 \$dialog = New-Object System.Windows.Forms.OpenFileDialog
-\$dialog.Title = '打开 Git 仓库'
+\$dialog.Title = '$escapedTitle'
 \$dialog.Filter = '文件夹|*.*'
 \$dialog.CheckFileExists = \$false
 \$dialog.CheckPathExists = \$true

@@ -147,6 +147,33 @@ void main() {
     );
   });
 
+  test('stash creation is queued before changing the worktree', () async {
+    await File('${repository.path}${Platform.pathSeparator}alpha.txt')
+        .writeAsString('stash me');
+
+    final queued = await controller.createStash(
+      message: 'planned stash',
+      includeUntracked: true,
+    );
+    expect(queued.isSuccess, isTrue);
+    expect(
+      controller.pendingOperations.single.kind,
+      PlannedOperationKind.createStash,
+    );
+    expect(
+      await File('${repository.path}${Platform.pathSeparator}alpha.txt')
+          .readAsString(),
+      'stash me',
+    );
+    expect(await controller.listStashes(), isEmpty);
+
+    final result = await controller.executePendingOperations(
+      confirmedDangerous: true,
+    );
+    expect(result.isSuccess, isTrue);
+    expect(await controller.listStashes(), hasLength(1));
+  });
+
   test('commit is not run until the plan is executed', () async {
     await File('${repository.path}${Platform.pathSeparator}alpha.txt')
         .writeAsString('changed');

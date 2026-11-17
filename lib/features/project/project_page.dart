@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -7,16 +8,20 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/folder_picker_service.dart';
+import '../../core/services/git_service.dart';
 import '../../core/services/installation_maintenance_service.dart';
 import '../../core/utils/path_utils.dart';
 import '../../core/utils/size_formatter.dart';
 import '../commit/commit_panel.dart';
 import '../dialogs/branch_management_dialog.dart';
+import '../dialogs/clone_repository_dialog.dart';
+import '../dialogs/git_metadata_clear_dialog.dart';
 import '../dialogs/log_viewer_dialog.dart';
 import '../dialogs/installation_cleanup_dialog.dart';
 import '../dialogs/operation_plan_dialog.dart';
 import '../dialogs/remote_management_dialog.dart';
 import '../dialogs/settings_dialog.dart';
+import '../dialogs/stash_management_dialog.dart';
 import '../dialogs/update_dialog.dart';
 import '../dialogs/user_guide_dialog.dart';
 import '../explorer/file_explorer_panel.dart';
@@ -301,6 +306,69 @@ class _ProjectPageState extends State<ProjectPage> {
         setState(() => _isOpening = false);
       }
     }
+  }
+
+  Future<void> _openEmptyFolder() async {
+    if (_isOpening) return;
+    final l10n = context.l10n;
+    setState(() => _isOpening = true);
+    try {
+      final path = await _folderPicker.pickFolder(
+        initialDirectory: _controller.repositoryPath,
+        title: l10n.tr('打开空白文件夹'),
+      );
+      if (path == null || !mounted) return;
+      final gitPath = '$path${Platform.pathSeparator}.git';
+      if (FileSystemEntity.typeSync(gitPath) != FileSystemEntityType.notFound) {
+        await _openRepositoryPath(path);
+        return;
+      }
+      final initialize = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          final colors = Theme.of(context).colorScheme;
+          return AlertDialog(
+            icon: Icon(Icons.account_tree_outlined, color: colors.primary),
+            title: Text(l10n.tr('是否马上初始化 Git 仓库？')),
+            content: Text(
+              l10n.tr('当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。'),
+              style: const TextStyle(fontSize: 13, height: 1.5),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(l10n.tr('暂不初始化')),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.check_rounded, size: 17),
+                label: Text(l10n.tr('立即初始化')),
+              ),
+            ],
+          );
+        },
+      );
+      if (initialize != true || !mounted) return;
+      await GitService.initializeRepository(path);
+      await _openRepositoryPath(path);
+    } catch (error) {
+      _log.error('repository', '初始化空白文件夹失败：$error');
+      if (mounted) {
+        _showOutcome(OperationOutcome.failure(error.toString()));
+      }
+    } finally {
+      if (mounted) setState(() => _isOpening = false);
+    }
+  }
+
+  Future<void> _cloneRepository() async {
+    final path = await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const CloneRepositoryDialog(),
+    );
+    if (path == null || !mounted) return;
+    await _openRepositoryPath(path);
   }
 
   Future<void> _openRepositoryPath(String path) async {
@@ -691,6 +759,28 @@ class _ProjectPageState extends State<ProjectPage> {
     }
   }
 
+  Future<void> _showGitMetadata() async {
+    final outcome = await showDialog<OperationOutcome>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => GitMetadataClearDialog(controller: _controller),
+    );
+    if (outcome != null && mounted) {
+      _showOutcome(outcome);
+    }
+  }
+
+  Future<void> _showStashes() async {
+    _log.detail('ui', '打开 Stash 管理');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => StashManagementDialog(controller: _controller),
+    );
+    if (mounted) {
+      _explorerFocus.requestFocus();
+    }
+  }
+
   Future<void> _showOperationPlan() async {
     _log.detail('ui', '打开待执行操作计划，共 ${_controller.pendingOperations.length} 步');
     await showDialog<void>(
@@ -792,6 +882,8 @@ class _ProjectPageState extends State<ProjectPage> {
           ? _buildRepositoryWorkspace(context)
           : StartView(
               onOpenRepository: _openRepository,
+              onOpenEmptyFolder: _openEmptyFolder,
+              onCloneRepository: _cloneRepository,
               isOpening: _isOpening || _controller.isBusy,
               recentRepositories: _controller.recentRepositories,
               onOpenRecent: _openRecentRepository,
@@ -859,6 +951,12 @@ class _ProjectPageState extends State<ProjectPage> {
               icon: Icons.folder_copy_outlined,
               label: l10n.tr('项目目录'),
               onTap: _openProjectDirectory,
+            ),
+          if (_controller.hasRepository)
+            _TopBarButton(
+              icon: Icons.delete_forever_outlined,
+              label: l10n.tr('Git 元数据'),
+              onTap: _showGitMetadata,
             ),
           _TopBarButton(
             icon: Icons.system_update_alt_rounded,
@@ -943,6 +1041,7 @@ class _ProjectPageState extends State<ProjectPage> {
                           onPushRequested: _pushCurrentBranch,
                           onManageRemotes: _showRemotes,
                           onManageBranches: _showBranches,
+                          onManageStashes: _showStashes,
                           onPlanRequested: _showOperationPlan,
                           onTextEditingChanged: (focused) {
                             _isCommitFieldFocused = focused;

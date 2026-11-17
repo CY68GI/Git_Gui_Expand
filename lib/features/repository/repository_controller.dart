@@ -84,6 +84,10 @@ enum PlannedOperationKind {
   switchBranch,
   renameBranch,
   deleteBranch,
+  createStash,
+  applyStash,
+  popStash,
+  dropStash,
 }
 
 class PlannedRepositoryOperation {
@@ -147,6 +151,18 @@ class RemoteClearInspection {
   final bool isSuccess;
   final String message;
   final RemoteClearPreview? preview;
+}
+
+class GitMetadataClearInspection {
+  const GitMetadataClearInspection({
+    required this.isSuccess,
+    required this.message,
+    required this.remotes,
+  });
+
+  final bool isSuccess;
+  final String message;
+  final List<GitRemote> remotes;
 }
 
 class RepositoryController extends ChangeNotifier {
@@ -310,6 +326,60 @@ class RepositoryController extends ChangeNotifier {
     planCurrentTitle = null;
     fatalError = null;
     notifyListeners();
+  }
+
+  Future<GitMetadataClearInspection> inspectGitMetadataForClear() async {
+    if (_git == null) {
+      return const GitMetadataClearInspection(
+        isSuccess: false,
+        message: '当前没有打开的仓库。',
+        remotes: [],
+      );
+    }
+    try {
+      final remotes = await _git!.remotes();
+      return GitMetadataClearInspection(
+        isSuccess: true,
+        message: remotes.isEmpty
+            ? '当前仓库没有配置远端，可以清除 Git 元数据。'
+            : '当前仓库已连接远端，禁止清除 Git 元数据。',
+        remotes: remotes,
+      );
+    } catch (error) {
+      return GitMetadataClearInspection(
+        isSuccess: false,
+        message: _cleanError(error),
+        remotes: const [],
+      );
+    }
+  }
+
+  Future<OperationOutcome> clearGitMetadata() async {
+    final root = repositoryPath;
+    if (_git == null || root == null) {
+      return const OperationOutcome.failure('当前没有打开的仓库。');
+    }
+    if (pendingOperations.isNotEmpty) {
+      return const OperationOutcome.failure('请先清空或执行当前待执行操作计划。');
+    }
+    final inspection = await inspectGitMetadataForClear();
+    if (!inspection.isSuccess) {
+      return OperationOutcome.failure(inspection.message);
+    }
+    if (inspection.remotes.isNotEmpty) {
+      return const OperationOutcome.failure('当前仓库已连接远端，禁止清除 Git 元数据。');
+    }
+    try {
+      await GitService.clearRepositoryMetadata(root);
+      await removeRecentRepository(root);
+      closeRepository();
+      return const OperationOutcome.success(
+        'Git 元数据已清除；工作文件保留，但提交历史、分支和索引已经移除。',
+      );
+    } catch (error) {
+      _log.error('repository', '清除 Git 元数据失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
   }
 
   Future<OperationOutcome> removeRecentRepository(String path) async {
@@ -665,6 +735,10 @@ class RepositoryController extends ChangeNotifier {
       PlannedOperationKind.switchBranch,
       PlannedOperationKind.renameBranch,
       PlannedOperationKind.deleteBranch,
+      PlannedOperationKind.createStash,
+      PlannedOperationKind.applyStash,
+      PlannedOperationKind.popStash,
+      PlannedOperationKind.dropStash,
     };
     if (commitAlreadyQueued && !allowedAfterCommit.contains(operation.kind)) {
       return const OperationOutcome.failure('提交步骤已加入计划末尾。若要继续修改文件，请先移除提交步骤。');
@@ -991,6 +1065,141 @@ class RepositoryController extends ChangeNotifier {
       return OperationOutcome.success('已删除分支 $name');
     } catch (error) {
       _log.error('branch', '删除分支失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<List<GitStashEntry>> listStashes() async {
+    if (_git == null) return const [];
+    return _git!.listStashes();
+  }
+
+  Future<OperationOutcome> createStash({
+    String message = '',
+    bool includeUntracked = true,
+  }) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final trimmed = message.trim();
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.createStash,
+        title: trimmed.isEmpty ? '创建 Stash' : '创建 Stash：$trimmed',
+        description:
+            '执行 git stash push${includeUntracked ? ' --include-untracked' : ''}'
+            '${trimmed.isEmpty ? '。' : ' -m $trimmed。'}',
+        run: () => _applyCreateStash(
+          message: trimmed,
+          includeUntracked: includeUntracked,
+        ),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyCreateStash({
+    required String message,
+    required bool includeUntracked,
+  }) async {
+    try {
+      await _git!.createStash(
+        message: message,
+        includeUntracked: includeUntracked,
+      );
+      await _reloadAfterMutation();
+      return const OperationOutcome.success('Stash 已创建');
+    } catch (error) {
+      _log.error('stash', '创建 Stash 失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<OperationOutcome> applyStash(String selector) {
+    return _queueStashOperation(
+      selector: selector,
+      kind: PlannedOperationKind.applyStash,
+      title: '应用 $selector',
+      description: '执行 git stash apply $selector，并保留 Stash 记录。',
+      run: () => _applyStashAction(
+        selector: selector,
+        successMessage: '已应用 $selector',
+        action: () => _git!.applyStash(selector),
+        reload: true,
+      ),
+    );
+  }
+
+  Future<OperationOutcome> popStash(String selector) {
+    return _queueStashOperation(
+      selector: selector,
+      kind: PlannedOperationKind.popStash,
+      title: '弹出 $selector',
+      description: '执行 git stash pop $selector，应用后删除该 Stash。',
+      run: () => _applyStashAction(
+        selector: selector,
+        successMessage: '已弹出 $selector',
+        action: () => _git!.popStash(selector),
+        reload: true,
+      ),
+    );
+  }
+
+  Future<OperationOutcome> dropStash(String selector) {
+    return _queueStashOperation(
+      selector: selector,
+      kind: PlannedOperationKind.dropStash,
+      title: '删除 $selector',
+      description: '执行 git stash drop $selector，此操作无法通过本软件撤销。',
+      run: () => _applyStashAction(
+        selector: selector,
+        successMessage: '已删除 $selector',
+        action: () => _git!.dropStash(selector),
+      ),
+      isDangerous: true,
+    );
+  }
+
+  Future<OperationOutcome> _queueStashOperation({
+    required String selector,
+    required PlannedOperationKind kind,
+    required String title,
+    required String description,
+    required Future<OperationOutcome> Function() run,
+    bool isDangerous = false,
+  }) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    if (!RegExp(r'^stash@\{\d+\}$').hasMatch(selector.trim())) {
+      return const OperationOutcome.failure('Stash 选择器无效。');
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: kind,
+        title: title,
+        description: description,
+        run: run,
+        isDangerous: isDangerous,
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyStashAction({
+    required String selector,
+    required String successMessage,
+    required Future<void> Function() action,
+    bool reload = false,
+  }) async {
+    try {
+      await action();
+      if (reload) {
+        await _reloadAfterMutation();
+      }
+      return OperationOutcome.success(successMessage);
+    } catch (error) {
+      _log.error('stash', 'Stash 操作失败：$selector；$error');
       return OperationOutcome.failure(_cleanError(error));
     }
   }
