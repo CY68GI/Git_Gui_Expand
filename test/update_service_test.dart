@@ -119,18 +119,29 @@ void main() {
       '${Directory.current.path}${Platform.pathSeparator}windows'
       '${Platform.pathSeparator}runner${Platform.pathSeparator}CMakeLists.txt',
     ).readAsString();
+    final installerSource = await File(
+      '${Directory.current.path}${Platform.pathSeparator}lib'
+      '${Platform.pathSeparator}core${Platform.pathSeparator}services'
+      '${Platform.pathSeparator}update_installer_service.dart',
+    ).readAsString();
 
     expect(launcherSource, contains('pending-version.txt'));
     expect(launcherSource, contains('current-version.txt'));
     expect(launcherSource, contains('GIT_GUI_EXPAND_ROOT'));
     expect(launcherSource, contains('rollback-version.txt'));
     expect(launcherSource, contains('PruneOldVersionDirectories'));
-    expect(launcherSource, contains('previousVersion'));
     expect(launcherSource, contains('Removed old version directory'));
     expect(launcherSource, contains('DiscoverCurrentVersion'));
-    expect(launcherSource, contains('DiscoverPreviousVersion'));
+    expect(launcherSource, contains('CleanupDownloadedUpdatePackages'));
+    expect(launcherSource, contains('Removed downloaded update artifact'));
     expect(launcherSource, contains('TryBuildFlatLaunchPlan'));
     expect(launcherSource, contains('0xEF'));
+    expect(installerSource, contains('已清理下载的更新包和临时解压目录'));
+    expect(installerSource, contains('await _deleteFileIfExists(archive)'));
+    expect(
+      installerSource,
+      contains('await _deleteDirectoryIfExists(staging)'),
+    );
     expect(cmake, contains('GitGuiExpandLauncher'));
   });
 

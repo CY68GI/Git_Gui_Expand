@@ -12,9 +12,6 @@ class AppColorPalette {
 class AppTheme {
   const AppTheme._();
 
-  static const Color accent = Color(0xFF087C68);
-  static const Color darkAccent = Color(0xFF43D4B4);
-
   static AppColorPalette palette(AppColorSchemePreference preference) {
     return switch (preference) {
       AppColorSchemePreference.emerald => const AppColorPalette(
@@ -45,25 +42,19 @@ class AppTheme {
     AppColorSchemePreference colorScheme = AppColorSchemePreference.emerald,
   }) {
     final palette = AppTheme.palette(colorScheme);
-    final scheme =
-        ColorScheme.fromSeed(
-          seedColor: palette.lightSeed,
-          brightness: Brightness.light,
-          surface: Colors.white,
-        ).copyWith(
-          primary: palette.lightSeed,
-          onPrimary: Colors.white,
-          onSurface: const Color(0xFF17211E),
-          surfaceContainerLowest: Colors.white,
-          surfaceContainerLow: const Color(0xFFF7F9F8),
-          surfaceContainer: const Color(0xFFEDF2EF),
-          outline: const Color(0xFFC8D1CC),
-          outlineVariant: const Color(0xFFDDE4E0),
-        );
+    final generated = ColorScheme.fromSeed(
+      seedColor: palette.lightSeed,
+      brightness: Brightness.light,
+    );
+    final scheme = generated.copyWith(
+      primary: palette.lightSeed,
+      onPrimary: Colors.white,
+      surface: Colors.white,
+      surfaceContainerLowest: Colors.white,
+    );
     return _buildTheme(
       scheme: scheme,
-      scaffoldBackground: const Color(0xFFF2F5F3),
-      tooltipBackground: const Color(0xFF17211E),
+      scaffoldBackground: scheme.surfaceContainerLow,
       fontFamily: fontFamily,
     );
   }
@@ -73,27 +64,14 @@ class AppTheme {
     AppColorSchemePreference colorScheme = AppColorSchemePreference.emerald,
   }) {
     final palette = AppTheme.palette(colorScheme);
-    final scheme =
-        ColorScheme.fromSeed(
-          seedColor: palette.darkAccent,
-          brightness: Brightness.dark,
-          surface: const Color(0xFF171E1B),
-        ).copyWith(
-          primary: palette.darkAccent,
-          onPrimary: const Color(0xFF05241D),
-          onSurface: const Color(0xFFE8EFEA),
-          onSurfaceVariant: const Color(0xFFA9B8B1),
-          surfaceContainerLowest: const Color(0xFF101513),
-          surfaceContainerLow: const Color(0xFF1D2522),
-          surfaceContainer: const Color(0xFF25302C),
-          outline: const Color(0xFF52615A),
-          outlineVariant: const Color(0xFF33413B),
-          error: const Color(0xFFFFB4AB),
-        );
+    final generated = ColorScheme.fromSeed(
+      seedColor: palette.darkAccent,
+      brightness: Brightness.dark,
+    );
+    final scheme = generated.copyWith(primary: palette.darkAccent);
     return _buildTheme(
       scheme: scheme,
-      scaffoldBackground: const Color(0xFF0C1110),
-      tooltipBackground: const Color(0xFFE8EFEA),
+      scaffoldBackground: scheme.surfaceContainerLowest,
       fontFamily: fontFamily,
     );
   }
@@ -101,12 +79,8 @@ class AppTheme {
   static ThemeData _buildTheme({
     required ColorScheme scheme,
     required Color scaffoldBackground,
-    required Color tooltipBackground,
     required String? fontFamily,
   }) {
-    final tooltipForeground = tooltipBackground.computeLuminance() > 0.5
-        ? const Color(0xFF17211E)
-        : Colors.white;
     return ThemeData(
       useMaterial3: true,
       brightness: scheme.brightness,
@@ -134,10 +108,10 @@ class AppTheme {
       tooltipTheme: TooltipThemeData(
         waitDuration: const Duration(milliseconds: 500),
         decoration: BoxDecoration(
-          color: tooltipBackground,
+          color: scheme.inverseSurface,
           borderRadius: BorderRadius.circular(6),
         ),
-        textStyle: TextStyle(color: tooltipForeground, fontSize: 12),
+        textStyle: TextStyle(color: scheme.onInverseSurface, fontSize: 12),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

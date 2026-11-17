@@ -14,6 +14,16 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.5',
+    date: '2026-11-17',
+    title: '只保留最新版、全局配色与 Git 功能清单',
+    items: [
+      '每次成功启动后只保留当前版本，删除其他版本和下载的更新包。',
+      '配色方案统一应用到界面表面、图标、状态徽标、按钮和提示。',
+      '三份 README 增加 Git 功能覆盖表，明确已完成和未完成功能。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.4',
     date: '2026-11-16',
     title: 'MIT 许可证、自动清理旧版本与外观配色',

@@ -13,7 +13,7 @@ an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.4`
+Current version: `0.9.5`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -42,8 +42,47 @@ Current version: `0.9.4`
 - Create a desktop shortcut from **Settings → About**.
 - Use automatic updates through a stable Launcher and isolated version
   directories, with startup health checks and rollback.
-- Keep only the current version and the version it was updated from after an
-  update succeeds.
+- Keep only the current version after a successful update and remove downloaded
+  update packages and staging files.
+
+## Git feature coverage
+
+Legend: `✅` implemented in the application, `❌` not currently implemented.
+
+| Git capability | Status | Notes |
+| --- | --- | --- |
+| Open an existing initialized repository | ✅ | Native Windows picker and recent-repository history |
+| `git init` | ❌ | The app opens existing repositories only |
+| `git clone` | ❌ | Not implemented |
+| `git status` | ✅ | Branch, staged, unstaged, and untracked state |
+| List tracked and untracked files | ✅ | `.gitignore`-aware enumeration |
+| Selective staging / hunk staging | ❌ | Staging is currently all-or-nothing |
+| `git add -A` / stage all | ✅ | Planned and confirmed before execution |
+| Unstage all | ✅ | Keeps workspace file contents |
+| `git commit` / commit all changes | ✅ | Commit message and confirmation required |
+| Amend, sign-off, GPG-signed commits | ❌ | Not implemented |
+| Diff viewer / hunk editor | ❌ | File status is shown without a diff editor |
+| `git mv` / rename and move | ✅ | Files and folders |
+| Copy through Git objects and index | ✅ | Git has no native `git cp` |
+| `git rm` / `git clean` deletion | ✅ | Dangerous confirmation required |
+| Display current branch | ✅ | Shown in the commit workspace |
+| Create, switch, rename, delete branches | ❌ | Only the current branch is displayed |
+| Merge, rebase, cherry-pick | ❌ | Not implemented |
+| Reset, revert, restore UI | ❌ | Internal reset is used only by remote-history clearing |
+| `git stash` | ❌ | Not implemented |
+| Create, delete, or push tags | ❌ | Release tags are managed outside the UI |
+| Git log, graph, blame, reflog | ❌ | Application logs are not Git history |
+| Git grep / bisect | ❌ | Not implemented |
+| Merge conflict editor | ❌ | Not implemented |
+| List/add/edit/remove remotes | ✅ | Multiple platform remotes |
+| Push current branch | ✅ | One or all remotes; upstream is configured |
+| Fetch and pull | ❌ | Internal fetch is only used before remote clearing |
+| Clear remote history | ✅ | Atomic empty-root replacement after strong confirmation |
+| SSH/HTTPS authentication | ✅ | Delegated to the installed Git credential system |
+| Submodules, worktrees, sparse checkout | ❌ | Not implemented |
+| Git LFS | ❌ | Not implemented |
+| Hooks editor | ❌ | Not implemented |
+| Archive / bundle / fsck / gc UI | ❌ | Not implemented |
 
 ## Requirements
 
@@ -73,7 +112,7 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.4
+.\tool\package_windows_release.ps1 -Tag v0.9.5
 ```
 
 ## Release layout
@@ -83,7 +122,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.4/
+    0.9.5/
       git_gui_expand.exe
       flutter_windows.dll
       data/
@@ -127,9 +166,10 @@ to `versions/<version>`, and switches versions after the running application
 exits. A new version that does not stay alive for the startup health check is
 rolled back automatically.
 
-After a successful update, only the current version and the immediately previous
-version are retained. Older version directories are removed. Settings, logs,
-recent repositories, and other `userdata` files are shared across versions.
+After a successful update, only the current version is retained. All older
+version directories, downloaded update ZIPs, partial downloads, and staged
+extraction folders are removed. Settings, logs, recent repositories, and other
+`userdata` files are shared across versions.
 
 Release notes are generated from the previous Git tag to the current tag and are
 provided in English, Simplified Chinese, and Traditional Chinese.

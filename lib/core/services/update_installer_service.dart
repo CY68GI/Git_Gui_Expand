@@ -140,6 +140,9 @@ class UpdateInstallerService {
         }
         logService.info('update', '新版本已准备到 ${target.path}');
       }
+      await _deleteFileIfExists(archive);
+      await _deleteDirectoryIfExists(staging);
+      logService.detail('update', '已清理下载的更新包和临时解压目录');
 
       onProgress(
         const UpdateInstallProgress(

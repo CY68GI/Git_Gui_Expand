@@ -575,22 +575,22 @@ class _ExplorerRowState extends State<_ExplorerRow> {
   }
 
   Color _entryColor(RepositoryEntry entry, bool isDirectory) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     if (isDirectory) {
-      return isDark ? const Color(0xFFFFD27A) : const Color(0xFFD79A37);
+      return colors.primary;
     }
     final name = entry.name.toLowerCase();
-    if (name.endsWith('.dart')) return const Color(0xFF1685B8);
+    if (name.endsWith('.dart')) return colors.primary;
     if (name.endsWith('.md') || name.endsWith('.txt')) {
-      return isDark ? const Color(0xFFAEBDB5) : const Color(0xFF64736B);
+      return colors.onSurfaceVariant;
     }
     if (name.endsWith('.png') ||
         name.endsWith('.jpg') ||
         name.endsWith('.jpeg') ||
         name.endsWith('.svg')) {
-      return const Color(0xFF9B6AC7);
+      return colors.tertiary;
     }
-    return const Color(0xFF74827A);
+    return colors.secondary;
   }
 }
 
@@ -601,7 +601,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     final first = code.isEmpty ? '?' : code.substring(0, 1);
     final labels = {
       'M': 'M',
@@ -614,11 +614,11 @@ class _StatusBadge extends StatelessWidget {
       '!': 'IGN',
     };
     final color = switch (first) {
-      'A' || '?' => isDark ? const Color(0xFF6FE7C3) : const Color(0xFF16836C),
-      'D' => isDark ? const Color(0xFFFF9B8E) : const Color(0xFFC04E4E),
-      'U' => isDark ? const Color(0xFFFFC56B) : const Color(0xFFC97914),
-      'R' || 'C' => isDark ? const Color(0xFF9BB9FF) : const Color(0xFF466FBF),
-      _ => isDark ? const Color(0xFFFFD27A) : const Color(0xFF9A7116),
+      'A' || '?' => colors.primary,
+      'D' => colors.error,
+      'U' => colors.tertiary,
+      'R' || 'C' => colors.secondary,
+      _ => colors.primary,
     };
     return Align(
       alignment: Alignment.centerLeft,

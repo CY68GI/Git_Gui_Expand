@@ -259,13 +259,13 @@ class _UpdateDialogState extends State<UpdateDialog> {
         l10n.tr('已经是最新版本'),
         result.message,
         Icons.check_circle_outline_rounded,
-        const Color(0xFF16836C),
+        colors.primary,
       ),
       UpdateCheckStatus.unavailable => (
         l10n.tr('暂时无法获取线上版本'),
         result.message,
         Icons.cloud_off_outlined,
-        const Color(0xFF9A7116),
+        colors.tertiary,
       ),
     };
     return Container(

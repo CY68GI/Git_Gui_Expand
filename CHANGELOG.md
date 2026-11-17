@@ -1,5 +1,35 @@
 # Changelog
 
+## 0.9.5 - 2026-11-17
+
+### English
+
+- Successful Launcher startup now keeps only the current version directory and
+  removes every other installed version.
+- Downloaded update ZIPs, partial downloads, staged extraction directories, and
+  the legacy updater script are removed after the new version passes startup.
+- Appearance colors now drive primary accents, tinted surfaces, document icons,
+  status badges, selected states, buttons, and success messages throughout the
+  application.
+- All three READMEs now include a detailed Git feature coverage matrix covering
+  implemented and unimplemented Git capabilities.
+
+### 简体中文
+
+- Launcher 成功启动后只保留当前版本目录，删除所有其他已安装版本。
+- 新版本通过启动检查后，清除下载的更新 ZIP、未完成下载、临时解压目录和旧更新脚本。
+- 配色方案现在统一影响全局强调色、带色调表面、文件图标、状态徽标、选择状态、
+  按钮和成功提示。
+- 三份 README 新增详细 Git 功能覆盖表，分别列出已实现和尚未实现的能力。
+
+### 繁體中文
+
+- Launcher 成功啟動後只保留目前版本目錄，刪除所有其他已安裝版本。
+- 新版本通過啟動檢查後，清除下載的更新 ZIP、未完成下載、臨時解壓目錄和舊更新指令碼。
+- 配色方案現在統一影響全域強調色、帶色調表面、檔案圖示、狀態徽章、選取狀態、
+  按鈕和成功提示。
+- 三份 README 新增詳細 Git 功能覆蓋表，分別列出已實現和尚未實現的能力。
+
 ## 0.9.4 - 2026-11-16
 
 ### English

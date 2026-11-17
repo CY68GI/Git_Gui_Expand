@@ -106,8 +106,9 @@ GitService ───────── SettingsService
 5. 将已验证目录移动到根目录 `versions/<version>`，写入 `pending-version.txt`。
 6. 主应用退出后，Launcher 切换 `current-version.txt` 并启动新版本。
 7. 新版本若在 8 秒内退出，Launcher 恢复 `rollback-version.txt`，不删除版本目录。
-8. 新版本通过启动检查后，Launcher 只保留当前版本和本次更新前版本，其余版本目录
-   递归删除；清理失败只写 `userdata/updates/launcher.log`。
+8. 新版本通过启动检查后，Launcher 只保留当前版本，其余版本目录递归删除。
+9. Launcher 同时清理下载的 ZIP、未完成下载、`stage-v*` 临时目录和旧更新脚本；
+   清理失败只写 `userdata/updates/launcher.log`。
 
 运行中的版本不会被覆盖。`userdata` 位于 Launcher 根目录，由全部版本共享。
 回滚路径和未实际应用更新时的启动不会触发旧版本清理。
@@ -154,7 +155,7 @@ Flutter 监听设备亮度并自动重建。窗口级 `WidgetsBindingObserver` �
 选择系统语言时把 `MaterialApp.locale` 设为 null，由
 `localeListResolutionCallback` 读取平台语言列表。英文解析为 `en`；简体中文区域
 解析为 `zh-CN`；繁体中文脚本或台湾、香港、澳门区域解析为 `zh-Hant`；其它语言
-回退到英文。语言偏好和字体迁移使用独立设置版本，当前版本为 3。
+回退到英文。语言偏好、字体迁移和配色方案使用独立设置版本，当前版本为 4。
 
 ## 图标
 
@@ -176,8 +177,8 @@ Launcher 和 `userdata` 在版本切换时保持不变。版本字符串只允�
 下划线，防止目录穿越。
 
 Launcher 从 `pending-version.txt` 获取本次新版本，从切换前的
-`current-version.txt` 获取更新前版本。新版本通过启动检查后，仅这两个目录被保留，
-其它同级版本目录会被清理。符号链接目录不会被递归删除。
+新版本通过启动检查后，只有 `current-version.txt` 指向的目录被保留，其它同级版本
+目录会被清理。符号链接目录不会被递归删除。
 
 ## 文件枚举
 

@@ -701,6 +701,11 @@ class AppLocalizations {
       'Launcher 每次成功启动都会保留当前版本和上一已安装版本，删除其余旧版本。': 'Every successful Launcher startup keeps the current and immediately previous installed version and removes all older versions.',
       '“外观模式”改名为“外观设置”，新增五种可选配色方案。': 'Appearance was renamed to Appearance settings and now offers five color schemes.',
       '按钮、选择状态、边框、图标和强调文字会随配色方案变化。': 'Buttons, selected states, borders, icons, and emphasis text follow the selected color scheme.',
+      '只保留最新版、全局配色与 Git 功能清单':
+          'Latest-version-only updates, global colors, and Git coverage',
+      '每次成功启动后只保留当前版本，删除其他版本和下载的更新包。': 'Every successful startup keeps only the current version and removes other versions and downloaded update packages.',
+      '配色方案统一应用到界面表面、图标、状态徽标、按钮和提示。': 'Color schemes now apply consistently to surfaces, icons, status badges, buttons, and messages.',
+      '三份 README 增加 Git 功能覆盖表，明确已完成和未完成功能。': 'All three READMEs now include a Git feature matrix showing completed and pending capabilities.',
     },
     'zh_Hant': {
       '当前操作尚未完成。': '目前操作尚未完成。',
@@ -783,6 +788,11 @@ class AppLocalizations {
           'Launcher 每次成功啟動都會保留目前版本和上一個已安裝版本，刪除其餘舊版本。',
       '“外观模式”改名为“外观设置”，新增五种可选配色方案。': '「外觀模式」改名為「外觀設定」，新增五種可選配色方案。',
       '按钮、选择状态、边框、图标和强调文字会随配色方案变化。': '按鈕、選取狀態、邊框、圖示和強調文字會跟隨配色方案變化。',
+      '只保留最新版、全局配色与 Git 功能清单': '只保留最新版、全域配色與 Git 功能清單',
+      '每次成功启动后只保留当前版本，删除其他版本和下载的更新包。': '每次成功啟動後只保留目前版本，刪除其他版本和下載的更新包。',
+      '配色方案统一应用到界面表面、图标、状态徽标、按钮和提示。': '配色方案統一套用到介面表面、圖示、狀態徽章、按鈕和提示。',
+      '三份 README 增加 Git 功能覆盖表，明确已完成和未完成功能。':
+          '三份 README 增加 Git 功能覆蓋表，明確列出已完成和未完成功能。',
       '可在本窗口中选中并复制文字。完整指南保存在 {path}。': '可在此視窗中選取並複製文字。完整指南保存在 {path}。',
     },
   };

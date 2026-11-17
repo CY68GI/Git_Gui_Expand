@@ -9,6 +9,9 @@ void showAppOutcomeSnackBar(
   VoidCallback? onViewLogs,
 }) {
   final messenger = ScaffoldMessenger.of(context);
+  final colors = Theme.of(context).colorScheme;
+  final background = outcome.isSuccess ? colors.primary : colors.error;
+  final foreground = outcome.isSuccess ? colors.onPrimary : colors.onError;
   final localizedMessage = context.l10n.tr(outcome.message);
   final isLongFailure = !outcome.isSuccess && localizedMessage.length > 520;
   final displayMessage = isLongFailure
@@ -28,33 +31,31 @@ void showAppOutcomeSnackBar(
                     ? Icons.check_circle_outline_rounded
                     : Icons.error_outline_rounded,
                 size: 19,
-                color: Colors.white,
+                color: foreground,
               ),
               const SizedBox(width: 9),
               Expanded(
                 child: Text(
                   displayMessage,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13.5,
                     height: 1.45,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: foreground,
                   ),
                 ),
               ),
             ],
           ),
         ),
-        backgroundColor: outcome.isSuccess
-            ? const Color(0xFF1C3D35)
-            : const Color(0xFF7B3434),
+        backgroundColor: background,
         duration: Duration(seconds: outcome.isSuccess ? 5 : 10),
         showCloseIcon: true,
-        closeIconColor: Colors.white,
+        closeIconColor: foreground,
         action: isLongFailure && onViewLogs != null
             ? SnackBarAction(
                 label: context.l10n.tr('查看日志'),
-                textColor: Colors.white,
+                textColor: foreground,
                 onPressed: onViewLogs,
               )
             : null,

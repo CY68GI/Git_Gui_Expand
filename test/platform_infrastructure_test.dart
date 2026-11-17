@@ -236,6 +236,10 @@ void main() {
 
     expect(ocean.colorScheme.primary, isNot(emerald.colorScheme.primary));
     expect(
+      ocean.scaffoldBackgroundColor,
+      isNot(emerald.scaffoldBackgroundColor),
+    );
+    expect(
       violetDark.colorScheme.primary,
       AppTheme.palette(AppColorSchemePreference.violet).darkAccent,
     );
@@ -335,6 +339,16 @@ void main() {
       expect(readme, contains('actions/workflows/windows-release.yml'));
       expect(readme, contains('platform-Windows%2010%20%7C%2011'));
       expect(readme, contains('license-MIT-blue'));
+      expect(
+        readme,
+        anyOf(
+          contains('Git feature coverage'),
+          contains('Git 功能覆盖'),
+          contains('Git 功能覆蓋'),
+        ),
+      );
+      expect(readme, contains('git clone'));
+      expect(readme, contains('git stash'));
     }
   });
 }

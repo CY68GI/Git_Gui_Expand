@@ -39,7 +39,6 @@ class _CommitPanelState extends State<CommitPanel> {
   Widget build(BuildContext context) {
     final controller = widget.controller;
     final colors = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final changes = controller.changedFiles;
     final hasChanges = changes.isNotEmpty;
     final stagedCount = changes.where((item) => item.isStaged).length;
@@ -87,11 +86,7 @@ class _CommitPanelState extends State<CommitPanel> {
                   text: context.l10n.tr('{count} 项变更', {
                     'count': changes.length,
                   }),
-                  color: hasChanges
-                      ? (isDark
-                            ? const Color(0xFFFFD27A)
-                            : const Color(0xFF9A7116))
-                      : colors.onSurfaceVariant,
+                  color: hasChanges ? colors.tertiary : colors.onSurfaceVariant,
                 ),
                 if (stagedCount > 0) ...[
                   const SizedBox(width: 6),
@@ -192,6 +187,7 @@ class _CommitPanelState extends State<CommitPanel> {
   }
 
   Widget _buildChangeList(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     final changes = widget.controller.changedFiles;
     if (changes.isEmpty) {
       if (widget.controller.hasPendingFileChanges) {
@@ -220,10 +216,10 @@ class _CommitPanelState extends State<CommitPanel> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.check_circle_outline_rounded,
               size: 19,
-              color: Color(0xFF16836C),
+              color: colors.primary,
             ),
             const SizedBox(width: 8),
             Text(
@@ -385,7 +381,7 @@ class _ChangeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
     final code = status.isStaged
         ? status.indexCode
         : status.worktreeCode.trim().isEmpty
@@ -394,11 +390,11 @@ class _ChangeRow extends StatelessWidget {
     final normalized = code.replaceAll(' ', '');
     final label = normalized.isEmpty ? '?' : normalized.substring(0, 1);
     final color = switch (label) {
-      'A' || '?' => isDark ? const Color(0xFF6FE7C3) : const Color(0xFF16836C),
-      'D' => isDark ? const Color(0xFFFF9B8E) : const Color(0xFFC04E4E),
-      'U' => isDark ? const Color(0xFFFFC56B) : const Color(0xFFC97914),
-      'R' || 'C' => isDark ? const Color(0xFF9BB9FF) : const Color(0xFF466FBF),
-      _ => isDark ? const Color(0xFFFFD27A) : const Color(0xFF9A7116),
+      'A' || '?' => colors.primary,
+      'D' => colors.error,
+      'U' => colors.tertiary,
+      'R' || 'C' => colors.secondary,
+      _ => colors.primary,
     };
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 1),
@@ -443,9 +439,7 @@ class _ChangeRow extends StatelessWidget {
               width: 6,
               height: 6,
               decoration: BoxDecoration(
-                color: status.isStaged
-                    ? const Color(0xFF16836C)
-                    : const Color(0xFFD5B262),
+                color: status.isStaged ? colors.primary : colors.tertiary,
                 shape: BoxShape.circle,
               ),
             ),

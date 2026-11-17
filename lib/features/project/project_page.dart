@@ -1322,9 +1322,7 @@ class _ClipboardView extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCut = selection.mode == ClipboardMode.cut;
     final l10n = context.l10n;
-    final badgeColor = Theme.of(context).brightness == Brightness.dark
-        ? const Color(0xFFFFD27A)
-        : const Color(0xFF7E651E);
+    final badgeColor = Theme.of(context).colorScheme.primary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [

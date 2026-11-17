@@ -642,7 +642,7 @@ class _RemoteCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final platformColor = _platformColor(remote.platform);
+    final platformColor = _platformColor(context, remote.platform);
     return Container(
       margin: const EdgeInsets.only(bottom: 9),
       padding: const EdgeInsets.fromLTRB(12, 11, 8, 11),
@@ -765,13 +765,13 @@ class _RemoteCard extends StatelessWidget {
     );
   }
 
-  Color _platformColor(GitRemotePlatform platform) {
+  Color _platformColor(BuildContext context, GitRemotePlatform platform) {
     return switch (platform) {
       GitRemotePlatform.github => const Color(0xFF24292F),
       GitRemotePlatform.gitee => const Color(0xFFC71D23),
       GitRemotePlatform.gitlab => const Color(0xFFFC6D26),
       GitRemotePlatform.bitbucket => const Color(0xFF2684FF),
-      GitRemotePlatform.generic => const Color(0xFF087C68),
+      GitRemotePlatform.generic => Theme.of(context).colorScheme.primary,
     };
   }
 

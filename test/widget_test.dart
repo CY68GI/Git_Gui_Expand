@@ -154,13 +154,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text(
-        'MIT license, automatic old-version cleanup, and appearance colors',
-      ),
+      find.text('Latest-version-only updates, global colors, and Git coverage'),
       findsOneWidget,
     );
-    expect(find.text('v0.9.3'), findsNothing);
-    expect(find.text('MIT 许可证、自动清理旧版本与外观配色'), findsNothing);
+    expect(find.text('v0.9.4'), findsNothing);
+    expect(find.text('只保留最新版、全局配色与 Git 功能清单'), findsNothing);
   });
 
   testWidgets('settings page exposes all sections and attribution', (
@@ -354,9 +352,10 @@ void main() {
   testWidgets('commit result snackbar stays readable in dark theme', (
     WidgetTester tester,
   ) async {
+    final theme = AppTheme.dark(fontFamily: 'Noto Sans SC');
     await tester.pumpWidget(
       MaterialApp(
-        theme: AppTheme.dark(fontFamily: 'Noto Sans SC'),
+        theme: theme,
         home: Scaffold(
           body: Builder(
             builder: (context) => Center(
@@ -380,8 +379,8 @@ void main() {
     final message = tester.widget<Text>(find.text('提交成功'));
     expect(snackBar.duration, const Duration(seconds: 5));
     expect(snackBar.showCloseIcon, isTrue);
-    expect(snackBar.backgroundColor, const Color(0xFF1C3D35));
-    expect(message.style?.color, Colors.white);
+    expect(snackBar.backgroundColor, theme.colorScheme.primary);
+    expect(message.style?.color, theme.colorScheme.onPrimary);
     expect(message.style?.fontSize, greaterThanOrEqualTo(13));
     expect(find.byIcon(Icons.check_circle_outline_rounded), findsOneWidget);
   });

@@ -265,37 +265,6 @@ std::wstring DiscoverCurrentVersion(const fs::path& root) {
   return selected;
 }
 
-std::wstring DiscoverPreviousVersion(const fs::path& root,
-                                     const std::wstring& currentVersion) {
-  const fs::path versionsDirectory = root / L"versions";
-  std::error_code error;
-  if (!fs::is_directory(versionsDirectory, error)) {
-    return {};
-  }
-  std::wstring selected;
-  for (fs::directory_iterator iterator(versionsDirectory, error), end;
-       iterator != end; iterator.increment(error)) {
-    if (error) {
-      break;
-    }
-    std::error_code statusError;
-    const fs::file_status status = iterator->symlink_status(statusError);
-    if (statusError || !fs::is_directory(status) ||
-        fs::is_symlink(status)) {
-      continue;
-    }
-    const std::wstring name = iterator->path().filename().wstring();
-    if (!IsLaunchableVersion(root, name, nullptr) ||
-        CompareVersions(name, currentVersion) >= 0) {
-      continue;
-    }
-    if (selected.empty() || CompareVersions(name, selected) > 0) {
-      selected = name;
-    }
-  }
-  return selected;
-}
-
 bool TryBuildFlatLaunchPlan(const fs::path& root, LaunchPlan* plan) {
   const fs::path executable = root / L"git_gui_expand.exe";
   const fs::path appData = root / L"data" / L"app.so";
@@ -402,8 +371,7 @@ DWORD ReadExitCode(HANDLE process) {
 }
 
 void PruneOldVersionDirectories(const fs::path& root,
-                                const std::wstring& currentVersion,
-                                const std::wstring& previousVersion) {
+                                const std::wstring& currentVersion) {
   const fs::path versionsDirectory = root / L"versions";
   std::error_code error;
   if (!fs::is_directory(versionsDirectory, error)) {
@@ -428,8 +396,7 @@ void PruneOldVersionDirectories(const fs::path& root,
       continue;
     }
     const std::wstring name = entry.path().filename().wstring();
-    if (name == currentVersion ||
-        (!previousVersion.empty() && name == previousVersion)) {
+    if (name == currentVersion) {
       WriteLog(root, L"Retained version directory " + name);
       continue;
     }
@@ -442,6 +409,60 @@ void PruneOldVersionDirectories(const fs::path& root,
                          std::to_wstring(removeError.value()));
     } else {
       WriteLog(root, L"Removed old version directory " + name);
+    }
+  }
+}
+
+void CleanupDownloadedUpdatePackages(const fs::path& root) {
+  const fs::path updatesDirectory = root / L"userdata" / L"updates";
+  std::error_code error;
+  if (!fs::is_directory(updatesDirectory, error)) {
+    return;
+  }
+  for (fs::directory_iterator iterator(updatesDirectory, error), end;
+       iterator != end; iterator.increment(error)) {
+    if (error) {
+      WriteLog(root, L"Could not enumerate downloaded updates, error=" +
+                         std::to_wstring(error.value()));
+      return;
+    }
+    const fs::directory_entry& entry = *iterator;
+    std::error_code statusError;
+    const fs::file_status status = entry.symlink_status(statusError);
+    if (statusError || fs::is_symlink(status)) {
+      continue;
+    }
+    std::wstring name = entry.path().filename().wstring();
+    std::transform(name.begin(), name.end(), name.begin(),
+                   [](wchar_t character) {
+                     return static_cast<wchar_t>(std::towlower(character));
+                   });
+    const bool staged =
+        fs::is_directory(status) && name.rfind(L"stage-v", 0) == 0;
+    const bool archive =
+        fs::is_regular_file(status) &&
+        (name.rfind(L"git_gui_expand-", 0) == 0 &&
+         (name.size() >= 4 && name.substr(name.size() - 4) == L".zip"));
+    const bool partial =
+        fs::is_regular_file(status) &&
+        (name.size() >= 5 && name.substr(name.size() - 5) == L".part");
+    const bool legacyUpdater =
+        fs::is_regular_file(status) && name == L"apply-update.ps1";
+    if (!staged && !archive && !partial && !legacyUpdater) {
+      continue;
+    }
+    std::error_code removeError;
+    if (staged) {
+      fs::remove_all(entry.path(), removeError);
+    } else {
+      fs::remove(entry.path(), removeError);
+    }
+    if (removeError) {
+      WriteLog(root, L"Could not remove downloaded update artifact " + name +
+                         L", error=" +
+                         std::to_wstring(removeError.value()));
+    } else {
+      WriteLog(root, L"Removed downloaded update artifact " + name);
     }
   }
 }
@@ -494,12 +515,8 @@ DWORD RunLauncher(const fs::path& root, DWORD waitProcessId) {
     const DWORD firstWait = WaitForSingleObject(process.hProcess, 8000);
     if (firstWait == WAIT_TIMEOUT) {
       WriteLog(root, L"Version " + version + L" passed startup check");
-      std::wstring previousVersion = pendingResult.previous_version;
-      if (previousVersion.empty() ||
-          !IsLaunchableVersion(root, previousVersion, nullptr)) {
-        previousVersion = DiscoverPreviousVersion(root, version);
-      }
-      PruneOldVersionDirectories(root, version, previousVersion);
+      PruneOldVersionDirectories(root, version);
+      CleanupDownloadedUpdatePackages(root);
       DeleteFileW((root / L"rollback-version.txt").c_str());
       WaitForSingleObject(process.hProcess, INFINITE);
       const DWORD exitCode = ReadExitCode(process.hProcess);

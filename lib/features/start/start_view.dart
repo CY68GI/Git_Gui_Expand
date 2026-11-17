@@ -41,7 +41,7 @@ class StartView extends StatelessWidget {
           bottom: -180,
           child: _Glow(
             size: 500,
-            color: const Color(0xFFF2A65A).withValues(alpha: 0.09),
+            color: colors.tertiary.withValues(alpha: 0.09),
           ),
         ),
         Center(

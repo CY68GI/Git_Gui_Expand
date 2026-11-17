@@ -959,7 +959,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.tr(outcome.message)),
-        backgroundColor: const Color(0xFF7B3434),
+        backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
   }
@@ -973,9 +973,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.l10n.tr(result.message)),
-        backgroundColor: result.isSuccess
-            ? const Color(0xFF1C3D35)
-            : colors.error,
+        backgroundColor: result.isSuccess ? colors.primary : colors.error,
+        closeIconColor: result.isSuccess ? colors.onPrimary : colors.onError,
         duration: const Duration(seconds: 5),
         showCloseIcon: true,
       ),

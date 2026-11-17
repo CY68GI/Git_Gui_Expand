@@ -152,8 +152,9 @@ payload into `versions/<version>`, and exits. The stable Launcher switches the
 current version and starts the new application.
 
 If the new version exits during the startup health check, the Launcher rolls
-back. After a successful update, only the current version and the version it was
-updated from remain; older version directories are removed.
+back. After a successful update, only the current version remains. Older version
+directories, downloaded ZIPs, partial downloads, staged extraction folders, and
+the legacy updater script are removed.
 
 Use **Open release page** when automatic publication metadata is unavailable or
 network conditions are poor.

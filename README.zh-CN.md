@@ -12,7 +12,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.4`
+当前版本：`0.9.5`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -55,9 +55,48 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 - 设置、日志、选择器临时文件等运行数据统一保存在软件目录的 `userdata` 文件夹。
 - 通过 GitHub Releases API 检查并自动安装更新，完成后自动重启。
 - 使用稳定 Launcher 与独立版本目录完成热更新和启动失败自动回滚。
-- 新版本通过启动检查后只保留当前版本与更新前版本，自动清理更早的版本目录。
+- 新版本通过启动检查后只保留当前版本，自动清理其他版本、更新 ZIP 和临时解压目录。
 - 项目使用 Git 标签版本控制，推送 `v*` 标签会触发 Windows Release 构建与上传。
 - Linux 和 macOS 目录已由 Flutter 保留，但当前版本未开发、未构建验证。
+
+## Git 功能覆盖
+
+图例：`✅` 已在软件中实现，`❌` 当前未实现。
+
+| Git 功能 | 状态 | 说明 |
+| --- | --- | --- |
+| 打开已初始化仓库 | ✅ | Windows 标准选择器和最近仓库记录 |
+| `git init` 初始化仓库 | ❌ | 当前只打开现有仓库 |
+| `git clone` 克隆仓库 | ❌ | 未实现 |
+| `git status` 状态 | ✅ | 显示分支、暂存、未暂存和未跟踪状态 |
+| 列出已跟踪和未跟踪文件 | ✅ | 遵循 `.gitignore` |
+| 选择性暂存 / 按块暂存 | ❌ | 当前暂存全部或不暂存 |
+| `git add -A` 暂存全部 | ✅ | 先进入执行计划并确认 |
+| 取消暂存全部 | ✅ | 保留工作区文件内容 |
+| `git commit` 提交全部更改 | ✅ | 必须填写说明并确认执行 |
+| amend、sign-off、GPG 签名提交 | ❌ | 未实现 |
+| Diff 查看器 / 块编辑器 | ❌ | 仅显示文件状态，没有差异编辑器 |
+| `git mv` 重命名和移动 | ✅ | 支持文件和文件夹 |
+| 通过 Git 对象与索引复制 | ✅ | Git 没有原生 `git cp` |
+| `git rm` / `git clean` 删除 | ✅ | 需要危险操作确认 |
+| 显示当前分支 | ✅ | 在提交工作区显示 |
+| 创建、切换、重命名、删除分支 | ❌ | 只显示当前分支 |
+| Merge、rebase、cherry-pick | ❌ | 未实现 |
+| Reset、revert、restore 界面 | ❌ | 内部 reset 仅供清空远端历史使用 |
+| `git stash` | ❌ | 未实现 |
+| 创建、删除、推送标签 | ❌ | Release 标签由外部工具管理 |
+| Git 日志、分支图、blame、reflog | ❌ | 软件操作日志不是 Git 历史 |
+| Git grep / bisect | ❌ | 未实现 |
+| 冲突编辑器 | ❌ | 未实现 |
+| 查看、添加、修改、删除远端 | ✅ | 支持多个平台远端 |
+| 推送当前分支 | ✅ | 支持单个或全部远端，并可设置 upstream |
+| Fetch 和 pull | ❌ | 内部 fetch 仅用于清空远端前备份 |
+| 清空远端历史 | ✅ | 强确认后以空根提交原子替换 |
+| SSH/HTTPS 认证 | ✅ | 由系统 Git 凭据机制处理 |
+| 子模块、worktree、sparse checkout | ❌ | 未实现 |
+| Git LFS | ❌ | 未实现 |
+| Hooks 编辑器 | ❌ | 未实现 |
+| Archive / bundle / fsck / gc 界面 | ❌ | 未实现 |
 
 ## 环境要求
 
@@ -168,8 +207,7 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.3/                    # 更新成功后保留的上一版本
-    0.9.4/                    # 当前版本
+    0.9.5/                    # 当前唯一保留的版本
       git_gui_expand.exe
       data/
       version.json
@@ -202,7 +240,7 @@ build\windows\x64\runner\Release\
 5. 写入 `pending-version.txt`，应用退出；
 6. 常驻 Launcher 原子切换 `current-version.txt` 并启动新版本；
 7. 新版本 8 秒内异常退出时恢复上一版本，不清理版本目录；
-8. 新版本通过启动检查后，只保留新版本和更新前版本，其余版本目录自动删除。
+8. 新版本通过启动检查后，只保留当前新版本，并清理其他版本和下载的更新包。
 
 `v0.8.1` 起使用 Launcher 更新架构。`v0.8.0` 及更早版本的原 PowerShell 更新助手存在
 进程未启动问题，必须先手动安装一次 Launcher 版本。`v0.8.1` 和 `v0.8.2` 的哈希校验还会
