@@ -138,7 +138,7 @@ void main() {
     expect(await destination.exists(), isTrue);
     expect(
       await GitService.resolveRepositoryRoot(destination.path),
-      destination.path,
+      await destination.resolveSymbolicLinks(),
     );
   });
 
