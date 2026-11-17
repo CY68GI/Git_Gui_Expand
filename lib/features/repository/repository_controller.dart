@@ -80,6 +80,10 @@ enum PlannedOperationKind {
   updateRemote,
   removeRemoteConfig,
   clearRemote,
+  createBranch,
+  switchBranch,
+  renameBranch,
+  deleteBranch,
 }
 
 class PlannedRepositoryOperation {
@@ -657,6 +661,10 @@ class RepositoryController extends ChangeNotifier {
       PlannedOperationKind.addRemote,
       PlannedOperationKind.updateRemote,
       PlannedOperationKind.removeRemoteConfig,
+      PlannedOperationKind.createBranch,
+      PlannedOperationKind.switchBranch,
+      PlannedOperationKind.renameBranch,
+      PlannedOperationKind.deleteBranch,
     };
     if (commitAlreadyQueued && !allowedAfterCommit.contains(operation.kind)) {
       return const OperationOutcome.failure('提交步骤已加入计划末尾。若要继续修改文件，请先移除提交步骤。');
@@ -822,6 +830,167 @@ class RepositoryController extends ChangeNotifier {
       return OperationOutcome.success('已删除 ${paths.length} 项');
     } catch (error) {
       _log.error('delete', '删除失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<List<String>> localBranches() async {
+    if (_git == null) return const [];
+    final branches = await _git!.localBranches();
+    final current = branch;
+    branches.sort((left, right) {
+      if (left == current) return -1;
+      if (right == current) return 1;
+      return left.toLowerCase().compareTo(right.toLowerCase());
+    });
+    return branches;
+  }
+
+  Future<OperationOutcome> createBranch(String name) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final trimmed = name.trim();
+    try {
+      await _git!.validateBranchName(trimmed);
+    } catch (error) {
+      return OperationOutcome.failure(_cleanError(error));
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.createBranch,
+        title: '创建分支 $trimmed',
+        description: '执行 git branch -- $trimmed，从当前 HEAD 创建本地分支。',
+        run: () => _applyCreateBranch(trimmed),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyCreateBranch(String name) async {
+    try {
+      await _git!.createBranch(name);
+      return OperationOutcome.success('已创建分支 $name');
+    } catch (error) {
+      _log.error('branch', '创建分支失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<OperationOutcome> switchBranch(String name) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final trimmed = name.trim();
+    if (trimmed == branch) {
+      return OperationOutcome.failure('已经位于分支 $trimmed。');
+    }
+    try {
+      await _git!.validateBranchName(trimmed);
+    } catch (error) {
+      return OperationOutcome.failure(_cleanError(error));
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.switchBranch,
+        title: '切换到分支 $trimmed',
+        description: '执行 git switch $trimmed。未提交修改发生冲突时 Git 会拒绝切换。',
+        run: () => _applySwitchBranch(trimmed),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applySwitchBranch(String name) async {
+    try {
+      await _git!.switchBranch(name);
+      await _reloadAfterMutation();
+      branch = await _git!.currentBranch();
+      return OperationOutcome.success('已切换到分支 $name');
+    } catch (error) {
+      _log.error('branch', '切换分支失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<OperationOutcome> renameBranch(String oldName, String newName) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final oldTrimmed = oldName.trim();
+    final newTrimmed = newName.trim();
+    try {
+      await _git!.validateBranchName(oldTrimmed);
+      await _git!.validateBranchName(newTrimmed);
+    } catch (error) {
+      return OperationOutcome.failure(_cleanError(error));
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.renameBranch,
+        title: '重命名分支 $oldTrimmed -> $newTrimmed',
+        description: '执行 git branch -m $oldTrimmed $newTrimmed。',
+        run: () => _applyRenameBranch(oldTrimmed, newTrimmed),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyRenameBranch(
+    String oldName,
+    String newName,
+  ) async {
+    try {
+      await _git!.renameBranch(oldName, newName);
+      if (branch == oldName) {
+        branch = newName;
+      }
+      return OperationOutcome.success('已重命名分支 $oldName 为 $newName');
+    } catch (error) {
+      _log.error('branch', '重命名分支失败：$error');
+      return OperationOutcome.failure(_cleanError(error));
+    }
+  }
+
+  Future<OperationOutcome> deleteBranch(
+    String name, {
+    bool force = false,
+  }) async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final trimmed = name.trim();
+    if (trimmed == branch) {
+      return const OperationOutcome.failure('不能删除当前分支，请先切换到其他分支。');
+    }
+    try {
+      await _git!.validateBranchName(trimmed);
+    } catch (error) {
+      return OperationOutcome.failure(_cleanError(error));
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.deleteBranch,
+        title: '删除分支 $trimmed',
+        description: force
+            ? '执行 git branch -D $trimmed，强制删除未合并分支。'
+            : '执行 git branch -d $trimmed，仅允许删除已合并分支。',
+        run: () => _applyDeleteBranch(trimmed, force: force),
+        isDangerous: true,
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyDeleteBranch(
+    String name, {
+    required bool force,
+  }) async {
+    try {
+      await _git!.deleteBranch(name, force: force);
+      return OperationOutcome.success('已删除分支 $name');
+    } catch (error) {
+      _log.error('branch', '删除分支失败：$error');
       return OperationOutcome.failure(_cleanError(error));
     }
   }

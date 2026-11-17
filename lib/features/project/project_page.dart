@@ -7,10 +7,13 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/folder_picker_service.dart';
+import '../../core/services/installation_maintenance_service.dart';
 import '../../core/utils/path_utils.dart';
 import '../../core/utils/size_formatter.dart';
 import '../commit/commit_panel.dart';
+import '../dialogs/branch_management_dialog.dart';
 import '../dialogs/log_viewer_dialog.dart';
+import '../dialogs/installation_cleanup_dialog.dart';
 import '../dialogs/operation_plan_dialog.dart';
 import '../dialogs/remote_management_dialog.dart';
 import '../dialogs/settings_dialog.dart';
@@ -48,6 +51,8 @@ class _ProjectPageState extends State<ProjectPage> {
   final RepositoryController _controller = RepositoryController();
   final FolderPickerService _folderPicker = const FolderPickerService();
   final FocusNode _explorerFocus = FocusNode(debugLabel: 'explorer-shortcuts');
+  final InstallationMaintenanceService _maintenance =
+      const InstallationMaintenanceService();
 
   bool _isOpening = false;
   bool _isCommitFieldFocused = false;
@@ -68,9 +73,40 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _initialize() async {
     await _controller.initialize();
+    await _performStartupMaintenance();
     final initialPath = widget.initialRepositoryPath;
     if (initialPath != null && initialPath.trim().isNotEmpty && mounted) {
       await _openRepositoryPath(initialPath);
+    }
+  }
+
+  Future<void> _performStartupMaintenance() async {
+    try {
+      final scan = await _maintenance.scan();
+      if (scan.items.isNotEmpty) {
+        final result = await _maintenance.cleanup(scan);
+        _log.info(
+          'maintenance',
+          '启动自动清理：移除 ${result.removed.length} 项，'
+              '失败 ${result.failed.length} 项',
+        );
+      } else {
+        _log.detail('maintenance', '启动扫描：没有需要清理的旧版本或安装包');
+      }
+      await _maintenance.scheduleLauncherSelfUpdate();
+      final remaining = await _maintenance.scan();
+      if (remaining.items.isNotEmpty && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            showDialog<void>(
+              context: context,
+              builder: (context) => const InstallationCleanupDialog(),
+            );
+          }
+        });
+      }
+    } catch (error) {
+      _log.error('maintenance', '启动自动维护失败：$error');
     }
   }
 
@@ -644,6 +680,17 @@ class _ProjectPageState extends State<ProjectPage> {
     }
   }
 
+  Future<void> _showBranches() async {
+    _log.detail('ui', '打开分支管理');
+    await showDialog<void>(
+      context: context,
+      builder: (context) => BranchManagementDialog(controller: _controller),
+    );
+    if (mounted) {
+      _explorerFocus.requestFocus();
+    }
+  }
+
   Future<void> _showOperationPlan() async {
     _log.detail('ui', '打开待执行操作计划，共 ${_controller.pendingOperations.length} 步');
     await showDialog<void>(
@@ -895,6 +942,7 @@ class _ProjectPageState extends State<ProjectPage> {
                           showOutcome: _showOutcome,
                           onPushRequested: _pushCurrentBranch,
                           onManageRemotes: _showRemotes,
+                          onManageBranches: _showBranches,
                           onPlanRequested: _showOperationPlan,
                           onTextEditingChanged: (focused) {
                             _isCommitFieldFocused = focused;

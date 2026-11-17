@@ -453,6 +453,10 @@ class _OperationCard extends StatelessWidget {
       PlannedOperationKind.updateRemote => '修改远端',
       PlannedOperationKind.removeRemoteConfig => '移除配置',
       PlannedOperationKind.clearRemote => '清空远端',
+      PlannedOperationKind.createBranch => '创建分支',
+      PlannedOperationKind.switchBranch => '切换分支',
+      PlannedOperationKind.renameBranch => '重命名分支',
+      PlannedOperationKind.deleteBranch => '删除分支',
     };
     return context.l10n.tr(label);
   }

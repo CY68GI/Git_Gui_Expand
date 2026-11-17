@@ -1,5 +1,45 @@
 # Changelog
 
+## 0.9.6 - 2026-11-17
+
+### English
+
+- Fixed the root cause where automatic updates replaced only files under
+  `versions` while the root Launcher remained at an old version.
+- The application now scans and removes old versions, downloaded installers,
+  partial downloads, staging folders, and legacy flat app files during startup.
+- The current release includes a maintenance copy of the Launcher and schedules
+  a safe root Launcher update after the running app exits.
+- Added Settings → About → Scan old versions and installers with a scan window
+  and one-click cleanup fallback.
+- Settings → About now displays the actual file versions of
+  `git_gui_expand.exe` and `GitGuiExpandLauncher.exe`.
+- Added local branch creation, switching, renaming, and safe/force deletion.
+- The update page can check and install releases from either GitHub or Gitee.
+- Releases now include a companion SHA-256 checksum file for Gitee updates.
+
+### 简体中文
+
+- 修复自动更新只替换 `versions` 内文件、根目录 Launcher 仍停留在旧版本的问题。
+- 应用启动后会主动扫描并清理旧版本、下载的安装包、未完成下载、临时目录和旧平铺程序文件。
+- 新版本目录包含维护用 Launcher，并在当前应用退出后安全更新根目录 Launcher。
+- 在“设置 → 关于”新增“扫描旧版本与安装包”，提供扫描窗口和一键清除兜底。
+- “设置 → 关于”显示 `git_gui_expand.exe` 与 `GitGuiExpandLauncher.exe` 实际文件版本。
+- 新增本地分支创建、切换、重命名、安全删除和强制删除。
+- 更新页面可选择 GitHub 或 Gitee 获取最新版和安装包。
+- Release 新增 SHA-256 校验文件，供 Gitee 自动更新验证。
+
+### 繁體中文
+
+- 修復自動更新只替換 `versions` 內檔案、根目錄 Launcher 仍停留在舊版本的問題。
+- 應用程式啟動後會主動掃描並清理舊版本、下載的安裝包、未完成下載、臨時目錄和舊平鋪程式檔案。
+- 新版本目錄包含維護用 Launcher，並在目前應用程式結束後安全更新根目錄 Launcher。
+- 在「設定 → 關於」新增「掃描舊版本與安裝包」，提供掃描視窗和一鍵清除備援。
+- 「設定 → 關於」顯示 `git_gui_expand.exe` 與 `GitGuiExpandLauncher.exe` 實際檔案版本。
+- 新增本機分支建立、切換、重新命名、安全刪除和強制刪除。
+- 更新頁面可選擇 GitHub 或 Gitee 取得最新版和安裝包。
+- Release 新增 SHA-256 校驗檔案，供 Gitee 自動更新驗證。
+
 ## 0.9.5 - 2026-11-17
 
 ### English

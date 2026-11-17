@@ -221,9 +221,14 @@ class UpdateInstallerService {
     final versionFile = File(
       '${payload.path}${Platform.pathSeparator}version.json',
     );
+    final maintenanceLauncher = File(
+      '${payload.path}${Platform.pathSeparator}maintenance'
+      '${Platform.pathSeparator}GitGuiExpandLauncher.exe',
+    );
     if (!await executable.exists() ||
         !await appData.exists() ||
-        !await flutterData.exists()) {
+        !await flutterData.exists() ||
+        !await maintenanceLauncher.exists()) {
       throw const FileSystemException('新版本目录缺少应用运行文件');
     }
     if (!await versionFile.exists()) {

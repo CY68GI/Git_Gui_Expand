@@ -48,6 +48,25 @@ void main() {
     expect(asset.size, 123);
   });
 
+  test('selects a Gitee Windows release asset and checksum text', () {
+    final hash = _repeat('e');
+    final asset = service.selectWindowsAsset([
+      {
+        'name': 'Git_Gui_Expand-v0.9.6-windows-x64.zip',
+        'browser_download_url': 'https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases/download/v0.9.6/Git_Gui_Expand-v0.9.6-windows-x64.zip',
+      },
+    ], source: UpdateSource.gitee);
+
+    expect(asset, isNotNull);
+    expect(asset!.name, contains('windows-x64.zip'));
+    expect(
+      service.extractSha256FromChecksumText(
+        '$hash  Git_Gui_Expand-v0.9.6-windows-x64.zip',
+      ),
+      hash,
+    );
+  });
+
   test('rejects release assets without GitHub HTTPS URL or SHA-256', () {
     expect(
       service.selectWindowsAsset([
@@ -171,6 +190,7 @@ void main() {
       expect(source, contains(r'UTF8Encoding]::new($false)'));
       expect(source, contains('"current-version.txt"'));
       expect(source, contains('"LICENSE"'));
+      expect(source, contains('"maintenance"'));
     },
   );
 

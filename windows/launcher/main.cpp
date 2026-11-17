@@ -442,7 +442,11 @@ void CleanupDownloadedUpdatePackages(const fs::path& root) {
     const bool archive =
         fs::is_regular_file(status) &&
         (name.rfind(L"git_gui_expand-", 0) == 0 &&
-         (name.size() >= 4 && name.substr(name.size() - 4) == L".zip"));
+         ((name.size() >= 4 && name.substr(name.size() - 4) == L".zip") ||
+          (name.size() >= 7 &&
+           name.substr(name.size() - 7) == L".sha256") ||
+          (name.size() >= 10 &&
+           name.substr(name.size() - 10) == L".sha256sum")));
     const bool partial =
         fs::is_regular_file(status) &&
         (name.size() >= 5 && name.substr(name.size() - 5) == L".part");

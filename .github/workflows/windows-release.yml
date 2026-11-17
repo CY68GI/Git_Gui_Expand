@@ -54,6 +54,7 @@ jobs:
         run: |
           gh release create $env:GITHUB_REF_NAME `
             "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
+            "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip.sha256" `
             --title "Git GUI Expand $env:GITHUB_REF_NAME" `
             --notes-file RELEASE_NOTES.md `
             --verify-tag
@@ -64,5 +65,8 @@ jobs:
         run: |
           ./tool/upload_gitee_release.ps1 `
             -Tag $env:GITHUB_REF_NAME `
-            -AssetPath "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
+            -AssetPath @(
+              "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip",
+              "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip.sha256"
+            ) `
             -NotesPath RELEASE_NOTES.md

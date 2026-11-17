@@ -12,7 +12,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.5`
+当前版本：`0.9.6`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -37,6 +37,7 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 - 可备份并清空选定远端历史，把目标分支替换为一个空根提交并删除其它分支和标签；
   本地文件不变，但本地分支与索引同步为空，文件随后显示为未跟踪；受保护分支会阻止操作。
 - 实时显示 Git 状态，可把暂存、取消暂存和提交说明加入执行计划。
+- 可创建、切换、重命名和删除本地分支，分支操作同样先进入执行计划。
 - 显示仓库名称、分支、仓库总大小、文件数量、待提交数量和每个文件大小。
 - 大小单位支持 IEC 二进制、SI 十进制、Byte 和 bit。
 - 支持跟随系统、浅色和深色三种显示模式，并提供经典绿、海洋蓝、星夜紫、
@@ -49,6 +50,8 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 - 普通日志记录关键事件，详细日志记录导航、选择、设置、更新及每条 Git 命令和输出。
 - 普通日志和详细日志使用当前界面语言生成；Git 原始命令及技术错误内容保持原样。
 - 在“设置 → 关于”中可一键创建指向稳定 Launcher 的桌面快捷方式。
+- 在“设置 → 关于”中显示 `git_gui_expand` 和 `GitGuiExpandLauncher` 的实际文件版本。
+- 在“设置 → 关于”中可扫描旧版本与安装包，并一键清除。
 - 全新解压目录缺少版本标记时，Launcher 可从唯一有效的 `versions/<版本>` 自动恢复，
   也支持直接运行根目录中平铺的 Release 文件。
 - 新增应用内使用指南和 [完整使用指南](docs/USER_GUIDE.zh-CN.md)。
@@ -80,7 +83,7 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 | 通过 Git 对象与索引复制 | ✅ | Git 没有原生 `git cp` |
 | `git rm` / `git clean` 删除 | ✅ | 需要危险操作确认 |
 | 显示当前分支 | ✅ | 在提交工作区显示 |
-| 创建、切换、重命名、删除分支 | ❌ | 只显示当前分支 |
+| 创建、切换、重命名、删除分支 | ✅ | 本地操作先进入执行计划 |
 | Merge、rebase、cherry-pick | ❌ | 未实现 |
 | Reset、revert、restore 界面 | ❌ | 内部 reset 仅供清空远端历史使用 |
 | `git stash` | ❌ | 未实现 |
@@ -179,7 +182,8 @@ build\windows\x64\runner\Release\
 - 清空远端通过 `git ls-remote` 查看分支/标签，先抓取到本地备份引用，再创建一个
   空根提交，并使用原子强推替换目标分支、删除其它分支和标签。确认时必须输入
   `远端项目全称/目标分支`。受保护分支通常会导致整个操作被拒绝。
-- 应用不会拉取、切换分支或以普通操作改写本地提交历史；推送、删除和远端清空
+- 应用不会自动拉取或以普通操作改写本地提交历史；分支切换需在计划中确认，
+  推送、删除和远端清空
   都需要在执行计划中明确确认。
 - 冲突解决、分支图和自动拉取尚未实现；推送只处理当前分支，但支持多个远端。
 
@@ -207,7 +211,9 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.5/                    # 当前唯一保留的版本
+    0.9.6/                    # 当前唯一保留的版本
+      maintenance/
+        GitGuiExpandLauncher.exe
       git_gui_expand.exe
       data/
       version.json
@@ -231,16 +237,21 @@ build\windows\x64\runner\Release\
 旧版本保存在 `%APPDATA%` 的设置会在首次启动时复制到新位置。日志查看器顶部提供
 当前日志目录路径，并可直接打开该目录。
 
-更新检查请求 GitHub 的公开 Releases API。发现新版本后可以点击“立即更新并重启”：
+更新页面可以选择 GitHub 或 Gitee 公开 Releases API；中国大陆网络建议使用 Gitee。
+Gitee Release 同时提供 ZIP 和 SHA-256 校验文件。发现新版本后可以点击“立即更新并重启”：
 
 1. 自动下载 Release 中的 Windows x64 ZIP；
-2. 使用 GitHub Release 提供的 SHA-256 校验下载文件；
+2. 使用所选 GitHub/Gitee Release 提供的 SHA-256 校验下载文件；
 3. 解压并验证 `versions/<版本>` 内的 EXE、Flutter 数据和 `version.json`；
 4. 将新版本目录移动到 `versions/<新版本>`；
 5. 写入 `pending-version.txt`，应用退出；
 6. 常驻 Launcher 原子切换 `current-version.txt` 并启动新版本；
 7. 新版本 8 秒内异常退出时恢复上一版本，不清理版本目录；
 8. 新版本通过启动检查后，只保留当前新版本，并清理其他版本和下载的更新包。
+
+应用启动时也会主动执行上述清理。由于旧 Launcher 无法自行更新，发布包在版本
+目录中携带维护用 Launcher；当前应用退出后，维护助手会重试覆盖根目录
+`GitGuiExpandLauncher.exe`，确保后续启动使用新版 Launcher。
 
 `v0.8.1` 起使用 Launcher 更新架构。`v0.8.0` 及更早版本的原 PowerShell 更新助手存在
 进程未启动问题，必须先手动安装一次 Launcher 版本。`v0.8.1` 和 `v0.8.2` 的哈希校验还会
@@ -250,7 +261,7 @@ build\windows\x64\runner\Release\
 提示，不会执行不完整更新。
 
 自动更新之外始终提供“打开发布页”按钮。网络较慢、自动更新材料不完整或用户希望
-手动选择安装包时，可以直接打开当前 GitHub Release 页面。
+手动选择安装包时，可以直接打开当前所选平台的 Release 页面。
 
 Release 页面中 Assets 上方的更新说明由 `tool/generate_release_notes.ps1` 自动生成，
 只包含上一个 Git 标签到当前标签之间的 CHANGELOG 内容和提交记录，不再附加全部历史日志。

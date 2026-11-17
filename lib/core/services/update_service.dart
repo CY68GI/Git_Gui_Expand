@@ -6,6 +6,8 @@ import 'app_log_service.dart';
 
 enum UpdateCheckStatus { updateAvailable, upToDate, unavailable }
 
+enum UpdateSource { github, gitee }
+
 class UpdateAsset {
   const UpdateAsset({
     required this.name,
@@ -33,6 +35,7 @@ class UpdateCheckResult {
     this.downloadUrl = '',
     this.sha256 = '',
     this.assetSize = 0,
+    this.source = UpdateSource.github,
   });
 
   final UpdateCheckStatus status;
@@ -46,6 +49,7 @@ class UpdateCheckResult {
   final String downloadUrl;
   final String sha256;
   final int assetSize;
+  final UpdateSource source;
 }
 
 class UpdateService {
@@ -55,7 +59,16 @@ class UpdateService {
 
   AppLogService get _log => logService ?? AppLogService.instance;
 
-  Future<UpdateCheckResult> checkForUpdates() async {
+  Future<UpdateCheckResult> checkForUpdates({
+    UpdateSource source = UpdateSource.github,
+  }) {
+    return switch (source) {
+      UpdateSource.github => _checkGitHub(),
+      UpdateSource.gitee => _checkGitee(),
+    };
+  }
+
+  Future<UpdateCheckResult> _checkGitHub() async {
     _log.info('update', '开始检查 GitHub Release 更新');
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 8)
@@ -181,7 +194,191 @@ class UpdateService {
     }
   }
 
-  UpdateAsset? selectWindowsAsset(Object? rawAssets) {
+  Future<UpdateCheckResult> _checkGitee() async {
+    _log.info('update', '开始检查 Gitee Release 更新');
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 8)
+      ..userAgent = 'GitGUIExpand/${AppInfo.version}';
+    try {
+      final request = await client
+          .getUrl(Uri.parse(AppInfo.giteeLatestReleaseApi))
+          .timeout(const Duration(seconds: 8));
+      request.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final response = await request.close().timeout(
+        const Duration(seconds: 8),
+      );
+      final text = await response.transform(utf8.decoder).join();
+      if (response.statusCode == HttpStatus.notFound) {
+        return const UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: '仓库暂未发布 Gitee Release，可前往发布页查看。',
+          releaseUrl: AppInfo.giteeReleasesUrl,
+          source: UpdateSource.gitee,
+        );
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: 'Gitee 返回 HTTP ${response.statusCode}，请稍后重试。',
+          releaseUrl: AppInfo.giteeReleasesUrl,
+          source: UpdateSource.gitee,
+        );
+      }
+      final decoded = jsonDecode(text);
+      if (decoded is! Map<String, dynamic>) {
+        return const UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: 'Gitee 更新描述格式无法识别。',
+          source: UpdateSource.gitee,
+        );
+      }
+      final tag = (decoded['tag_name'] as String? ?? '').trim();
+      final latestVersion = _normalizeVersion(tag);
+      final releaseUrl = tag.isEmpty
+          ? AppInfo.giteeReleasesUrl
+          : '${AppInfo.giteeReleasesUrl}/tag/$tag';
+      if (latestVersion.isEmpty) {
+        return UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: 'Gitee 公开 Release 没有可识别的版本号。',
+          releaseUrl: releaseUrl,
+          source: UpdateSource.gitee,
+        );
+      }
+      final comparison = compareVersions(latestVersion, AppInfo.version);
+      var windowsAsset = comparison > 0
+          ? selectWindowsAsset(decoded['assets'], source: UpdateSource.gitee)
+          : null;
+      if (comparison > 0 &&
+          windowsAsset != null &&
+          windowsAsset.sha256.isEmpty) {
+        windowsAsset = await _resolveGiteeDigest(
+          client,
+          decoded['assets'],
+          windowsAsset,
+        );
+      }
+      if (comparison > 0 &&
+          (windowsAsset == null || windowsAsset.sha256.isEmpty)) {
+        return UpdateCheckResult(
+          status: UpdateCheckStatus.unavailable,
+          message: '发现 Gitee 新版本，但缺少带 SHA-256 校验文件的 Windows x64 ZIP。',
+          latestVersion: latestVersion,
+          releaseName: decoded['name'] as String? ?? '',
+          releaseNotes: decoded['body'] as String? ?? '',
+          releaseUrl: releaseUrl,
+          publishedAt: decoded['created_at'] as String? ?? '',
+          source: UpdateSource.gitee,
+        );
+      }
+      final result = UpdateCheckResult(
+        status: comparison > 0
+            ? UpdateCheckStatus.updateAvailable
+            : UpdateCheckStatus.upToDate,
+        message: comparison > 0
+            ? '发现可用的 Gitee 新版本，可直接下载、校验并自动重启更新。'
+            : '当前版本 v${AppInfo.version} 已是 Gitee 最新版本。',
+        latestVersion: latestVersion,
+        releaseName: decoded['name'] as String? ?? '',
+        releaseNotes: decoded['body'] as String? ?? '',
+        releaseUrl: releaseUrl,
+        publishedAt: decoded['created_at'] as String? ?? '',
+        assetName: windowsAsset?.name ?? '',
+        downloadUrl: windowsAsset?.downloadUrl ?? '',
+        sha256: windowsAsset?.sha256 ?? '',
+        assetSize: windowsAsset?.size ?? 0,
+        source: UpdateSource.gitee,
+      );
+      _log.info(
+        'update',
+        'Gitee 更新检查完成：${result.status.name} latest=$latestVersion',
+      );
+      return result;
+    } on SocketException {
+      return const UpdateCheckResult(
+        status: UpdateCheckStatus.unavailable,
+        message: '无法连接 Gitee，请检查网络后重试。',
+        releaseUrl: AppInfo.giteeReleasesUrl,
+        source: UpdateSource.gitee,
+      );
+    } on HttpException {
+      return const UpdateCheckResult(
+        status: UpdateCheckStatus.unavailable,
+        message: 'Gitee 网络请求失败，请稍后重试。',
+        releaseUrl: AppInfo.giteeReleasesUrl,
+        source: UpdateSource.gitee,
+      );
+    } catch (error) {
+      _log.error('update', 'Gitee 更新检查异常：$error');
+      return UpdateCheckResult(
+        status: UpdateCheckStatus.unavailable,
+        message: 'Gitee 更新检查失败：$error',
+        releaseUrl: AppInfo.giteeReleasesUrl,
+        source: UpdateSource.gitee,
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<UpdateAsset?> _resolveGiteeDigest(
+    HttpClient client,
+    Object? rawAssets,
+    UpdateAsset windowsAsset,
+  ) async {
+    if (rawAssets is! List) return windowsAsset;
+    final expectedNames = {
+      '${windowsAsset.name}.sha256',
+      '${windowsAsset.name}.sha256sum',
+      '${windowsAsset.name}.sha256.txt',
+    }.map((name) => name.toLowerCase()).toSet();
+    String? checksumUrl;
+    for (final raw in rawAssets) {
+      if (raw is! Map) continue;
+      final name = (raw['name'] as String? ?? '').trim().toLowerCase();
+      if (!expectedNames.contains(name)) continue;
+      checksumUrl = (raw['browser_download_url'] as String? ?? '').trim();
+      if (checksumUrl.isNotEmpty) break;
+    }
+    if (checksumUrl == null || checksumUrl.isEmpty) return windowsAsset;
+    final uri = Uri.tryParse(checksumUrl);
+    if (uri == null || uri.scheme != 'https' || uri.host != 'gitee.com') {
+      return windowsAsset;
+    }
+    try {
+      final request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 8));
+      request.headers.set(HttpHeaders.acceptHeader, 'text/plain');
+      final response = await request.close().timeout(
+        const Duration(seconds: 8),
+      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return windowsAsset;
+      }
+      final text = await response.transform(utf8.decoder).join();
+      final digest = extractSha256FromChecksumText(text) ?? '';
+      if (digest.isEmpty) return windowsAsset;
+      return UpdateAsset(
+        name: windowsAsset.name,
+        downloadUrl: windowsAsset.downloadUrl,
+        sha256: digest,
+        size: windowsAsset.size,
+      );
+    } catch (_) {
+      return windowsAsset;
+    }
+  }
+
+  String? extractSha256FromChecksumText(String text) {
+    final match = RegExp(r'\b([a-fA-F0-9]{64})\b').firstMatch(text);
+    return match?.group(1)?.toLowerCase();
+  }
+
+  UpdateAsset? selectWindowsAsset(
+    Object? rawAssets, {
+    UpdateSource source = UpdateSource.github,
+  }) {
     if (rawAssets is! List) return null;
     UpdateAsset? fallback;
     for (final raw in rawAssets) {
@@ -194,10 +391,12 @@ class UpdateService {
         continue;
       }
       final uri = Uri.tryParse(urlText);
+      final allowedHosts = source == UpdateSource.github
+          ? const {'github.com', 'objects.githubusercontent.com'}
+          : const {'gitee.com'};
       if (uri == null ||
           uri.scheme != 'https' ||
-          (uri.host != 'github.com' &&
-              uri.host != 'objects.githubusercontent.com')) {
+          !allowedHosts.contains(uri.host)) {
         continue;
       }
       final digest = (raw['digest'] as String? ?? '').trim().toLowerCase();

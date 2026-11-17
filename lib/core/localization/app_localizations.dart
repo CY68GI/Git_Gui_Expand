@@ -298,6 +298,93 @@ class AppLocalizations {
           : '建立桌面捷徑失敗：${match.group(1)}';
     }
 
+    match = RegExp(r'^创建分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Create branch ${match.group(1)}'
+          : '建立分支 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git branch -- (.+)，从当前 HEAD 创建本地分支。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git branch -- ${match.group(1)} to create a local branch from the current HEAD.'
+          : '執行 git branch -- ${match.group(1)}，從目前 HEAD 建立本機分支。';
+    }
+    match = RegExp(r'^已创建分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Created branch ${match.group(1)}'
+          : '已建立分支 ${match.group(1)}';
+    }
+    match = RegExp(r'^切换到分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Switch to branch ${match.group(1)}'
+          : '切換到分支 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git switch (.+)。未提交修改发生冲突时 Git 会拒绝切换。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git switch ${match.group(1)}. Git refuses the switch if uncommitted changes conflict.'
+          : '執行 git switch ${match.group(1)}。未提交修改發生衝突時 Git 會拒絕切換。';
+    }
+    match = RegExp(r'^已切换到分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Switched to branch ${match.group(1)}'
+          : '已切換到分支 ${match.group(1)}';
+    }
+    match = RegExp(r'^已经位于分支 (.+)。$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Already on branch ${match.group(1)}.'
+          : '已經位於分支 ${match.group(1)}。';
+    }
+    match = RegExp(r'^重命名分支 (.+) -> (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Rename branch ${match.group(1)} to ${match.group(2)}'
+          : '重新命名分支 ${match.group(1)} 為 ${match.group(2)}';
+    }
+    match = RegExp(r'^执行 git branch -m (.+) (.+)。$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git branch -m ${match.group(1)} ${match.group(2)}.'
+          : '執行 git branch -m ${match.group(1)} ${match.group(2)}。';
+    }
+    match = RegExp(r'^已重命名分支 (.+) 为 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Renamed branch ${match.group(1)} to ${match.group(2)}'
+          : '已重新命名分支 ${match.group(1)} 為 ${match.group(2)}';
+    }
+    match = RegExp(r'^删除分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Delete branch ${match.group(1)}'
+          : '刪除分支 ${match.group(1)}';
+    }
+    match = RegExp(r'^执行 git branch -D (.+)，强制删除未合并分支。$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git branch -D ${match.group(1)} to force-delete an unmerged branch.'
+          : '執行 git branch -D ${match.group(1)}，強制刪除未合併分支。';
+    }
+    match = RegExp(r'^执行 git branch -d (.+)，仅允许删除已合并分支。$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git branch -d ${match.group(1)}. Only merged branches may be deleted.'
+          : '執行 git branch -d ${match.group(1)}。僅允許刪除已合併分支。';
+    }
+    match = RegExp(r'^已删除分支 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Deleted branch ${match.group(1)}'
+          : '已刪除分支 ${match.group(1)}';
+    }
+
     match = RegExp(r'^(移动|复制) (\d+) 项到 (.+)$').firstMatch(source);
     if (match != null) {
       final isMove = match.group(1) == '移动';
@@ -706,6 +793,52 @@ class AppLocalizations {
       '每次成功启动后只保留当前版本，删除其他版本和下载的更新包。': 'Every successful startup keeps only the current version and removes other versions and downloaded update packages.',
       '配色方案统一应用到界面表面、图标、状态徽标、按钮和提示。': 'Color schemes now apply consistently to surfaces, icons, status badges, buttons, and messages.',
       '三份 README 增加 Git 功能覆盖表，明确已完成和未完成功能。': 'All three READMEs now include a Git feature matrix showing completed and pending capabilities.',
+      '旧版本与安装包清理': 'Old version and installer cleanup',
+      '扫描旧版本与安装包': 'Scan old versions and installers',
+      '当前版本：{version}。只清理旧版本、旧安装包和旧平铺程序文件，不删除 userdata 数据。': 'Current version: {version}. Only old versions, installers, and legacy flat app files are removed; userdata is preserved.',
+      '未发现旧版本或旧安装包，当前目录已经是干净状态。':
+          'No old versions or installers were found. The directory is clean.',
+      '扫描到 {count} 项，可释放 {size}。':
+          'Found {count} items and {size} can be freed.',
+      '已清除 {count} 项，共释放 {size}。': 'Removed {count} items and freed {size}.',
+      '已清除 {removed} 项；{failed} 项无法删除，请查看详细日志。': 'Removed {removed} items; {failed} could not be deleted. Check the detailed log.',
+      '重新扫描': 'Scan again',
+      '一键清除': 'Clean all',
+      '旧版本目录': 'Old version directory',
+      '更新安装包': 'Downloaded installer',
+      '未完成下载': 'Partial download',
+      '临时解压目录': 'Staging directory',
+      '旧更新脚本': 'Legacy update script',
+      '旧平铺程序文件': 'Legacy flat app file',
+      '旧平铺程序目录': 'Legacy flat app directory',
+      '分支管理': 'Branch management',
+      '刷新分支': 'Refresh branches',
+      '当前': 'Current',
+      '当前没有可显示的本地分支。': 'No local branches are available.',
+      '新分支名称或重命名后的名称': 'New branch name or renamed name',
+      '例如 feature/login': 'For example feature/login',
+      '创建分支': 'Create branch',
+      '切换分支': 'Switch branch',
+      '重命名分支': 'Rename branch',
+      '删除分支': 'Delete branch',
+      '删除未合并分支时强制使用 git branch -D':
+          'Use git branch -D to force-delete an unmerged branch',
+      '不能删除当前分支，请先切换到其他分支。':
+          'Cannot delete the current branch. Switch to another branch first.',
+      '更新源': 'Update source',
+      'Gitee 更新源适合中国大陆网络环境。':
+          'The Gitee source is recommended for networks in mainland China.',
+      'GitHub 更新源通常获取国际发布版本。':
+          'The GitHub source retrieves the international release.',
+      '未找到或无法读取版本': 'Version not found or unreadable',
+      '修复根目录 Launcher 未更新并提供清理扫描':
+          'Fixed root Launcher updates and added cleanup scanning',
+      '应用启动后自动清理旧版本、下载包、临时目录和旧平铺程序文件。': 'The app now cleans old versions, installers, staging folders, and legacy flat app files at startup.',
+      '新版本携带维护用 Launcher，应用退出后安全更新根目录 Launcher。': 'New versions include a maintenance Launcher that safely updates the root Launcher after the app exits.',
+      '设置关于页新增扫描窗口和一键清除旧版本内容。': 'Settings → About now provides a scan window and one-click cleanup for old version content.',
+      '关于页显示 git_gui_expand 和 GitGuiExpandLauncher 实际版本。': 'About now shows the actual git_gui_expand and GitGuiExpandLauncher file versions.',
+      '新增分支创建、切换、重命名、安全删除和强制删除。': 'Added local branch creation, switching, renaming, safe deletion, and force deletion.',
+      '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。': 'Updates now support GitHub and Gitee sources with SHA-256 verification.',
     },
     'zh_Hant': {
       '当前操作尚未完成。': '目前操作尚未完成。',
@@ -793,6 +926,50 @@ class AppLocalizations {
       '配色方案统一应用到界面表面、图标、状态徽标、按钮和提示。': '配色方案統一套用到介面表面、圖示、狀態徽章、按鈕和提示。',
       '三份 README 增加 Git 功能覆盖表，明确已完成和未完成功能。':
           '三份 README 增加 Git 功能覆蓋表，明確列出已完成和未完成功能。',
+      '旧版本与安装包清理': '舊版本與安裝包清理',
+      '扫描旧版本与安装包': '掃描舊版本與安裝包',
+      '当前版本：{version}。只清理旧版本、旧安装包和旧平铺程序文件，不删除 userdata 数据。':
+          '目前版本：{version}。只清理舊版本、舊安裝包和舊平鋪程式檔案，不刪除 userdata 資料。',
+      '未发现旧版本或旧安装包，当前目录已经是干净状态。': '未發現舊版本或舊安裝包，目前目錄已經是乾淨狀態。',
+      '扫描到 {count} 项，可释放 {size}。': '掃描到 {count} 項，可釋放 {size}。',
+      '已清除 {count} 项，共释放 {size}。': '已清除 {count} 項，共釋放 {size}。',
+      '已清除 {removed} 项；{failed} 项无法删除，请查看详细日志。':
+          '已清除 {removed} 項；{failed} 項無法刪除，請查看詳細日誌。',
+      '重新扫描': '重新掃描',
+      '一键清除': '一鍵清除',
+      '旧版本目录': '舊版本目錄',
+      '更新安装包': '更新安裝包',
+      '未完成下载': '未完成下載',
+      '临时解压目录': '臨時解壓目錄',
+      '旧更新脚本': '舊更新指令碼',
+      '旧平铺程序文件': '舊平鋪程式檔案',
+      '旧平铺程序目录': '舊平鋪程式目錄',
+      '分支管理': '分支管理',
+      '刷新分支': '重新整理分支',
+      '当前': '目前',
+      '当前没有可显示的本地分支。': '目前沒有可顯示的本機分支。',
+      '新分支名称或重命名后的名称': '新分支名稱或重新命名後的名稱',
+      '例如 feature/login': '例如 feature/login',
+      '创建分支': '建立分支',
+      '切换分支': '切換分支',
+      '重命名分支': '重新命名分支',
+      '删除分支': '刪除分支',
+      '删除未合并分支时强制使用 git branch -D': '刪除未合併分支時強制使用 git branch -D',
+      '不能删除当前分支，请先切换到其他分支。': '不能刪除目前分支，請先切換到其他分支。',
+      '更新源': '更新來源',
+      'Gitee 更新源适合中国大陆网络环境。': 'Gitee 更新來源適合中國大陸網路環境。',
+      'GitHub 更新源通常获取国际发布版本。': 'GitHub 更新來源通常取得國際發布版本。',
+      '未找到或无法读取版本': '找不到或無法讀取版本',
+      '修复根目录 Launcher 未更新并提供清理扫描': '修復根目錄 Launcher 未更新並提供清理掃描',
+      '应用启动后自动清理旧版本、下载包、临时目录和旧平铺程序文件。': '應用程式啟動後自動清理舊版本、下載包、臨時目錄和舊平鋪程式檔案。',
+      '新版本携带维护用 Launcher，应用退出后安全更新根目录 Launcher。':
+          '新版本攜帶維護用 Launcher，應用程式結束後安全更新根目錄 Launcher。',
+      '设置关于页新增扫描窗口和一键清除旧版本内容。': '設定關於頁新增掃描視窗和一鍵清除舊版本內容。',
+      '关于页显示 git_gui_expand 和 GitGuiExpandLauncher 实际版本。':
+          '關於頁顯示 git_gui_expand 和 GitGuiExpandLauncher 實際版本。',
+      '新增分支创建、切换、重命名、安全删除和强制删除。': '新增本機分支建立、切換、重新命名、安全刪除和強制刪除。',
+      '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。':
+          '更新支援 GitHub 與 Gitee 雙來源，並使用 SHA-256 校驗。',
       '可在本窗口中选中并复制文字。完整指南保存在 {path}。': '可在此視窗中選取並複製文字。完整指南保存在 {path}。',
     },
   };

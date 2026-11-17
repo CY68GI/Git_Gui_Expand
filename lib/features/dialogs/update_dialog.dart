@@ -36,6 +36,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
   bool _installFailed = false;
   double? _installPercent;
   String? _installMessage;
+  UpdateSource _source = UpdateSource.github;
 
   @override
   void initState() {
@@ -147,6 +148,59 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.tr('更新源'),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          SegmentedButton<UpdateSource>(
+                            segments: [
+                              ButtonSegment(
+                                value: UpdateSource.github,
+                                label: Text(l10n.tr('GitHub')),
+                                icon: const Icon(Icons.code_rounded, size: 16),
+                              ),
+                              ButtonSegment(
+                                value: UpdateSource.gitee,
+                                label: Text(l10n.tr('Gitee')),
+                                icon: const Icon(
+                                  Icons.cloud_outlined,
+                                  size: 16,
+                                ),
+                              ),
+                            ],
+                            selected: {_source},
+                            showSelectedIcon: false,
+                            onSelectionChanged: _isChecking || _isInstalling
+                                ? null
+                                : (selected) {
+                                    setState(() {
+                                      _source = selected.first;
+                                      _result = null;
+                                    });
+                                    _checkForUpdates();
+                                  },
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _source == UpdateSource.gitee
+                            ? l10n.tr('Gitee 更新源适合中国大陆网络环境。')
+                            : l10n.tr('GitHub 更新源通常获取国际发布版本。'),
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                       if (_result != null) ...[
                         _buildResult(context, _result!),
                         const SizedBox(height: 18),
@@ -210,7 +264,11 @@ class _UpdateDialogState extends State<UpdateDialog> {
         TextButton.icon(
           onPressed: _isInstalling
               ? null
-              : () => _service.openExternalUrl(AppInfo.repositoryUrl),
+              : () => _service.openExternalUrl(
+                  _source == UpdateSource.gitee
+                      ? AppInfo.giteeRepositoryUrl
+                      : AppInfo.repositoryUrl,
+                ),
           icon: const Icon(Icons.code_rounded, size: 16),
           label: Text(l10n.tr('打开仓库')),
         ),
@@ -443,7 +501,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       _installMessage = null;
       _installPercent = null;
     });
-    final result = await _service.checkForUpdates();
+    final result = await _service.checkForUpdates(source: _source);
     if (!mounted) return;
     setState(() {
       _result = result;

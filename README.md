@@ -13,7 +13,7 @@ an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.5`
+Current version: `0.9.6`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -26,7 +26,8 @@ Current version: `0.9.5`
 - Select files and folders with checkboxes and perform batch operations.
 - Cut, copy, paste, rename, move, and delete through Git commands.
 - Review every repository mutation in a pending operation plan before execution.
-- Stage, unstage, commit, push, and manage multiple remotes.
+- Stage, unstage, commit, push, manage multiple remotes, and create, switch,
+  rename, or delete local branches.
 - Manage GitHub, Gitee, GitLab, Bitbucket, and generic Git remotes.
 - Clear a selected remote history with an atomic empty-root commit after an
   explicit project/branch confirmation.
@@ -40,6 +41,10 @@ Current version: `0.9.5`
   operating-system language.
 - Record normal and detailed logs in the selected interface language.
 - Create a desktop shortcut from **Settings → About**.
+- Show the actual executable versions of `git_gui_expand` and
+  `GitGuiExpandLauncher` in **Settings → About**.
+- Scan and one-click clean old versions and downloaded installers from
+  **Settings → About**.
 - Use automatic updates through a stable Launcher and isolated version
   directories, with startup health checks and rollback.
 - Keep only the current version after a successful update and remove downloaded
@@ -66,7 +71,7 @@ Legend: `✅` implemented in the application, `❌` not currently implemented.
 | Copy through Git objects and index | ✅ | Git has no native `git cp` |
 | `git rm` / `git clean` deletion | ✅ | Dangerous confirmation required |
 | Display current branch | ✅ | Shown in the commit workspace |
-| Create, switch, rename, delete branches | ❌ | Only the current branch is displayed |
+| Create, switch, rename, delete branches | ✅ | Planned locally before execution |
 | Merge, rebase, cherry-pick | ❌ | Not implemented |
 | Reset, revert, restore UI | ❌ | Internal reset is used only by remote-history clearing |
 | `git stash` | ❌ | Not implemented |
@@ -112,7 +117,7 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.5
+.\tool\package_windows_release.ps1 -Tag v0.9.6
 ```
 
 ## Release layout
@@ -122,7 +127,9 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.5/
+    0.9.6/
+      maintenance/
+        GitGuiExpandLauncher.exe
       git_gui_expand.exe
       flutter_windows.dll
       data/
@@ -161,6 +168,10 @@ successful operations.
 
 ## Updates
 
+The update page supports both GitHub and Gitee as release sources. Choose Gitee
+for networks in mainland China. Gitee releases include the ZIP and a companion
+SHA-256 file.
+
 The Launcher downloads and verifies a Windows x64 ZIP, extracts the new version
 to `versions/<version>`, and switches versions after the running application
 exits. A new version that does not stay alive for the startup health check is
@@ -170,6 +181,12 @@ After a successful update, only the current version is retained. All older
 version directories, downloaded update ZIPs, partial downloads, and staged
 extraction folders are removed. Settings, logs, recent repositories, and other
 `userdata` files are shared across versions.
+
+The app also performs the same cleanup during startup. This is required because
+older Launcher versions cannot update themselves. The payload includes a
+maintenance Launcher; after the running app exits, a maintenance helper retries
+copying it over the root `GitGuiExpandLauncher.exe` once Windows releases the
+running executable.
 
 Release notes are generated from the previous Git tag to the current tag and are
 provided in English, Simplified Chinese, and Traditional Chinese.

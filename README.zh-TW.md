@@ -12,7 +12,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 檔案工作區操作已初始化的 Git 儲存庫。檔案與版本控制變更都交由本機 Git CLI
 執行，軟體提供可視化操作，不會自行取代 Git。
 
-目前版本：`0.9.5`
+目前版本：`0.9.6`
 
 - GitHub：<https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -26,6 +26,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 - 透過 Git 執行剪下、複製、貼上、重新命名、移動與刪除。
 - 所有會修改儲存庫的操作先進入待執行計畫，確認後才逐步執行。
 - 支援暫存、取消暫存、提交、推送與多平台遠端管理。
+- 可建立、切換、重新命名和刪除本機分支，分支操作同樣先進入執行計畫。
 - 可管理 GitHub、Gitee、GitLab、Bitbucket 與一般 Git 遠端。
 - 輸入「遠端擁有者/專案/分支」確認後，可用原子空根提交清除指定遠端歷史。
 - 可在檔案總管中定位檔案，或使用系統預設應用程式開啟。
@@ -36,6 +37,8 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 - 支援 English、简体中文、繁體中文，預設跟隨作業系統語言。
 - 普通日誌與詳細日誌依目前介面語言產生。
 - 可在「設定 → 關於」一鍵建立桌面捷徑。
+- 可在「設定 → 關於」查看 `git_gui_expand` 和 `GitGuiExpandLauncher` 的實際檔案版本。
+- 可在「設定 → 關於」掃描舊版本與安裝包，並一鍵清除。
 - 使用穩定 Launcher、獨立版本目錄、啟動健康檢查與自動回滾完成更新。
 - 更新成功後只保留目前版本，並清除其他版本、更新 ZIP 和臨時解壓目錄。
 
@@ -60,7 +63,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 | 透過 Git 物件與索引複製 | ✅ | Git 沒有原生 `git cp` |
 | `git rm` / `git clean` 刪除 | ✅ | 需要危險操作確認 |
 | 顯示目前分支 | ✅ | 在提交工作區顯示 |
-| 建立、切換、重新命名、刪除分支 | ❌ | 只顯示目前分支 |
+| 建立、切換、重新命名、刪除分支 | ✅ | 本機操作先進入執行計畫 |
 | Merge、rebase、cherry-pick | ❌ | 未實現 |
 | Reset、revert、restore 介面 | ❌ | 內部 reset 僅供清除遠端歷史使用 |
 | `git stash` | ❌ | 未實現 |
@@ -105,7 +108,7 @@ build\windows\x64\runner\Release\
 建立發布 ZIP：
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.5
+.\tool\package_windows_release.ps1 -Tag v0.9.6
 ```
 
 ## 發布目錄結構
@@ -115,7 +118,9 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.5/
+    0.9.6/
+      maintenance/
+        GitGuiExpandLauncher.exe
       git_gui_expand.exe
       flutter_windows.dll
       data/
@@ -142,11 +147,18 @@ Git GUI Expand/
 
 ## 自動更新與版本保留
 
+更新頁面可選擇 GitHub 或 Gitee Release；中國大陸網路建議使用 Gitee。
+Gitee Release 同時提供 ZIP 和 SHA-256 校驗檔案。
+
 Launcher 會下載並驗證 Windows x64 ZIP，解壓縮到獨立版本目錄，應用程式結束後
 切換版本。新版本未通過啟動檢查時會自動回滾。
 
 更新成功後只保留目前版本，其他舊版本目錄和更新下載包會刪除。設定、日誌、
 最近開啟記錄與其他 `userdata` 檔案由所有版本共用。
+
+應用程式啟動時也會主動執行清理。由於舊 Launcher 無法自行更新，發布包會在版本
+目錄攜帶維護用 Launcher；目前應用程式結束後，維護助手會重試覆蓋根目錄
+`GitGuiExpandLauncher.exe`，確保後續啟動使用新版 Launcher。
 
 ## 文件
 

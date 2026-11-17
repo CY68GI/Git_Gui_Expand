@@ -111,6 +111,42 @@ void main() {
     );
   });
 
+  test('branch operations are queued before Git executes them', () async {
+    final queuedCreate = await controller.createBranch('feature/plan');
+    expect(queuedCreate.isSuccess, isTrue);
+    expect(
+      controller.pendingOperations.single.kind,
+      PlannedOperationKind.createBranch,
+    );
+    expect(await controller.localBranches(), isNot(contains('feature/plan')));
+
+    final created = await controller.executePendingOperations(
+      confirmedDangerous: true,
+    );
+    expect(created.isSuccess, isTrue);
+    expect(await controller.localBranches(), contains('feature/plan'));
+
+    await controller.switchBranch('feature/plan');
+    await controller.executePendingOperations(confirmedDangerous: true);
+    expect(controller.branch, 'feature/plan');
+
+    await controller.renameBranch('feature/plan', 'feature/renamed');
+    await controller.executePendingOperations(confirmedDangerous: true);
+    expect(controller.branch, 'feature/renamed');
+
+    await controller.switchBranch('main');
+    await controller.executePendingOperations(confirmedDangerous: true);
+    await controller.deleteBranch('feature/renamed');
+    final deleted = await controller.executePendingOperations(
+      confirmedDangerous: true,
+    );
+    expect(deleted.isSuccess, isTrue);
+    expect(
+      await controller.localBranches(),
+      isNot(contains('feature/renamed')),
+    );
+  });
+
   test('commit is not run until the plan is executed', () async {
     await File('${repository.path}${Platform.pathSeparator}alpha.txt')
         .writeAsString('changed');

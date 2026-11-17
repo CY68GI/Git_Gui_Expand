@@ -118,6 +118,15 @@ GitService ───────── SettingsService
 标记；多个有效目录时按数字版本段选择最高版本。根目录直接包含
 `git_gui_expand.exe` 与 `data/app.so` 时，提供平铺 Release 兼容启动。
 
+`InstallationMaintenanceService` 在应用启动时执行第二层清理，处理旧 Launcher
+不会运行新版清理代码的迁移场景。它扫描并删除非当前版本目录、更新 ZIP、
+`.part`、`stage-v*`、旧更新脚本和根目录旧平铺程序文件，保留当前版本及
+`userdata`。扫描结果也可通过设置中的 `InstallationCleanupDialog` 手动查看和清除。
+
+发布包在 `versions/<version>/maintenance` 携带新版 Launcher。应用退出后，维护
+PowerShell 助手会重试覆盖根目录 Launcher；这是为了解决 Windows 无法覆盖正在
+运行的可执行文件，以及旧 Launcher 无法自更新的一次性迁移问题。
+
 Release 说明由 `tool/generate_release_notes.ps1` 生成。脚本从当前标签的父提交
 寻找上一个标签，读取 CHANGELOG 中当前标签之前、上个标签之后的全部版本小节，并收集
 `<previousTag>..<currentTag>` 的提交记录。完整历史 CHANGELOG 不会写入 Release 描述。
@@ -220,6 +229,13 @@ Git 状态使用 `git status --porcelain=v1 -z --untracked-files=all`。
 推送先读取当前分支。若 `@{u}` 存在则执行 `git push`；否则读取 remote，
 优先使用 `origin`，否则选择第一个远程并执行 `git push -u <remote> <branch>`。
 应用不会自动提交，也不会在认证失败后尝试交互式密码输入。
+
+## 分支
+
+`GitService.localBranches` 使用 `git for-each-ref refs/heads`；创建使用
+`git branch --`，切换使用 `git switch`，重命名使用 `git branch -m`，
+安全删除使用 `git branch -d`，用户明确选择后才使用 `git branch -D`。
+所有分支操作先进入 `RepositoryController` 的执行计划。
 
 ## 复制
 

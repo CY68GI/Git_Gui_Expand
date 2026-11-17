@@ -75,7 +75,15 @@ Enter a meaningful commit message, review the plan, then confirm execution.
 After a commit step is queued, additional file-change steps are blocked until the
 commit step is removed or executed.
 
-## 5. Push and remotes
+## 5. Branch management
+
+Click the current branch name in the commit workspace to open Branch management.
+The window lists local branches and supports creating, switching, renaming,
+safely deleting merged branches, and force-deleting unmerged branches after an
+explicit option is enabled. Every action is added to the operation plan first.
+The current branch cannot be deleted.
+
+## 6. Push and remotes
 
 The remote manager supports GitHub, Gitee, GitLab, Bitbucket, and generic Git
 remotes.
@@ -89,7 +97,7 @@ Pushes are planned first. If upstream is configured, the software runs
 `git push`; otherwise it prefers `origin`, configures upstream, and reports
 authentication or network failures.
 
-## 6. Clearing remote history
+## 7. Clearing remote history
 
 This is a dangerous operation. It replaces the selected remote branch with a
 single empty root commit and removes other branches and tags. Local files remain,
@@ -107,7 +115,7 @@ Reference backups are stored under
 `refs/gitgui-expand/backup/<remote>`. Protected branches, missing permissions,
 network failures, or servers without atomic push can reject the operation.
 
-## 7. Settings
+## 8. Settings
 
 Settings contains five pages:
 
@@ -144,9 +152,14 @@ Open **Settings → About**, then click **Send shortcut to desktop**. The shortc
 targets `GitGuiExpandLauncher.exe` when available, with the software directory as
 its working directory.
 
-## 8. Updates
+About also displays the actual file versions of `git_gui_expand.exe` and
+`GitGuiExpandLauncher.exe`.
+
+## 9. Updates
 
 The update page checks GitHub Releases and offers **Update and restart now**.
+Select GitHub or Gitee as the source. Gitee is appropriate for networks in
+mainland China; its release provides a companion SHA-256 file for verification.
 The application downloads the Windows x64 ZIP, verifies SHA-256, extracts the
 payload into `versions/<version>`, and exits. The stable Launcher switches the
 current version and starts the new application.
@@ -156,10 +169,19 @@ back. After a successful update, only the current version remains. Older version
 directories, downloaded ZIPs, partial downloads, staged extraction folders, and
 the legacy updater script are removed.
 
+The app also cleans at startup because an old root Launcher may not contain the
+latest cleanup logic. The new version payload contains a maintenance Launcher;
+after the app exits, a helper retries replacing the root Launcher.
+
+Open **Settings → About → Scan old versions and installers** to scan manually.
+The window lists old versions, installers, unfinished downloads, staging
+folders, and legacy app files. **Clean all** removes them while preserving the
+current version and `userdata`.
+
 Use **Open release page** when automatic publication metadata is unavailable or
 network conditions are poor.
 
-## 9. Logs
+## 10. Logs
 
 Open **Logs** from the top bar:
 
@@ -170,7 +192,7 @@ Open **Logs** from the top bar:
 
 Logs are stored in `userdata/logs` beneath the software directory.
 
-## 10. Keyboard shortcuts
+## 11. Keyboard shortcuts
 
 `Ctrl+O` opens a repository.
 
@@ -190,7 +212,7 @@ Logs are stored in `userdata/logs` beneath the software directory.
 
 `Ctrl+Shift+U` adds a push of the current branch to the plan.
 
-## 11. Safety recommendations
+## 12. Safety recommendations
 
 - Back up important repositories before dangerous operations.
 - Review every planned path, branch, remote, and commit message.

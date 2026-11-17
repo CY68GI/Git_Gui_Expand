@@ -39,6 +39,10 @@ Get-ChildItem -LiteralPath $release -Force |
   Copy-Item -Destination $versionStage -Recurse -Force
 Copy-Item -LiteralPath (Join-Path $release "GitGuiExpandLauncher.exe") `
   -Destination $stage -Force
+$maintenanceStage = Join-Path $versionStage "maintenance"
+New-Item -ItemType Directory -Path $maintenanceStage -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $release "GitGuiExpandLauncher.exe") `
+  -Destination $maintenanceStage -Force
 Get-ChildItem -LiteralPath $root -Filter "README*.md" |
   Copy-Item -Destination $stage -Force
 Get-ChildItem -LiteralPath $root -Filter "CHANGELOG*.md" |
@@ -69,6 +73,7 @@ $required = @(
   (Join-Path $versionStage "git_gui_expand.exe"),
   (Join-Path $versionStage "flutter_windows.dll"),
   (Join-Path $versionStage "data/app.so"),
+  (Join-Path $versionStage "maintenance/GitGuiExpandLauncher.exe"),
   (Join-Path $versionStage "version.json")
 )
 foreach ($path in $required) {
@@ -79,5 +84,13 @@ foreach ($path in $required) {
 
 Compress-Archive -Path "$stage/*" -DestinationPath $asset -CompressionLevel Optimal
 $assetFile = Get-Item -LiteralPath $asset
+$hash = (Get-FileHash -LiteralPath $asset -Algorithm SHA256).Hash.ToLowerInvariant()
+$checksumAsset = "$asset.sha256"
+[IO.File]::WriteAllText(
+  $checksumAsset,
+  "$hash  $($assetFile.Name)`n",
+  $utf8NoBom
+)
 Remove-Item -LiteralPath $stage -Recurse -Force
 Write-Output $assetFile.FullName
+Write-Output $checksumAsset

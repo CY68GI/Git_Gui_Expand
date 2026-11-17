@@ -7,11 +7,13 @@ import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/app_storage_service.dart';
 import '../../core/services/desktop_shortcut_service.dart';
+import '../../core/services/executable_version_service.dart';
 import '../../core/services/font_catalog_service.dart';
 import '../../core/services/update_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
+import 'installation_cleanup_dialog.dart';
 
 enum _SettingsSection { font, language, appearance, units, about }
 
@@ -21,11 +23,13 @@ class SettingsDialog extends StatefulWidget {
     required this.controller,
     this.fontCatalogService,
     this.desktopShortcutService,
+    this.versionInfoService,
   });
 
   final RepositoryController controller;
   final FontCatalogService? fontCatalogService;
   final DesktopShortcutService? desktopShortcutService;
+  final ExecutableVersionService? versionInfoService;
 
   @override
   State<SettingsDialog> createState() => _SettingsDialogState();
@@ -37,10 +41,14 @@ class _SettingsDialogState extends State<SettingsDialog> {
       widget.fontCatalogService ?? FontCatalogService();
   late final DesktopShortcutService _desktopShortcuts =
       widget.desktopShortcutService ?? const DesktopShortcutService();
+  late final ExecutableVersionService _versionInfo =
+      widget.versionInfoService ?? const ExecutableVersionService();
   final UpdateService _externalLinks = const UpdateService();
   final TextEditingController _fontSearchController = TextEditingController();
   List<String> _fontFamilies = const [];
   bool _loadingFonts = true;
+  ExecutableVersionInfo? _executableVersions;
+  bool _versionsRequested = false;
   bool _saving = false;
   bool _creatingShortcut = false;
   _SettingsSection _section = _SettingsSection.font;
@@ -64,6 +72,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
       _fontFamilies = fonts;
       _loadingFonts = false;
     });
+  }
+
+  Future<void> _loadExecutableVersions() async {
+    final versions = await _versionInfo.load();
+    if (!mounted) return;
+    setState(() => _executableVersions = versions);
   }
 
   String _fontQuery = '';
@@ -771,52 +785,76 @@ class _SettingsDialogState extends State<SettingsDialog> {
       subtitle: l10n.tr('Windows 优先的 Flutter Git 图形化文件工作区。'),
       children: [
         _SettingsCard(
-          child: Row(
+          child: Column(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.asset(
-                  'assets/icons/app_icon.png',
-                  width: 64,
-                  height: 64,
-                  fit: BoxFit.cover,
-                ),
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.asset(
+                      'assets/icons/app_icon.png',
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppInfo.englishName,
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          l10n.tr('版本 v{version}', {
+                            'version': AppInfo.version,
+                          }),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        Text(
+                          l10n.tr('通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.onSurfaceVariant,
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () =>
+                        _externalLinks.openExternalUrl(AppInfo.repositoryUrl),
+                    icon: const Icon(Icons.code_rounded, size: 16),
+                    label: Text(l10n.tr('打开仓库')),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppInfo.englishName,
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      l10n.tr('版本 v{version}', {'version': AppInfo.version}),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      l10n.tr('通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。'),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant,
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
+              const SizedBox(height: 14),
+              Divider(height: 1, color: colors.outlineVariant),
+              const SizedBox(height: 12),
+              _ExecutableVersionRow(
+                name: 'git_gui_expand',
+                version:
+                    _executableVersions?.applicationVersion ??
+                    '${AppInfo.version}+…',
+                path: _executableVersions?.applicationPath ?? '',
               ),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    _externalLinks.openExternalUrl(AppInfo.repositoryUrl),
-                icon: const Icon(Icons.code_rounded, size: 16),
-                label: Text(l10n.tr('打开仓库')),
+              const SizedBox(height: 8),
+              _ExecutableVersionRow(
+                name: 'GitGuiExpandLauncher',
+                version: (_executableVersions?.launcherVersion ?? '').isEmpty
+                    ? l10n.tr('未找到或无法读取版本')
+                    : _executableVersions!.launcherVersion,
+                path: _executableVersions?.launcherPath ?? '',
               ),
             ],
           ),
@@ -843,18 +881,34 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 ),
               ),
               const SizedBox(height: 11),
-              FilledButton.tonalIcon(
-                onPressed: _creatingShortcut ? null : _createDesktopShortcut,
-                icon: _creatingShortcut
-                    ? const SizedBox(
-                        width: 15,
-                        height: 15,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.add_to_drive_rounded, size: 17),
-                label: Text(
-                  l10n.tr(_creatingShortcut ? '正在创建快捷方式…' : '一键发送到桌面'),
-                ),
+              Wrap(
+                spacing: 9,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    onPressed: _creatingShortcut
+                        ? null
+                        : _createDesktopShortcut,
+                    icon: _creatingShortcut
+                        ? const SizedBox(
+                            width: 15,
+                            height: 15,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.add_to_drive_rounded, size: 17),
+                    label: Text(
+                      l10n.tr(_creatingShortcut ? '正在创建快捷方式…' : '一键发送到桌面'),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _openInstallationCleanup,
+                    icon: const Icon(
+                      Icons.cleaning_services_outlined,
+                      size: 17,
+                    ),
+                    label: Text(l10n.tr('扫描旧版本与安装包')),
+                  ),
+                ],
               ),
             ],
           ),
@@ -942,6 +996,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
   void _selectSection(_SettingsSection section) {
     if (_section == section) return;
     setState(() => _section = section);
+    if (section == _SettingsSection.about && !_versionsRequested) {
+      _versionsRequested = true;
+      _loadExecutableVersions();
+    }
   }
 
   Future<void> _save() async {
@@ -978,6 +1036,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
         duration: const Duration(seconds: 5),
         showCloseIcon: true,
       ),
+    );
+  }
+
+  Future<void> _openInstallationCleanup() async {
+    await showDialog<void>(
+      context: context,
+      builder: (context) => const InstallationCleanupDialog(),
     );
   }
 }
@@ -1710,6 +1775,69 @@ class _AboutTag extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
+    );
+  }
+}
+
+class _ExecutableVersionRow extends StatelessWidget {
+  const _ExecutableVersionRow({
+    required this.name,
+    required this.version,
+    required this.path,
+  });
+
+  final String name;
+  final String version;
+  final String path;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          name == 'git_gui_expand'
+              ? Icons.terminal_rounded
+              : Icons.launch_rounded,
+          size: 17,
+          color: colors.primary,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (path.isNotEmpty)
+                Text(
+                  path,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        SelectableText(
+          version,
+          style: TextStyle(
+            color: colors.primary,
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }

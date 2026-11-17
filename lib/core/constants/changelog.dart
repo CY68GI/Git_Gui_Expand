@@ -14,6 +14,19 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.6',
+    date: '2026-11-17',
+    title: '修复根目录 Launcher 未更新并提供清理扫描',
+    items: [
+      '应用启动后自动清理旧版本、下载包、临时目录和旧平铺程序文件。',
+      '新版本携带维护用 Launcher，应用退出后安全更新根目录 Launcher。',
+      '设置关于页新增扫描窗口和一键清除旧版本内容。',
+      '关于页显示 git_gui_expand 和 GitGuiExpandLauncher 实际版本。',
+      '新增分支创建、切换、重命名、安全删除和强制删除。',
+      '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.5',
     date: '2026-11-17',
     title: '只保留最新版、全局配色与 Git 功能清单',

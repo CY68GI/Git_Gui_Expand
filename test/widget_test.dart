@@ -10,10 +10,13 @@ import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
+import 'package:git_gui_expand/core/services/executable_version_service.dart';
+import 'package:git_gui_expand/core/services/installation_maintenance_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/installation_cleanup_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/update_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/user_guide_dialog.dart';
@@ -127,6 +130,8 @@ void main() {
       expect(find.text('立即更新并重启'), findsOneWidget);
       expect(find.text('打开发布页'), findsOneWidget);
       expect(find.text('打开下载页面'), findsNothing);
+      expect(find.text('Gitee'), findsOneWidget);
+      expect(find.text('更新源'), findsOneWidget);
     },
   );
 
@@ -154,11 +159,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Latest-version-only updates, global colors, and Git coverage'),
+      find.text('Fixed root Launcher updates and added cleanup scanning'),
       findsOneWidget,
     );
-    expect(find.text('v0.9.4'), findsNothing);
-    expect(find.text('只保留最新版、全局配色与 Git 功能清单'), findsNothing);
+    expect(find.text('v0.9.5'), findsNothing);
+    expect(find.text('修复根目录 Launcher 未更新并提供清理扫描'), findsNothing);
   });
 
   testWidgets('settings page exposes all sections and attribution', (
@@ -182,6 +187,7 @@ void main() {
           body: SettingsDialog(
             controller: controller,
             fontCatalogService: _FakeFontCatalogService(),
+            versionInfoService: _FakeExecutableVersionService(),
           ),
         ),
       ),
@@ -236,12 +242,15 @@ void main() {
     expect(find.text('使用繁體中文顯示軟體介面。'), findsOneWidget);
 
     await tester.tap(find.text('关于'));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(
       find.text('感谢 DeepSeek 人工智能和 ChatGPT Codex，两者合力创建、编写、修改此项目。'),
       findsOneWidget,
     );
     expect(find.text('一键发送到桌面'), findsOneWidget);
+    expect(find.text('扫描旧版本与安装包'), findsOneWidget);
+    expect(find.text('0.9.6+19'), findsOneWidget);
+    expect(find.text('0.9.6.19'), findsOneWidget);
     expect(find.text('本项目使用 MIT License 开源许可证。'), findsOneWidget);
   });
 
@@ -436,11 +445,35 @@ void main() {
     expect(find.text('用文件资源打开'), findsOneWidget);
     expect(find.text('用默认打开方式打开'), findsOneWidget);
   });
+
+  testWidgets('maintenance dialog lists artifacts and supports cleanup', (
+    WidgetTester tester,
+  ) async {
+    final service = _FakeMaintenanceService();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: InstallationCleanupDialog(service: service)),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('旧版本与安装包清理'), findsOneWidget);
+    expect(find.text('old-version.zip'), findsOneWidget);
+    expect(find.text('一键清除'), findsOneWidget);
+
+    await tester.tap(find.text('一键清除'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('已清除 1 项'), findsOneWidget);
+    expect(service.cleanupCalls, 1);
+  });
 }
 
 class _FakeUpdateService extends UpdateService {
   @override
-  Future<UpdateCheckResult> checkForUpdates() async {
+  Future<UpdateCheckResult> checkForUpdates({
+    UpdateSource source = UpdateSource.github,
+  }) async {
     return const UpdateCheckResult(
       status: UpdateCheckStatus.updateAvailable,
       message: '测试更新',
@@ -458,4 +491,45 @@ class _FakeUpdateService extends UpdateService {
 class _FakeFontCatalogService extends FontCatalogService {
   @override
   Future<List<String>> loadInstalledFonts() async => const ['Segoe UI'];
+}
+
+class _FakeMaintenanceService extends InstallationMaintenanceService {
+  int cleanupCalls = 0;
+
+  @override
+  Future<MaintenanceScanResult> scan() async {
+    return const MaintenanceScanResult(
+      softwareDirectory: 'C:\\Software',
+      currentVersion: '0.9.6',
+      items: [
+        MaintenanceItem(
+          path: 'C:\\Software\\userdata\\updates\\old-version.zip',
+          kind: MaintenanceItemKind.updateArchive,
+          size: 1024,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<MaintenanceCleanupResult> cleanup(MaintenanceScanResult scan) async {
+    cleanupCalls += 1;
+    return MaintenanceCleanupResult(
+      removed: scan.items,
+      failed: const [],
+      removedBytes: scan.totalBytes,
+    );
+  }
+}
+
+class _FakeExecutableVersionService extends ExecutableVersionService {
+  @override
+  Future<ExecutableVersionInfo> load() async {
+    return const ExecutableVersionInfo(
+      applicationVersion: '0.9.6+19',
+      launcherVersion: '0.9.6.19',
+      applicationPath: 'C:\\Software\\versions\\0.9.6\\git_gui_expand.exe',
+      launcherPath: 'C:\\Software\\GitGuiExpandLauncher.exe',
+    );
+  }
 }

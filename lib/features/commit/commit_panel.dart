@@ -12,6 +12,7 @@ class CommitPanel extends StatefulWidget {
     required this.onTextEditingChanged,
     required this.onPushRequested,
     required this.onManageRemotes,
+    required this.onManageBranches,
     required this.onPlanRequested,
   });
 
@@ -20,6 +21,7 @@ class CommitPanel extends StatefulWidget {
   final ValueChanged<bool> onTextEditingChanged;
   final VoidCallback onPushRequested;
   final VoidCallback onManageRemotes;
+  final VoidCallback onManageBranches;
   final Future<void> Function() onPlanRequested;
 
   @override
@@ -149,24 +151,27 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 8),
                 if (controller.branch.isNotEmpty)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.account_tree_outlined,
-                        size: 14,
-                        color: colors.onSurfaceVariant,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        controller.branch,
-                        style: TextStyle(
-                          fontSize: 11.5,
-                          color: colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w600,
+                  Tooltip(
+                    message: context.l10n.tr('分支管理'),
+                    child: TextButton.icon(
+                      onPressed: controller.isBusy
+                          ? null
+                          : widget.onManageBranches,
+                      icon: const Icon(Icons.account_tree_outlined, size: 15),
+                      label: Text(controller.branch),
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 5,
                         ),
+                        textStyle: Theme.of(context).textTheme.labelMedium
+                            ?.copyWith(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
-                    ],
+                    ),
                   ),
               ],
             ),

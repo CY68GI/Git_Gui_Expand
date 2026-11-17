@@ -9,6 +9,7 @@ import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
 import 'package:git_gui_expand/core/services/desktop_shortcut_service.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
+import 'package:git_gui_expand/core/services/installation_maintenance_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
 
@@ -351,4 +352,73 @@ void main() {
       expect(readme, contains('git stash'));
     }
   });
+
+  test(
+    'installation maintenance keeps current version and user data',
+    () async {
+      final root = temporaryDirectory.path;
+      final versions = Directory('$root${Platform.pathSeparator}versions');
+      await Directory('${versions.path}${Platform.pathSeparator}0.9.6')
+          .create(recursive: true);
+      await Directory('${versions.path}${Platform.pathSeparator}0.9.5')
+          .create(recursive: true);
+      await storage.currentVersionFile.writeAsString('0.9.6\n');
+      await File('$root${Platform.pathSeparator}git_gui_expand.exe')
+          .writeAsString('old');
+      await Directory('$root${Platform.pathSeparator}data')
+          .create(recursive: true);
+      final updates = Directory(
+        '$root${Platform.pathSeparator}userdata'
+        '${Platform.pathSeparator}updates',
+      );
+      await updates.create(recursive: true);
+      await File(
+        '${updates.path}${Platform.pathSeparator}Git_Gui_Expand-v0.9.5.zip',
+      ).writeAsString('old zip');
+      await File('${updates.path}${Platform.pathSeparator}download.part')
+          .writeAsString('partial');
+      await Directory('${updates.path}${Platform.pathSeparator}stage-v0.9.5')
+          .create(recursive: true);
+      await File('${updates.path}${Platform.pathSeparator}launcher.log')
+          .writeAsString('keep');
+      final settings = File(
+        '$root${Platform.pathSeparator}userdata'
+        '${Platform.pathSeparator}settings.json',
+      );
+      await settings.writeAsString('{}');
+
+      final service = InstallationMaintenanceService(
+        storage: storage,
+        logService: logger,
+      );
+      final scan = await service.scan();
+      expect(scan.currentVersion, '0.9.6');
+      expect(scan.items.any((item) => item.name == '0.9.5'), isTrue);
+      expect(scan.items.any((item) => item.name.endsWith('.zip')), isTrue);
+
+      final result = await service.cleanup(scan);
+      expect(result.failed, isEmpty);
+      expect(
+        await Directory('${versions.path}${Platform.pathSeparator}0.9.6')
+            .exists(),
+        isTrue,
+      );
+      expect(
+        await Directory('${versions.path}${Platform.pathSeparator}0.9.5')
+            .exists(),
+        isFalse,
+      );
+      expect(
+        await Directory('$root${Platform.pathSeparator}data').exists(),
+        isFalse,
+      );
+      expect(await File(settings.path).exists(), isTrue);
+      expect(
+        await File('${updates.path}${Platform.pathSeparator}launcher.log')
+            .exists(),
+        isTrue,
+      );
+      expect((await service.scan()).items, isEmpty);
+    },
+  );
 }

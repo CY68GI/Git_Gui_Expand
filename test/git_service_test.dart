@@ -101,6 +101,23 @@ void main() {
     expect(await service.currentBranch(), isNot('尚未提交'));
   });
 
+  test('creates, switches, renames and deletes local branches', () async {
+    expect(await service.localBranches(), contains('main'));
+
+    await service.createBranch('feature/test');
+    expect(await service.localBranches(), contains('feature/test'));
+
+    await service.switchBranch('feature/test');
+    expect(await service.currentBranch(), 'feature/test');
+
+    await service.renameBranch('feature/test', 'feature/renamed');
+    expect(await service.currentBranch(), 'feature/renamed');
+
+    await service.switchBranch('main');
+    await service.deleteBranch('feature/renamed');
+    expect(await service.localBranches(), isNot(contains('feature/renamed')));
+  });
+
   test('stages and unstages modified files', () async {
     await File('${repository.path}${Platform.pathSeparator}alpha.txt')
         .writeAsString('alpha changed');

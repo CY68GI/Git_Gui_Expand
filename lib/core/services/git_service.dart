@@ -289,6 +289,55 @@ class GitService {
     return hash.isEmpty ? '尚未提交' : 'detached@$hash';
   }
 
+  Future<List<String>> localBranches() async {
+    final result = await _run([
+      'for-each-ref',
+      '--format=%(refname:short)',
+      'refs/heads',
+    ]);
+    return result.stdout
+        .split(RegExp(r'[\r\n]+'))
+        .map((branch) => branch.trim())
+        .where((branch) => branch.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  Future<void> validateBranchName(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty || trimmed.startsWith('-')) {
+      throw const GitException('分支名称不能为空或以 - 开头。');
+    }
+    final result = await _run([
+      'check-ref-format',
+      '--branch',
+      trimmed,
+    ], allowFailure: true);
+    if (!result.success) {
+      throw GitException('分支名称无效。', commandOutput: result.stderr);
+    }
+  }
+
+  Future<void> createBranch(String name) async {
+    await validateBranchName(name);
+    await _run(['branch', '--', name.trim()]);
+  }
+
+  Future<void> switchBranch(String name) async {
+    await validateBranchName(name);
+    await _run(['switch', name.trim()]);
+  }
+
+  Future<void> renameBranch(String oldName, String newName) async {
+    await validateBranchName(oldName);
+    await validateBranchName(newName);
+    await _run(['branch', '-m', oldName.trim(), newName.trim()]);
+  }
+
+  Future<void> deleteBranch(String name, {bool force = false}) async {
+    await validateBranchName(name);
+    await _run(['branch', force ? '-D' : '-d', name.trim()]);
+  }
+
   Future<String> pushCurrentBranch() async {
     final branchResult = await _run([
       'branch',
