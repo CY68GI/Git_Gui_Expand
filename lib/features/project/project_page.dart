@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/localization/app_localizations.dart';
+import '../../core/models/git_remote.dart';
+import '../../core/models/operation_safety.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/folder_picker_service.dart';
@@ -27,6 +29,7 @@ import '../dialogs/user_guide_dialog.dart';
 import '../explorer/file_explorer_panel.dart';
 import '../repository/repository_controller.dart';
 import '../start/start_view.dart';
+import '../start/repository_bootstrap_plan_controller.dart';
 import 'widgets/app_brand.dart';
 import 'widgets/app_outcome_snack_bar.dart';
 
@@ -310,12 +313,11 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openEmptyFolder() async {
     if (_isOpening) return;
-    final l10n = context.l10n;
     setState(() => _isOpening = true);
     try {
       final path = await _folderPicker.pickFolder(
         initialDirectory: _controller.repositoryPath,
-        title: l10n.tr('打开空白文件夹'),
+        title: context.l10n.tr('打开空白文件夹'),
       );
       if (path == null || !mounted) return;
       final gitPath = '$path${Platform.pathSeparator}.git';
@@ -323,34 +325,10 @@ class _ProjectPageState extends State<ProjectPage> {
         await _openRepositoryPath(path);
         return;
       }
-      final initialize = await showDialog<bool>(
-        context: context,
-        builder: (context) {
-          final colors = Theme.of(context).colorScheme;
-          return AlertDialog(
-            icon: Icon(Icons.account_tree_outlined, color: colors.primary),
-            title: Text(l10n.tr('是否马上初始化 Git 仓库？')),
-            content: Text(
-              l10n.tr('当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。'),
-              style: const TextStyle(fontSize: 13, height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(l10n.tr('暂不初始化')),
-              ),
-              FilledButton.icon(
-                onPressed: () => Navigator.pop(context, true),
-                icon: const Icon(Icons.check_rounded, size: 17),
-                label: Text(l10n.tr('立即初始化')),
-              ),
-            ],
-          );
-        },
-      );
-      if (initialize != true || !mounted) return;
-      await GitService.initializeRepository(path);
-      await _openRepositoryPath(path);
+      final initialized = await _showInitializationPlan(path);
+      if (initialized && mounted) {
+        await _openRepositoryPath(path);
+      }
     } catch (error) {
       _log.error('repository', '初始化空白文件夹失败：$error');
       if (mounted) {
@@ -362,13 +340,153 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _cloneRepository() async {
-    final path = await showDialog<String>(
+    if (_isOpening) return;
+    final request = await showDialog<CloneRepositoryRequest>(
       context: context,
       barrierDismissible: false,
       builder: (context) => const CloneRepositoryDialog(),
     );
-    if (path == null || !mounted) return;
-    await _openRepositoryPath(path);
+    if (request == null || !mounted) return;
+    setState(() => _isOpening = true);
+    try {
+      final cloned = await _showClonePlan(request);
+      if (cloned && mounted) {
+        await _openRepositoryPath(request.destinationPath);
+      }
+    } finally {
+      if (mounted) setState(() => _isOpening = false);
+    }
+  }
+
+  Future<bool> _showInitializationPlan(String path) async {
+    if (!mounted) return false;
+    final l10n = context.l10n;
+    final snapshot = await GitService.inspectInitializationTarget(path);
+    if (!mounted) return false;
+    if (!snapshot.targetExists || snapshot.gitMetadataType != 'notFound') {
+      _showOutcome(
+        OperationOutcome.failure(l10n.tr('初始化目标必须存在且不能已经包含 Git 元数据。')),
+      );
+      return false;
+    }
+    final precondition = OperationPrecondition(bootstrap: snapshot);
+    final plan = RepositoryBootstrapPlanController(
+      operation: PlannedRepositoryOperation(
+        id: 'bootstrap-init',
+        kind: PlannedOperationKind.initializeRepository,
+        title: l10n.tr('初始化 Git 仓库'),
+        description: l10n.tr('目标目录：{path}\n确认后在目标目录执行 git init，然后打开该仓库。', {
+          'path': path,
+        }),
+        run: () async {
+          try {
+            await GitService.initializeRepository(path);
+            return OperationOutcome.success(l10n.tr('Git 仓库已初始化'));
+          } catch (error) {
+            return OperationOutcome.failure(error.toString());
+          }
+        },
+        affectedPaths: const [],
+      ),
+      precondition: precondition,
+      validate: (expected) async {
+        final current = await GitService.inspectInitializationTarget(path);
+        return compareBootstrapSnapshots(
+          expected: expected.bootstrap!,
+          actual: current,
+        );
+      },
+      refreshPrecondition: () async => OperationPrecondition(
+        bootstrap: await GitService.inspectInitializationTarget(path),
+      ),
+      logService: _log,
+    );
+    try {
+      if (!mounted) return false;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => OperationPlanDialog(planHost: plan),
+      );
+      return plan.lastResult?.isSuccess == true;
+    } finally {
+      plan.dispose();
+    }
+  }
+
+  Future<bool> _showClonePlan(CloneRepositoryRequest request) async {
+    if (!mounted) return false;
+    final l10n = context.l10n;
+    final snapshot = await GitService.inspectCloneTarget(
+      request.remoteUrl,
+      request.destinationPath,
+    );
+    if (!mounted) return false;
+    if (!await Directory(snapshot.parentPath).exists()) {
+      _showOutcome(OperationOutcome.failure(l10n.tr('克隆目标父目录不存在。')));
+      return false;
+    }
+    if (snapshot.targetExists && !snapshot.targetIsEmpty) {
+      _showOutcome(OperationOutcome.failure(l10n.tr('克隆目标目录不是空目录。')));
+      return false;
+    }
+    final precondition = OperationPrecondition(bootstrap: snapshot);
+    final plan = RepositoryBootstrapPlanController(
+      operation: PlannedRepositoryOperation(
+        id: 'bootstrap-clone',
+        kind: PlannedOperationKind.cloneRepository,
+        title: l10n.tr('克隆 Git 仓库'),
+        description: l10n.tr(
+          '地址：{url}\n目标目录：{path}\n取消不会创建任何文件，'
+          '确认计划后才会再次检查目标并执行 git clone。',
+          {
+            'url': GitRemote.maskRemoteUrl(request.remoteUrl),
+            'path': request.destinationPath,
+          },
+        ),
+        run: () async {
+          try {
+            await GitService.cloneRepository(
+              request.remoteUrl,
+              request.destinationPath,
+            );
+            return OperationOutcome.success(l10n.tr('Git 仓库已克隆'));
+          } catch (error) {
+            return OperationOutcome.failure(error.toString());
+          }
+        },
+        affectedPaths: const [],
+      ),
+      precondition: precondition,
+      validate: (expected) async {
+        final current = await GitService.inspectCloneTarget(
+          request.remoteUrl,
+          request.destinationPath,
+        );
+        return compareBootstrapSnapshots(
+          expected: expected.bootstrap!,
+          actual: current,
+        );
+      },
+      refreshPrecondition: () async => OperationPrecondition(
+        bootstrap: await GitService.inspectCloneTarget(
+          request.remoteUrl,
+          request.destinationPath,
+        ),
+      ),
+      logService: _log,
+    );
+    try {
+      if (!mounted) return false;
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        builder: (context) => OperationPlanDialog(planHost: plan),
+      );
+      return plan.lastResult?.isSuccess == true;
+    } finally {
+      plan.dispose();
+    }
   }
 
   Future<void> _openRepositoryPath(String path) async {
@@ -767,6 +885,9 @@ class _ProjectPageState extends State<ProjectPage> {
     );
     if (outcome != null && mounted) {
       _showOutcome(outcome);
+      if (outcome.isSuccess) {
+        await _showOperationPlan();
+      }
     }
   }
 
@@ -786,7 +907,7 @@ class _ProjectPageState extends State<ProjectPage> {
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
-      builder: (context) => OperationPlanDialog(controller: _controller),
+      builder: (context) => OperationPlanDialog(planHost: _controller),
     );
     if (mounted) {
       _explorerFocus.requestFocus();

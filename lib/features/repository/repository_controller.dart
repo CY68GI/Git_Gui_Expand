@@ -3,14 +3,20 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 import '../../core/models/app_models.dart';
+import '../../core/models/git_identity.dart';
 import '../../core/models/git_remote.dart';
+import '../../core/models/operation_plan.dart';
+import '../../core/models/operation_safety.dart';
 import '../../core/models/recent_repository.dart';
+import '../../core/models/repository_sync.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/git_service.dart';
 import '../../core/services/recent_repositories_service.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/utils/path_utils.dart';
+
+export '../../core/models/operation_plan.dart';
 
 enum ExplorerSide { left, right }
 
@@ -57,90 +63,6 @@ class ExplorerPanelState {
   static const Object _unchanged = Object();
 }
 
-class OperationOutcome {
-  const OperationOutcome.success(this.message) : isSuccess = true;
-  const OperationOutcome.failure(this.message) : isSuccess = false;
-
-  final bool isSuccess;
-  final String message;
-}
-
-enum PlannedOperationKind {
-  move,
-  copy,
-  rename,
-  delete,
-  stageAll,
-  unstageAll,
-  commit,
-  pushCurrentBranch,
-  pushRemote,
-  pushAllRemotes,
-  addRemote,
-  updateRemote,
-  removeRemoteConfig,
-  clearRemote,
-  createBranch,
-  switchBranch,
-  renameBranch,
-  deleteBranch,
-  createStash,
-  applyStash,
-  popStash,
-  dropStash,
-}
-
-class PlannedRepositoryOperation {
-  const PlannedRepositoryOperation({
-    required this.id,
-    required this.kind,
-    required this.title,
-    required this.description,
-    required this.run,
-    this.isDangerous = false,
-    this.strongConfirmationText,
-  });
-
-  final String id;
-  final PlannedOperationKind kind;
-  final String title;
-  final String description;
-  final bool isDangerous;
-  final String? strongConfirmationText;
-  final Future<OperationOutcome> Function() run;
-
-  bool get requiresStrongConfirmation =>
-      isDangerous || strongConfirmationText != null;
-}
-
-class OperationPlanProgress {
-  const OperationPlanProgress({
-    required this.step,
-    required this.total,
-    required this.title,
-  });
-
-  final int step;
-  final int total;
-  final String title;
-}
-
-class OperationPlanResult {
-  const OperationPlanResult({
-    required this.isSuccess,
-    required this.message,
-    required this.completed,
-    required this.total,
-    required this.remaining,
-  });
-
-  final bool isSuccess;
-  final String message;
-  final int completed;
-  final int total;
-  final List<PlannedRepositoryOperation> remaining;
-}
-
 class RemoteClearInspection {
   const RemoteClearInspection({
     required this.isSuccess,
@@ -165,7 +87,7 @@ class GitMetadataClearInspection {
   final List<GitRemote> remotes;
 }
 
-class RepositoryController extends ChangeNotifier {
+class RepositoryController extends ChangeNotifier implements OperationPlanHost {
   RepositoryController({
     SettingsService? settingsService,
     GitService? gitService,
@@ -186,6 +108,7 @@ class RepositoryController extends ChangeNotifier {
   String? projectName;
   String branch = '';
   RepositoryStats? repositoryStats;
+  BranchSyncState? syncState;
   List<GitFileStatus> changedFiles = const [];
   List<GitRemote> remotes = const [];
   List<RepositoryEntry> leftEntries = const [];
@@ -196,14 +119,19 @@ class RepositoryController extends ChangeNotifier {
   ExplorerSelection? clipboard;
   AppSettings settings = const AppSettings();
   bool isInitializing = true;
+  @override
   bool isBusy = false;
   bool isExecutingPlan = false;
   int planCurrentStep = 0;
   String? planCurrentTitle;
   String? fatalError;
   List<RecentRepository> recentRepositories = const [];
+  @override
   List<PlannedRepositoryOperation> pendingOperations = const [];
   int _operationSequence = 0;
+  RepositoryStateSnapshot? _planBaseline;
+  RepositoryStateSnapshot? _runtimeBaseline;
+  bool _isCapturingPlan = false;
 
   GitService? get git => _git;
   bool get hasRepository => _git != null && repositoryPath != null;
@@ -214,6 +142,9 @@ class RepositoryController extends ChangeNotifier {
   bool get hasQueuedClearRemote => pendingOperations.any(
     (operation) => operation.kind == PlannedOperationKind.clearRemote,
   );
+  bool get hasQueuedClearGitMetadata => pendingOperations.any(
+    (operation) => operation.kind == PlannedOperationKind.clearGitMetadata,
+  );
   bool get hasPendingFileChanges => pendingOperations.any(
     (operation) => const {
       PlannedOperationKind.move,
@@ -222,7 +153,9 @@ class RepositoryController extends ChangeNotifier {
       PlannedOperationKind.delete,
     }.contains(operation.kind),
   );
-  bool get localOperationsLocked => hasQueuedCommit || hasQueuedClearRemote;
+  bool get localOperationsLocked =>
+      hasQueuedCommit || hasQueuedClearRemote || hasQueuedClearGitMetadata;
+  @override
   bool get canExecutePlan =>
       hasRepository && pendingOperations.isNotEmpty && !isBusy;
   ExplorerPanelState panelFor(ExplorerSide side) =>
@@ -257,6 +190,7 @@ class RepositoryController extends ChangeNotifier {
       final root = await GitService.resolveRepositoryRoot(selectedPath);
       final service = GitService(root, logService: _log);
       final branchName = await service.currentBranch();
+      final initialSyncState = await _readSyncState(service);
       final status = await service.status();
       final remoteList = await service.remotes();
       final stats = await service.repositoryStats();
@@ -268,6 +202,7 @@ class RepositoryController extends ChangeNotifier {
       repositoryPath = root;
       projectName = repositoryBasename(root);
       branch = branchName;
+      syncState = initialSyncState;
       repositoryStats = stats;
       changedFiles = status;
       remotes = remoteList;
@@ -275,6 +210,7 @@ class RepositoryController extends ChangeNotifier {
       rightPanel = right;
       clipboard = null;
       pendingOperations = const [];
+      _resetPlanBaselines();
       planCurrentStep = 0;
       planCurrentTitle = null;
       try {
@@ -315,6 +251,7 @@ class RepositoryController extends ChangeNotifier {
     repositoryPath = null;
     projectName = null;
     branch = '';
+    syncState = null;
     repositoryStats = null;
     changedFiles = const [];
     remotes = const [];
@@ -322,6 +259,7 @@ class RepositoryController extends ChangeNotifier {
     rightPanel = const ExplorerPanelState();
     clipboard = null;
     pendingOperations = const [];
+    _resetPlanBaselines();
     planCurrentStep = 0;
     planCurrentTitle = null;
     fatalError = null;
@@ -359,9 +297,6 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || root == null) {
       return const OperationOutcome.failure('当前没有打开的仓库。');
     }
-    if (pendingOperations.isNotEmpty) {
-      return const OperationOutcome.failure('请先清空或执行当前待执行操作计划。');
-    }
     final inspection = await inspectGitMetadataForClear();
     if (!inspection.isSuccess) {
       return OperationOutcome.failure(inspection.message);
@@ -369,7 +304,32 @@ class RepositoryController extends ChangeNotifier {
     if (inspection.remotes.isNotEmpty) {
       return const OperationOutcome.failure('当前仓库已连接远端，禁止清除 Git 元数据。');
     }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.clearGitMetadata,
+        title: '清除 Git 元数据',
+        description:
+            '仓库：$root。将永久删除 .git 元数据，保留工作文件。'
+            '提交历史、分支、标签、索引、Stash、远端配置和仓库级配置将丢失。'
+            '此操作必须单独执行。',
+        run: () => _applyClearGitMetadata(root),
+        isDangerous: true,
+        isExclusive: true,
+        strongConfirmationText: 'CLEAR GIT',
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyClearGitMetadata(String root) async {
     try {
+      final inspection = await inspectGitMetadataForClear();
+      if (!inspection.isSuccess) {
+        return OperationOutcome.failure(inspection.message);
+      }
+      if (inspection.remotes.isNotEmpty) {
+        return const OperationOutcome.failure('当前仓库已连接远端，禁止清除 Git 元数据。');
+      }
       await GitService.clearRepositoryMetadata(root);
       await removeRecentRepository(root);
       closeRepository();
@@ -441,6 +401,7 @@ class RepositoryController extends ChangeNotifier {
       leftPanel = leftPanel.copyWith(entries: left, error: null);
       rightPanel = rightPanel.copyWith(entries: right, error: null);
       branch = await _git!.currentBranch();
+      syncState = await _readSyncState(_git!);
       _log.detail(
         'repository',
         '刷新完成：changes=${changedFiles.length} '
@@ -541,6 +502,7 @@ class RepositoryController extends ChangeNotifier {
     return const OperationOutcome.success('已清空剪贴板。');
   }
 
+  @override
   OperationOutcome removePendingOperation(String id) {
     if (isBusy) {
       return const OperationOutcome.failure('操作计划正在执行，暂时不能修改。');
@@ -554,11 +516,15 @@ class RepositoryController extends ChangeNotifier {
     pendingOperations = List.unmodifiable(
       pendingOperations.where((item) => item.id != id),
     );
+    if (pendingOperations.isEmpty) {
+      _resetPlanBaselines();
+    }
     _log.info('plan', '从执行计划移除：${operation.title}');
     notifyListeners();
     return OperationOutcome.success('已移除：${operation.title}');
   }
 
+  @override
   OperationOutcome clearPendingOperations() {
     if (isBusy) {
       return const OperationOutcome.failure('操作计划正在执行，暂时不能清空。');
@@ -568,11 +534,22 @@ class RepositoryController extends ChangeNotifier {
     }
     final count = pendingOperations.length;
     pendingOperations = const [];
+    _resetPlanBaselines();
     _log.info('plan', '清空执行计划：$count 步，未执行任何操作');
     notifyListeners();
     return OperationOutcome.success('已清空 $count 步待执行操作');
   }
 
+  @override
+  Future<void> recoverFromSafetyRejection() async {
+    if (isBusy) return;
+    pendingOperations = const [];
+    _resetPlanBaselines();
+    notifyListeners();
+    await refresh();
+  }
+
+  @override
   Future<OperationPlanResult> executePendingOperations({
     required bool confirmedDangerous,
     String? strongConfirmationText,
@@ -612,6 +589,11 @@ class RepositoryController extends ChangeNotifier {
         .firstOrNull;
     if (strongOperation != null &&
         strongConfirmationText != strongOperation.strongConfirmationText) {
+      _log.warning(
+        'plan',
+        '执行前安全校验失败：危险确认文字不匹配；'
+            '操作=${strongOperation.title}',
+      );
       return OperationPlanResult(
         isSuccess: false,
         message: '请准确输入 ${strongOperation.strongConfirmationText} 以确认危险操作。',
@@ -622,6 +604,7 @@ class RepositoryController extends ChangeNotifier {
     }
     if (operations.any((operation) => operation.isDangerous) &&
         !confirmedDangerous) {
+      _log.warning('plan', '执行前安全校验失败：未勾选危险操作确认');
       return OperationPlanResult(
         isSuccess: false,
         message: '请勾选危险操作确认项后再执行。',
@@ -636,8 +619,46 @@ class RepositoryController extends ChangeNotifier {
     notifyListeners();
     var completed = 0;
     try {
+      final preflight = await _validatePlanStart(operations);
+      if (!preflight.isSuccess) {
+        _log.warning(
+          'plan',
+          '执行前状态校验失败：${preflight.summary.replaceAll('\n', ' | ')}',
+        );
+        return OperationPlanResult(
+          isSuccess: false,
+          message: '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。',
+          completed: 0,
+          total: operations.length,
+          remaining: operations,
+          validation: preflight,
+        );
+      }
+      _runtimeBaseline = await _git!.stateSnapshot();
+      _log.info('plan', '开始执行操作计划：${operations.length} 步');
       for (var index = 0; index < operations.length; index++) {
         final operation = operations[index];
+        if (index > 0) {
+          final stepValidation = await _validateRuntimeState();
+          if (!stepValidation.isSuccess) {
+            pendingOperations = List.unmodifiable(operations.sublist(index));
+            _log.warning(
+              'plan',
+              '第 ${index + 1} 步执行前状态校验失败：'
+                  '${stepValidation.summary.replaceAll('\n', ' | ')}',
+            );
+            return OperationPlanResult(
+              isSuccess: false,
+              message:
+                  '执行到第 ${index + 1} 步前发现仓库状态已被外部修改，已停止。'
+                  '请刷新仓库并重新建立操作计划。',
+              completed: completed,
+              total: operations.length,
+              remaining: pendingOperations,
+              validation: stepValidation,
+            );
+          }
+        }
         planCurrentStep = index + 1;
         planCurrentTitle = operation.title;
         _log.info(
@@ -652,6 +673,27 @@ class RepositoryController extends ChangeNotifier {
           ),
         );
         notifyListeners();
+        if (index > 0) {
+          final finalStepValidation = await _validateRuntimeState();
+          if (!finalStepValidation.isSuccess) {
+            pendingOperations = List.unmodifiable(operations.sublist(index));
+            _log.warning(
+              'plan',
+              '第 ${index + 1} 步最终执行前校验失败：'
+                  '${finalStepValidation.summary.replaceAll('\n', ' | ')}',
+            );
+            return OperationPlanResult(
+              isSuccess: false,
+              message:
+                  '执行到第 ${index + 1} 步前发现仓库状态已被外部修改，已停止。'
+                  '请刷新仓库并重新建立操作计划。',
+              completed: completed,
+              total: operations.length,
+              remaining: pendingOperations,
+              validation: finalStepValidation,
+            );
+          }
+        }
         final outcome = await operation.run();
         if (!outcome.isSuccess) {
           pendingOperations = List.unmodifiable(operations.sublist(index));
@@ -672,12 +714,18 @@ class RepositoryController extends ChangeNotifier {
         }
         completed += 1;
         pendingOperations = List.unmodifiable(operations.sublist(index + 1));
+        if (_git == null) {
+          _resetPlanBaselines();
+        } else {
+          _runtimeBaseline = await _git!.stateSnapshot();
+        }
         _log.info(
           'plan',
           '第 ${index + 1} 步完成：${operation.title}；${outcome.message}',
         );
         notifyListeners();
       }
+      _resetPlanBaselines();
       _log.info('plan', '执行计划完成：共 $completed 步');
       return OperationPlanResult(
         isSuccess: true,
@@ -708,11 +756,13 @@ class RepositoryController extends ChangeNotifier {
     }
   }
 
-  OperationOutcome _queueOperation(PlannedRepositoryOperation operation) {
+  Future<OperationOutcome> _queueOperation(
+    PlannedRepositoryOperation operation,
+  ) async {
     if (!hasRepository) {
       return const OperationOutcome.failure('当前没有打开的仓库。');
     }
-    if (isBusy) {
+    if (isBusy || _isCapturingPlan) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
     final hasClearOperation = pendingOperations.any(
@@ -725,6 +775,9 @@ class RepositoryController extends ChangeNotifier {
     }
     final commitAlreadyQueued = hasQueuedCommit;
     const allowedAfterCommit = {
+      PlannedOperationKind.fetchCurrentRemote,
+      PlannedOperationKind.fetchAllRemotes,
+      PlannedOperationKind.pullFastForward,
       PlannedOperationKind.pushCurrentBranch,
       PlannedOperationKind.pushRemote,
       PlannedOperationKind.pushAllRemotes,
@@ -743,28 +796,77 @@ class RepositoryController extends ChangeNotifier {
     if (commitAlreadyQueued && !allowedAfterCommit.contains(operation.kind)) {
       return const OperationOutcome.failure('提交步骤已加入计划末尾。若要继续修改文件，请先移除提交步骤。');
     }
-    _operationSequence += 1;
-    pendingOperations = List.unmodifiable([
-      ...pendingOperations,
-      PlannedRepositoryOperation(
-        id: '${DateTime.now().microsecondsSinceEpoch}-$_operationSequence',
-        kind: operation.kind,
-        title: operation.title,
-        description: operation.description,
-        run: operation.run,
-        isDangerous: operation.isDangerous,
-        strongConfirmationText: operation.strongConfirmationText,
-      ),
-    ]);
-    _log.info(
-      'plan',
-      '加入待执行操作 ${pendingOperations.length}：'
-          '${operation.title}；${operation.description}',
-    );
-    notifyListeners();
-    return OperationOutcome.success(
-      '已加入执行计划：${operation.title}。尚未执行任何 Git 变更。',
-    );
+    if (operation.isExclusive && pendingOperations.isNotEmpty) {
+      return const OperationOutcome.failure('此生命周期操作必须单独执行。请先移除或执行当前计划中的其他步骤。');
+    }
+    if (pendingOperations.any((item) => item.isExclusive)) {
+      return const OperationOutcome.failure('当前计划包含必须单独执行的生命周期操作，不能再添加步骤。');
+    }
+    _isCapturingPlan = true;
+    try {
+      final globalSnapshot = await _git!.stateSnapshot();
+      final baseline = _planBaseline;
+      if (pendingOperations.isNotEmpty && baseline != null) {
+        final drift = compareRepositorySnapshots(
+          expected: baseline,
+          actual: globalSnapshot,
+        );
+        if (!drift.isSuccess) {
+          _log.warning(
+            'plan',
+            '添加操作预览时发现仓库状态已变化：'
+                '${drift.summary.replaceAll('\n', ' | ')}',
+          );
+          return const OperationOutcome.failure(
+            '仓库状态已变化，无法继续扩展当前计划。请刷新仓库并重新建立操作计划。',
+          );
+        }
+      }
+      final pathTypes = await _git!.pathTypeSnapshot(operation.affectedPaths);
+      final precondition = OperationPrecondition(
+        repository: RepositoryStateSnapshot(
+          rootPath: globalSnapshot.rootPath,
+          branch: globalSnapshot.branch,
+          head: globalSnapshot.head,
+          statusFingerprint: globalSnapshot.statusFingerprint,
+          remoteUrls: globalSnapshot.remoteUrls,
+          pathTypes: pathTypes,
+        ),
+        bootstrap: operation.precondition?.bootstrap,
+        remote: operation.precondition?.remote,
+      );
+      _operationSequence += 1;
+      pendingOperations = List.unmodifiable([
+        ...pendingOperations,
+        PlannedRepositoryOperation(
+          id: '${DateTime.now().microsecondsSinceEpoch}-$_operationSequence',
+          kind: operation.kind,
+          title: operation.title,
+          description: operation.description,
+          run: operation.run,
+          isDangerous: operation.isDangerous,
+          isExclusive: operation.isExclusive,
+          strongConfirmationText: operation.strongConfirmationText,
+          precondition: precondition,
+          affectedPaths: operation.affectedPaths,
+        ),
+      ]);
+      _planBaseline ??= globalSnapshot;
+      _log.info(
+        'plan',
+        '已创建操作预览 ${pendingOperations.length}：'
+            '${operation.title}；${operation.description}',
+      );
+      notifyListeners();
+      return OperationOutcome.success(
+        '已加入执行计划：${operation.title}。尚未执行任何 Git 变更。',
+      );
+    } catch (error) {
+      _log.error('plan', '创建操作预览失败：$error');
+      return OperationOutcome.failure('无法建立操作预览的安全状态快照：${_cleanError(error)}');
+    } finally {
+      _isCapturingPlan = false;
+    }
   }
 
   Future<OperationOutcome> pasteToActivePanel() async {
@@ -780,7 +882,7 @@ class RepositoryController extends ChangeNotifier {
     final destination = panelFor(activeSide).relativePath;
     final action = selection.mode == ClipboardMode.cut ? '移动' : '复制';
     final destinationLabel = destination.isEmpty ? '仓库根目录' : destination;
-    final outcome = _queueOperation(
+    final outcome = await _queueOperation(
       PlannedRepositoryOperation(
         id: '',
         kind: selection.mode == ClipboardMode.cut
@@ -791,6 +893,10 @@ class RepositoryController extends ChangeNotifier {
             '${selection.paths.length} 个项目将使用 Git 从当前目录$action到'
             ' $destinationLabel。',
         run: () => _applyPaste(selection, destination),
+        affectedPaths: [
+          ...selection.paths,
+          if (destination.isNotEmpty) destination,
+        ],
       ),
     );
     if (!outcome.isSuccess) {
@@ -839,13 +945,14 @@ class RepositoryController extends ChangeNotifier {
       return const OperationOutcome.failure('名称不能为空。');
     }
     final source = panel.selectedPaths.single;
-    final outcome = _queueOperation(
+    final outcome = await _queueOperation(
       PlannedRepositoryOperation(
         id: '',
         kind: PlannedOperationKind.rename,
         title: '重命名 $source',
         description: '将 $source 的新名称设为 $trimmed。',
         run: () => _applyRename(source, trimmed),
+        affectedPaths: [source],
       ),
     );
     if (outcome.isSuccess) {
@@ -876,7 +983,7 @@ class RepositoryController extends ChangeNotifier {
       return const OperationOutcome.failure('请先勾选要删除的项目。');
     }
     final paths = panel.selectedPaths.toList(growable: false);
-    final outcome = _queueOperation(
+    final outcome = await _queueOperation(
       PlannedRepositoryOperation(
         id: '',
         kind: PlannedOperationKind.delete,
@@ -886,6 +993,7 @@ class RepositoryController extends ChangeNotifier {
             '未跟踪或忽略内容使用 git clean。',
         run: () => _applyDelete(paths),
         isDangerous: true,
+        affectedPaths: paths,
       ),
     );
     if (outcome.isSuccess) {
@@ -980,6 +1088,7 @@ class RepositoryController extends ChangeNotifier {
       await _git!.switchBranch(name);
       await _reloadAfterMutation();
       branch = await _git!.currentBranch();
+      syncState = await _readSyncState(_git!);
       return OperationOutcome.success('已切换到分支 $name');
     } catch (error) {
       _log.error('branch', '切换分支失败：$error');
@@ -1209,25 +1318,201 @@ class RepositoryController extends ChangeNotifier {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
     final branchLabel = branch.isEmpty ? '当前分支' : branch;
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.pushCurrentBranch,
-          title: '推送 $branchLabel',
-          description:
-              '将当前分支 $branchLabel 推送到 upstream；如果没有 upstream，'
-              '会使用 origin 或首个远端并设置 upstream。',
-          run: _applyPushCurrentBranch,
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.pushCurrentBranch,
+        title: '推送 $branchLabel',
+        description:
+            '将当前分支 $branchLabel 推送到 upstream；如果没有 upstream，'
+            '会使用 origin 或首个远端并设置 upstream。',
+        run: _applyPushCurrentBranch,
       ),
     );
+  }
+
+  Future<OperationOutcome> fetchCurrentUpstream() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final state = syncState ?? await _readSyncState(_git!);
+    if (state == null || !state.hasUpstream) {
+      return const OperationOutcome.failure('当前分支没有可用的 upstream，请先配置远端跟踪分支。');
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.fetchCurrentRemote,
+        title: '获取远端 ${state.upstreamRemote}',
+        description:
+            '执行 git fetch --prune ${state.upstreamRemote}，'
+            '更新远端跟踪引用，不修改工作区文件。',
+        run: () => _applyFetchRemote(state.upstreamRemote),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> fetchAllRemotes() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    if (remotes.isEmpty) {
+      return const OperationOutcome.failure('项目没有配置远端仓库。');
+    }
+    final names = remotes.map((remote) => remote.name).toList(growable: false);
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.fetchAllRemotes,
+        title: '获取全部 ${names.length} 个远端',
+        description:
+            '依次执行 git fetch --prune：${names.join('、')}。'
+            '成功获取的远端跟踪引用会保留，失败的远端会逐项报告。',
+        run: () => _applyFetchAllRemotes(names),
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyFetchRemote(String remoteName) async {
+    try {
+      final output = await _git!.fetchRemote(remoteName);
+      await _reloadAfterMutation(refreshStats: false);
+      _log.detail(
+        'sync',
+        '远端 $remoteName fetch 输出：${output.isEmpty ? '无输出' : output}',
+      );
+      return OperationOutcome.success('已获取远端 $remoteName 的更新');
+    } catch (error) {
+      _log.error('sync', '获取远端 $remoteName 失败：$error');
+      return OperationOutcome.failure(_syncFailureMessage(error));
+    }
+  }
+
+  Future<OperationOutcome> _applyFetchAllRemotes(
+    List<String> remoteNames,
+  ) async {
+    final succeeded = <String>[];
+    final failed = <String>[];
+    for (final remoteName in remoteNames) {
+      try {
+        await _git!.fetchRemote(remoteName);
+        succeeded.add(remoteName);
+      } catch (error) {
+        _log.error('sync', '获取远端 $remoteName 失败：$error');
+        failed.add('$remoteName：${_syncFailureMessage(error)}');
+      }
+    }
+    await _reloadAfterMutation(refreshStats: false);
+    if (failed.isEmpty) {
+      return OperationOutcome.success('已获取全部 ${succeeded.length} 个远端');
+    }
+    return OperationOutcome.failure(
+      '成功 ${succeeded.length} 个，失败 ${failed.length} 个。\n'
+      '${failed.join('\n')}',
+    );
+  }
+
+  Future<OperationOutcome> pullCurrentBranchFastForward() async {
+    if (_git == null || isBusy) {
+      return const OperationOutcome.failure('当前操作尚未完成。');
+    }
+    final state = syncState ?? await _readSyncState(_git!);
+    if (state == null) {
+      return const OperationOutcome.failure('无法读取当前分支同步状态。');
+    }
+    if (state.isDetached) {
+      return const OperationOutcome.failure('当前处于 detached HEAD，不能 Pull 分支。');
+    }
+    if (state.isUnborn) {
+      return const OperationOutcome.failure('当前分支尚无提交，不能 Pull。');
+    }
+    if (!state.hasUpstream) {
+      return const OperationOutcome.failure('当前分支没有可用的 upstream。');
+    }
+    if (!state.worktreeClean) {
+      return const OperationOutcome.failure(
+        '工作区或索引不干净，已拒绝 Pull。请先提交或 Stash 更改。',
+      );
+    }
+    switch (state.relation) {
+      case BranchSyncRelation.behind:
+        break;
+      case BranchSyncRelation.upToDate:
+        return const OperationOutcome.failure('当前分支已经与 upstream 同步，不需要 Pull。');
+      case BranchSyncRelation.ahead:
+        return const OperationOutcome.failure(
+          '当前分支包含 upstream 的全部提交，但有本地提交未推送。',
+        );
+      case BranchSyncRelation.diverged:
+        return const OperationOutcome.failure(
+          '本地分支与 upstream 已分叉，已拒绝快进 Pull。'
+          '请先使用外部 Git 执行 Merge 或 Rebase。',
+        );
+      case BranchSyncRelation.unknown:
+        return const OperationOutcome.failure('当前分支同步关系未知。');
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.pullFastForward,
+        title: '安全快进 Pull ${state.branch}',
+        description:
+            '先从 ${state.upstreamRemote} 获取更新并重新检查 ahead/behind；'
+            '仅在当前分支落后且不分叉时执行 git merge --ff-only '
+            '${state.upstreamRef}。不会自动创建 Merge 提交。',
+        run: _applyPullFastForward,
+      ),
+    );
+  }
+
+  Future<OperationOutcome> _applyPullFastForward() async {
+    try {
+      final result = await _git!.pullFastForward();
+      await _reloadAfterMutation();
+      if (!result.updated) {
+        return OperationOutcome.success(result.output);
+      }
+      _log.detail('sync', '快进 Pull 输出：${result.output}');
+      return OperationOutcome.success(
+        '已快进更新 ${result.state.branch} 到 ${result.state.upstreamRef}',
+      );
+    } catch (error) {
+      _log.error('sync', '安全快进 Pull 失败：$error');
+      syncState = await _readSyncState(_git!);
+      return OperationOutcome.failure(_syncFailureMessage(error));
+    }
+  }
+
+  String _syncFailureMessage(Object error) {
+    final text = _cleanError(error);
+    final lower = text.toLowerCase();
+    if (lower.contains('authentication') ||
+        lower.contains('permission denied') ||
+        lower.contains('could not read from remote')) {
+      return '$text\n认证失败：请检查 Git 凭据、SSH Key 或远端访问权限。';
+    }
+    if (lower.contains('could not resolve host') ||
+        lower.contains('network') ||
+        lower.contains('timed out')) {
+      return '$text\n网络连接失败：请检查网络后重试。';
+    }
+    return text;
+  }
+
+  String _commitIdentityFailure(GitIdentityState identity) {
+    return 'Git 提交身份不可用：无法解析有效的 user.name 或 user.email。'
+        '\n'
+        '请在项目目录执行：\n'
+        'git config --local user.name "Your Name"\n'
+        'git config --local user.email "you@example.com"\n'
+        '或改用 --global 配置当前用户的默认 Git 身份。';
   }
 
   Future<OperationOutcome> _applyPushCurrentBranch() async {
     try {
       final output = await _git!.pushCurrentBranch();
       branch = await _git!.currentBranch();
+      syncState = await _readSyncState(_git!);
       _log.detail('push', '推送输出：${output.isEmpty ? '无输出' : output}');
       return OperationOutcome.success(
         '已推送 ${branch.isEmpty ? '当前分支' : branch}',
@@ -1244,6 +1529,7 @@ class RepositoryController extends ChangeNotifier {
     }
     try {
       remotes = await _git!.remotes();
+      syncState = await _readSyncState(_git!);
       notifyListeners();
       return const OperationOutcome.success('远端列表已刷新');
     } catch (error) {
@@ -1263,20 +1549,18 @@ class RepositoryController extends ChangeNotifier {
     final trimmedName = name.trim();
     final trimmedUrl = url.trim();
     final maskedUrl = GitRemote.maskRemoteUrl(trimmedUrl);
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: updateExisting
-              ? PlannedOperationKind.updateRemote
-              : PlannedOperationKind.addRemote,
-          title: '${updateExisting ? '更新' : '添加'}远端 $trimmedName',
-          description: '${updateExisting ? '把远端地址改为' : '新增远端地址'} $maskedUrl。',
-          run: () => _applySaveRemote(
-            name: trimmedName,
-            url: trimmedUrl,
-            updateExisting: updateExisting,
-          ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: updateExisting
+            ? PlannedOperationKind.updateRemote
+            : PlannedOperationKind.addRemote,
+        title: '${updateExisting ? '更新' : '添加'}远端 $trimmedName',
+        description: '${updateExisting ? '把远端地址改为' : '新增远端地址'} $maskedUrl。',
+        run: () => _applySaveRemote(
+          name: trimmedName,
+          url: trimmedUrl,
+          updateExisting: updateExisting,
         ),
       ),
     );
@@ -1294,6 +1578,7 @@ class RepositoryController extends ChangeNotifier {
         await _git!.addRemote(name, url);
       }
       remotes = await _git!.remotes();
+      syncState = await _readSyncState(_git!);
       return OperationOutcome.success(
         updateExisting ? '远端 $name 已更新' : '远端 $name 已添加',
       );
@@ -1307,15 +1592,13 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.removeRemoteConfig,
-          title: '删除本地远端配置 $name',
-          description: '仅删除本仓库中的 Git remote 配置，不会删除远端平台上的仓库。',
-          run: () => _applyRemoveRemote(name),
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.removeRemoteConfig,
+        title: '删除本地远端配置 $name',
+        description: '仅删除本仓库中的 Git remote 配置，不会删除远端平台上的仓库。',
+        run: () => _applyRemoveRemote(name),
       ),
     );
   }
@@ -1324,6 +1607,7 @@ class RepositoryController extends ChangeNotifier {
     try {
       await _git!.removeRemote(name);
       remotes = await _git!.remotes();
+      syncState = await _readSyncState(_git!);
       return OperationOutcome.success('远端 $name 已删除');
     } catch (error) {
       _log.error('remote', '删除远端失败：$error');
@@ -1335,15 +1619,13 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.pushRemote,
-          title: '推送到远端 $name',
-          description: '把当前分支 ${branch.isEmpty ? '（未识别）' : branch} 推送到 $name。',
-          run: () => _applyPushToRemote(name),
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.pushRemote,
+        title: '推送到远端 $name',
+        description: '把当前分支 ${branch.isEmpty ? '（未识别）' : branch} 推送到 $name。',
+        run: () => _applyPushToRemote(name),
       ),
     );
   }
@@ -1367,15 +1649,13 @@ class RepositoryController extends ChangeNotifier {
       return const OperationOutcome.failure('项目没有配置远端仓库。');
     }
     final names = remotes.map((remote) => remote.name).toList(growable: false);
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.pushAllRemotes,
-          title: '推送到全部 ${names.length} 个远端',
-          description: '依次推送当前分支到：${names.join('、')}。',
-          run: () => _applyPushToAllRemotes(names),
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.pushAllRemotes,
+        title: '推送到全部 ${names.length} 个远端',
+        description: '依次推送当前分支到：${names.join('、')}。',
+        run: () => _applyPushToAllRemotes(names),
       ),
     );
   }
@@ -1433,23 +1713,22 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.clearRemote,
-          title: '清空远端历史 ${preview.remoteName}',
-          description:
-              '项目 ${preview.projectName}，目标分支 ${preview.targetBranch}。'
-              '将备份并删除原 ${preview.branchCount} 个分支、'
-              '${preview.tagCount} 个标签，然后只保留一个空提交：'
-              '“${preview.emptyCommitMessage}”。本地文件内容不变，'
-              '但本地索引会重置为空，刷新后文件显示为未跟踪。'
-              '受保护分支或服务器不支持原子推送时，整个操作会失败。',
-          run: () => _applyClearRemote(preview),
-          isDangerous: true,
-          strongConfirmationText: preview.confirmationText,
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.clearRemote,
+        title: '清空远端历史 ${preview.remoteName}',
+        description:
+            '项目 ${preview.projectName}，目标分支 ${preview.targetBranch}。'
+            '将备份并删除原 ${preview.branchCount} 个分支、'
+            '${preview.tagCount} 个标签，然后只保留一个空提交：'
+            '“${preview.emptyCommitMessage}”。本地文件内容不变，'
+            '但本地索引会重置为空，刷新后文件显示为未跟踪。'
+            '受保护分支或服务器不支持原子推送时，整个操作会失败。',
+        run: () => _applyClearRemote(preview),
+        isDangerous: true,
+        isExclusive: true,
+        strongConfirmationText: preview.confirmationText,
       ),
     );
   }
@@ -1468,8 +1747,20 @@ class RepositoryController extends ChangeNotifier {
         '本地索引已重置为空，文件已保留并显示为未跟踪。',
       );
     } catch (error) {
-      _log.error('remote-clear', '清空远端失败：$error');
-      return OperationOutcome.failure(_cleanError(error));
+      var message = _cleanError(error);
+      if (message.contains('远端引用在确认后发生了变化')) {
+        try {
+          final refreshed = await _git!.previewClearRemote(preview.remoteName);
+          message =
+              '$message\n刷新后的远端状态：远端 ${preview.remoteName} '
+              '当前有 ${refreshed.branchCount} 个分支、'
+              '${refreshed.tagCount} 个标签。';
+        } catch (_) {
+          // The original safety rejection remains the primary result.
+        }
+      }
+      _log.error('remote-clear', '清空远端失败：$message');
+      return OperationOutcome.failure(message);
     }
   }
 
@@ -1477,15 +1768,13 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.stageAll,
-          title: '暂存全部更改',
-          description: '执行 git add -A，把当前全部更改加入 Git 索引。',
-          run: _applyStageAllChanges,
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.stageAll,
+        title: '暂存全部更改',
+        description: '执行 git add -A，把当前全部更改加入 Git 索引。',
+        run: _applyStageAllChanges,
       ),
     );
   }
@@ -1509,15 +1798,13 @@ class RepositoryController extends ChangeNotifier {
     if (_git == null || isBusy) {
       return const OperationOutcome.failure('当前操作尚未完成。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.unstageAll,
-          title: '取消暂存全部更改',
-          description: '把 Git 索引恢复到 HEAD，但保留工作区文件内容。',
-          run: _applyUnstageAllChanges,
-        ),
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.unstageAll,
+        title: '取消暂存全部更改',
+        description: '把 Git 索引恢复到 HEAD，但保留工作区文件内容。',
+        run: _applyUnstageAllChanges,
       ),
     );
   }
@@ -1551,23 +1838,31 @@ class RepositoryController extends ChangeNotifier {
     )) {
       return const OperationOutcome.failure('执行计划中已经有提交步骤。');
     }
-    return Future<OperationOutcome>.value(
-      _queueOperation(
-        PlannedRepositoryOperation(
-          id: '',
-          kind: PlannedOperationKind.commit,
-          title: '提交全部更改',
-          description:
-              '提交说明：${trimmed.replaceAll('\n', ' / ')}。'
-              '执行时先运行 git add -A，再运行 git commit。',
-          run: () => _applyCommitAll(trimmed),
-        ),
+    final identity = await _git!.identityState();
+    if (!identity.isReady) {
+      _log.warning('identity', '提交未加入计划：有效 Git 身份不可用；${identity.errorMessage}');
+      return OperationOutcome.failure(_commitIdentityFailure(identity));
+    }
+    return _queueOperation(
+      PlannedRepositoryOperation(
+        id: '',
+        kind: PlannedOperationKind.commit,
+        title: '提交全部更改',
+        description:
+            '提交说明：${trimmed.replaceAll('\n', ' / ')}。'
+            '执行时先运行 git add -A，再运行 git commit。',
+        run: () => _applyCommitAll(trimmed),
       ),
     );
   }
 
   Future<OperationOutcome> _applyCommitAll(String message) async {
     try {
+      final identity = await _git!.identityState();
+      if (!identity.isReady) {
+        _log.warning('identity', '提交执行前身份复核失败：${identity.errorMessage}');
+        return OperationOutcome.failure(_commitIdentityFailure(identity));
+      }
       await _git!.stageAll();
       await _git!.commit(message);
       await _reloadAfterMutation();
@@ -1660,6 +1955,7 @@ class RepositoryController extends ChangeNotifier {
     _log.detail('repository', '变更后重新加载仓库视图');
     changedFiles = await service.status();
     branch = await service.currentBranch();
+    syncState = await _readSyncState(service);
     if (refreshStats) {
       repositoryStats = await service.repositoryStats();
     }
@@ -1673,6 +1969,64 @@ class RepositoryController extends ChangeNotifier {
       rightPanel.relativePath,
       announce: false,
     );
+  }
+
+  Future<OperationValidationResult> _validatePlanStart(
+    List<PlannedRepositoryOperation> operations,
+  ) async {
+    final service = _git;
+    if (service == null) {
+      return const OperationValidationResult.failure([
+        OperationDrift(
+          kind: OperationDriftKind.repositoryRoot,
+          label: 'repository',
+          expected: 'open repository',
+          actual: 'no repository',
+        ),
+      ]);
+    }
+    final actual = await service.stateSnapshot();
+    _planBaseline ??= actual;
+    final globalValidation = compareRepositorySnapshots(
+      expected: _planBaseline!,
+      actual: actual,
+    );
+    final expectedPaths = <String, String>{
+      for (final operation in operations)
+        ...?operation.precondition?.repository?.pathTypes,
+    };
+    if (expectedPaths.isEmpty) {
+      return globalValidation;
+    }
+    final actualPaths = await service.pathTypeSnapshot(expectedPaths.keys);
+    return mergeValidationResults([
+      globalValidation,
+      comparePathTypes(expected: expectedPaths, actual: actualPaths),
+    ]);
+  }
+
+  Future<OperationValidationResult> _validateRuntimeState() async {
+    final service = _git;
+    final baseline = _runtimeBaseline ?? _planBaseline;
+    if (service == null || baseline == null) {
+      return const OperationValidationResult.success();
+    }
+    final actual = await service.stateSnapshot();
+    return compareRepositorySnapshots(expected: baseline, actual: actual);
+  }
+
+  void _resetPlanBaselines() {
+    _planBaseline = null;
+    _runtimeBaseline = null;
+  }
+
+  Future<BranchSyncState?> _readSyncState(GitService service) async {
+    try {
+      return await service.syncState();
+    } catch (error) {
+      _log.warning('sync', '读取分支同步状态失败：$error');
+      return null;
+    }
   }
 
   void _setPanel(ExplorerSide side, ExplorerPanelState next) {

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../../core/localization/app_localizations.dart';
-import '../repository/repository_controller.dart';
+import '../../core/models/operation_plan.dart';
+import '../../core/models/operation_safety.dart';
 
 class OperationPlanDialog extends StatefulWidget {
-  const OperationPlanDialog({super.key, required this.controller});
+  const OperationPlanDialog({super.key, required this.planHost});
 
-  final RepositoryController controller;
+  final OperationPlanHost planHost;
 
   @override
   State<OperationPlanDialog> createState() => _OperationPlanDialogState();
@@ -32,7 +33,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final operations = widget.controller.pendingOperations;
+    final operations = widget.planHost.pendingOperations;
     final dangerous = operations
         .where((operation) => operation.isDangerous)
         .toList();
@@ -129,7 +130,10 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                           const SizedBox(height: 12),
                         ],
                         if (_result != null) ...[
-                          _ResultBanner(result: _result!),
+                          _ResultBanner(
+                            result: _result!,
+                            onRecover: _recoverFromSafetyRejection,
+                          ),
                           const SizedBox(height: 12),
                         ],
                         for (var index = 0; index < operations.length; index++)
@@ -278,14 +282,14 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
   }
 
   void _removeOperation(PlannedRepositoryOperation operation) {
-    final outcome = widget.controller.removePendingOperation(operation.id);
+    final outcome = widget.planHost.removePendingOperation(operation.id);
     setState(() {
       _validationMessage = outcome.isSuccess ? null : outcome.message;
     });
   }
 
   void _clearPlan() {
-    final outcome = widget.controller.clearPendingOperations();
+    final outcome = widget.planHost.clearPendingOperations();
     setState(() {
       _result = null;
       _dangerousConfirmed = false;
@@ -294,8 +298,19 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
     });
   }
 
+  Future<void> _recoverFromSafetyRejection() async {
+    await widget.planHost.recoverFromSafetyRejection();
+    if (!mounted) return;
+    setState(() {
+      _result = null;
+      _dangerousConfirmed = false;
+      _confirmationController.clear();
+      _validationMessage = null;
+    });
+  }
+
   Future<void> _execute() async {
-    final operations = widget.controller.pendingOperations;
+    final operations = widget.planHost.pendingOperations;
     final strongOperation = operations
         .where((operation) => operation.strongConfirmationText != null)
         .firstOrNull;
@@ -326,7 +341,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
       _totalSteps = operations.length;
       _currentTitle = null;
     });
-    final result = await widget.controller.executePendingOperations(
+    final result = await widget.planHost.executePendingOperations(
       confirmedDangerous: _dangerousConfirmed,
       strongConfirmationText: _confirmationController.text.trim(),
       onProgress: (progress) {
@@ -439,13 +454,19 @@ class _OperationCard extends StatelessWidget {
 
   String _kindLabel(BuildContext context, PlannedOperationKind kind) {
     final label = switch (kind) {
+      PlannedOperationKind.initializeRepository => '初始化仓库',
+      PlannedOperationKind.cloneRepository => '克隆仓库',
       PlannedOperationKind.move => '移动',
       PlannedOperationKind.copy => '复制',
       PlannedOperationKind.rename => '重命名',
       PlannedOperationKind.delete => '删除',
+      PlannedOperationKind.clearGitMetadata => '清除 Git 元数据',
       PlannedOperationKind.stageAll => '暂存',
       PlannedOperationKind.unstageAll => '取消暂存',
       PlannedOperationKind.commit => '提交',
+      PlannedOperationKind.fetchCurrentRemote => '获取 upstream',
+      PlannedOperationKind.fetchAllRemotes => '获取全部远端',
+      PlannedOperationKind.pullFastForward => '安全快进 Pull',
       PlannedOperationKind.pushCurrentBranch => '推送',
       PlannedOperationKind.pushRemote => '推送',
       PlannedOperationKind.pushAllRemotes => '全部推送',
@@ -604,9 +625,10 @@ class _ProgressBanner extends StatelessWidget {
 }
 
 class _ResultBanner extends StatelessWidget {
-  const _ResultBanner({required this.result});
+  const _ResultBanner({required this.result, required this.onRecover});
 
   final OperationPlanResult result;
+  final VoidCallback onRecover;
 
   @override
   Widget build(BuildContext context) {
@@ -619,16 +641,106 @@ class _ResultBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(9),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: SelectableText(
-        context.l10n.tr(result.message),
-        style: TextStyle(
-          fontSize: 12.5,
-          height: 1.45,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (result.validation?.isSuccess == false) ...[
+            Text(
+              context.l10n.tr('执行前状态已变化'),
+              style: TextStyle(
+                color: color,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 5),
+          ],
+          SelectableText(
+            context.l10n.tr(result.message),
+            style: TextStyle(
+              fontSize: 12.5,
+              height: 1.45,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          if (result.validation?.isSuccess == false)
+            _SafetyDriftDetails(validation: result.validation!),
+          if (result.validation?.isSuccess == false) ...[
+            const SizedBox(height: 9),
+            OutlinedButton.icon(
+              onPressed: onRecover,
+              icon: const Icon(Icons.refresh_rounded, size: 17),
+              label: Text(context.l10n.tr('刷新仓库并重建计划')),
+            ),
+          ],
+        ],
       ),
     );
+  }
+}
+
+class _SafetyDriftDetails extends StatelessWidget {
+  const _SafetyDriftDetails({required this.validation});
+
+  final OperationValidationResult validation;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    return Container(
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: colors.error.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.error.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.tr('状态变化详情'),
+            style: TextStyle(
+              color: colors.error,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          for (final drift in validation.drifts)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: SelectableText(
+                '${_driftLabel(context, drift.kind)}: '
+                '${drift.expected} -> ${drift.actual}',
+                style: const TextStyle(fontSize: 11.5, height: 1.4),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _driftLabel(BuildContext context, OperationDriftKind kind) {
+    final label = switch (kind) {
+      OperationDriftKind.repositoryRoot => '仓库根目录',
+      OperationDriftKind.branch => '分支',
+      OperationDriftKind.head => 'HEAD',
+      OperationDriftKind.status => '工作区状态',
+      OperationDriftKind.remotes => '远端配置',
+      OperationDriftKind.pathType => '路径类型',
+      OperationDriftKind.destinationParent => '父目录',
+      OperationDriftKind.destinationExists => '目标是否存在',
+      OperationDriftKind.destinationEmpty => '目标是否为空',
+      OperationDriftKind.gitMetadata => 'Git 元数据',
+      OperationDriftKind.source => '来源',
+      OperationDriftKind.remoteName => '远端名称',
+      OperationDriftKind.remoteTargetBranch => '目标分支',
+      OperationDriftKind.remoteRefs => '远端引用',
+    };
+    return context.l10n.tr(label);
   }
 }
 

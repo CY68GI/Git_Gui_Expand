@@ -22,7 +22,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.7`
+当前版本：`0.9.9`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -43,9 +43,13 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 - 文件行右键菜单支持在资源管理器中定位文件，或使用系统默认应用打开。
 - 剪切、复制、粘贴、重命名和左右面板间批量移动。
 - 所有仓库修改先进入可检查、可移除的待执行操作计划，确认后才逐步运行 Git。
+- 执行前重新检查仓库、路径和远端状态；状态变化时停止计划、显示漂移详情并提供恢复入口。
+- 提交前检查有效 Git 作者和提交者身份，执行时再次复核，避免 Git 身份缺失导致部分执行。
 - 带危险确认的批量删除，支持已跟踪、未跟踪和忽略内容。
 - 当前活动面板决定粘贴目标文件夹。
 - 支持推送当前分支，自动检查 upstream，并在需要时设置 `origin` 或首个远程。
+- 可查看 upstream、ahead/behind，并通过执行计划获取当前 upstream 或全部远端。
+- 安全 Pull 仅允许干净、未分叉的落后分支，通过 Fetch 后执行 `git merge --ff-only`。
 - 支持同时管理 GitHub、Gitee、GitLab、Bitbucket 和通用 Git 远端。
 - 可查看所有远端、添加/修改/删除远端，并可逐项推送或推送到全部远端。
 - 可备份并清空选定远端历史，把目标分支替换为一个空根提交并删除其它分支和标签；
@@ -84,9 +88,9 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 | Git 功能 | 状态 | 说明 |
 | --- | --- | --- |
 | 打开已初始化仓库 | ✅ | Windows 标准选择器和最近仓库记录 |
-| `git init` 初始化仓库 | ✅ | 打开非 Git 空文件夹时询问是否初始化 |
-| `git clone` 克隆仓库 | ✅ | 提供地址与目标目录对话框 |
-| 清除 Git 元数据（`.git`） | ✅ | 仅在未配置远端时允许，工作文件保留 |
+| `git init` 初始化仓库 | ✅ | 一次性预览、目标复核和明确确认 |
+| `git clone` 克隆仓库 | ✅ | 预览窗口、目标复核和明确确认 |
+| 清除 Git 元数据（`.git`） | ✅ | 作为独占计划步骤；仅在未配置远端时允许，工作文件保留 |
 | `git status` 状态 | ✅ | 显示分支、暂存、未暂存和未跟踪状态 |
 | 列出已跟踪和未跟踪文件 | ✅ | 遵循 `.gitignore` |
 | 选择性暂存 / 按块暂存 | ❌ | 当前暂存全部或不暂存 |
@@ -109,7 +113,8 @@ Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
 | 冲突编辑器 | ❌ | 未实现 |
 | 查看、添加、修改、删除远端 | ✅ | 支持多个平台远端 |
 | 推送当前分支 | ✅ | 支持单个或全部远端，并可设置 upstream |
-| Fetch 和 pull | ❌ | 内部 fetch 仅用于清空远端前备份 |
+| Fetch | ✅ | 当前 upstream/全部远端 Fetch 先进入计划；部分失败时保留成功更新 |
+| Pull | ✅ | 仅限干净且已跟踪的落后分支；Fetch 后 `git merge --ff-only`，分叉时拒绝 |
 | 清空远端历史 | ✅ | 强确认后以空根提交原子替换 |
 | SSH/HTTPS 认证 | ✅ | 由系统 Git 凭据机制处理 |
 | 子模块、worktree、sparse checkout | ❌ | 未实现 |
@@ -196,8 +201,10 @@ build\windows\x64\runner\Release\
   upstream。
 - 远端管理通过 `git remote add/set-url/remove` 执行，平台根据 URL 自动识别。
 - 清空远端通过 `git ls-remote` 查看分支/标签，先抓取到本地备份引用，再创建一个
-  空根提交，并使用原子强推替换目标分支、删除其它分支和标签。确认时必须输入
-  `远端项目全称/目标分支`。受保护分支通常会导致整个操作被拒绝。
+  空根提交。执行前会重新读取全部引用与对象哈希；已知引用变化时立即拒绝。
+  通过检查后使用 atomic push 和每个引用的 `--force-with-lease` 替换目标分支、
+  删除其它分支和标签。确认时必须输入 `远端项目全称/目标分支`。
+  受保护分支通常会导致整个操作被拒绝。
 - 应用不会自动拉取或以普通操作改写本地提交历史；分支切换需在计划中确认，
   推送、删除和远端清空
   都需要在执行计划中明确确认。
@@ -227,7 +234,7 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.7/                    # 当前唯一保留的版本
+    0.9.9/                    # 当前唯一保留的版本
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe

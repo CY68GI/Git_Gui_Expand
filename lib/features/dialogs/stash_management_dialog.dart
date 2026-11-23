@@ -71,7 +71,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
     }
     await showDialog<void>(
       context: context,
-      builder: (context) => OperationPlanDialog(controller: widget.controller),
+      builder: (context) => OperationPlanDialog(planHost: widget.controller),
     );
     if (mounted) {
       _messageController.clear();

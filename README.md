@@ -23,7 +23,7 @@ an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.7`
+Current version: `0.9.9`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -40,8 +40,16 @@ Current version: `0.9.7`
 - Select files and folders with checkboxes and perform batch operations.
 - Cut, copy, paste, rename, move, and delete through Git commands.
 - Review every repository mutation in a pending operation plan before execution.
+- Revalidate repository, path, and remote state before execution; stale plans stop
+  with a localized drift summary and recovery action.
 - Stage, unstage, commit, push, manage multiple remotes, and create, switch,
   rename, or delete local branches.
+- Validate effective Git author/committer identity before commit planning and
+  again before staging or commit creation.
+- Inspect upstream ahead/behind state and fetch the current upstream or all
+  remotes through the operation plan.
+- Safely Pull only clean, non-diverged branches through fetch followed by
+  `git merge --ff-only`; no automatic merge commit is created.
 - Create, list, apply, pop, and drop Git stashes.
 - Manage GitHub, Gitee, GitLab, Bitbucket, and generic Git remotes.
 - Clear a selected remote history with an atomic empty-root commit after an
@@ -72,9 +80,9 @@ Legend: `✅` implemented in the application, `❌` not currently implemented.
 | Git capability | Status | Notes |
 | --- | --- | --- |
 | Open an existing initialized repository | ✅ | Native Windows picker and recent-repository history |
-| `git init` | ✅ | Offered when opening a non-Git empty folder |
-| `git clone` | ✅ | URL and destination dialog |
-| Remove Git metadata (`.git`) | ✅ | Only when no remote is configured; working files remain |
+| `git init` | ✅ | One-step preview, target revalidation, explicit confirmation |
+| `git clone` | ✅ | Preview dialog, destination revalidation, explicit confirmation |
+| Remove Git metadata (`.git`) | ✅ | Exclusive planned step; only when no remote is configured; working files remain |
 | `git status` | ✅ | Branch, staged, unstaged, and untracked state |
 | List tracked and untracked files | ✅ | `.gitignore`-aware enumeration |
 | Selective staging / hunk staging | ❌ | Staging is currently all-or-nothing |
@@ -97,8 +105,9 @@ Legend: `✅` implemented in the application, `❌` not currently implemented.
 | Merge conflict editor | ❌ | Not implemented |
 | List/add/edit/remove remotes | ✅ | Multiple platform remotes |
 | Push current branch | ✅ | One or all remotes; upstream is configured |
-| Fetch and pull | ❌ | Internal fetch is only used before remote clearing |
-| Clear remote history | ✅ | Atomic empty-root replacement after strong confirmation |
+| Fetch | ✅ | Upstream/all-remote fetch is planned; successful remote-tracking refs are retained on partial failure |
+| Pull | ✅ | Clean tracked branches only; fetch then `git merge --ff-only`; diverged histories are rejected |
+| Clear remote history | ✅ | Ref snapshot revalidation, atomic per-ref leases, empty-root replacement, and retained backups |
 | SSH/HTTPS authentication | ✅ | Delegated to the installed Git credential system |
 | Submodules, worktrees, sparse checkout | ❌ | Not implemented |
 | Git LFS | ❌ | Not implemented |
@@ -133,7 +142,7 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.7
+.\tool\package_windows_release.ps1 -Tag v0.9.9
 ```
 
 ## Release layout
@@ -143,7 +152,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.7/
+    0.9.9/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe
@@ -172,15 +181,18 @@ require additional permissions.
 ## Operation safety
 
 File moves, copies, renames, deletes, commits, pushes, remote changes, and remote
-history clearing are first added to the operation plan. Nothing is executed
-until the plan is confirmed. Dangerous steps require explicit confirmation;
+history clearing are first added to the operation plan. Repository, branch,
+HEAD, status, affected paths, bootstrap destinations, and remote refs are
+revalidated before mutation. Nothing is executed until the plan is confirmed;
+dangerous steps require explicit confirmation;
 remote history clearing additionally requires
 `remote-owner/project/branch` to be typed exactly.
 
 Git commands are executed without shell string concatenation. Protected
 branches, authentication failures, network failures, and servers that do not
 support atomic push are reported as failures rather than being treated as
-successful operations.
+successful operations. Remote clearing refreshes every ref hash and uses atomic
+per-ref leases so changed known refs abort before target replacement.
 
 ## Updates
 

@@ -22,7 +22,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 檔案工作區操作已初始化的 Git 儲存庫。檔案與版本控制變更都交由本機 Git CLI
 執行，軟體提供可視化操作，不會自行取代 Git。
 
-目前版本：`0.9.7`
+目前版本：`0.9.9`
 
 - GitHub：<https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -39,7 +39,11 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 - 使用核取方塊選取檔案與資料夾，支援批次操作。
 - 透過 Git 執行剪下、複製、貼上、重新命名、移動與刪除。
 - 所有會修改儲存庫的操作先進入待執行計畫，確認後才逐步執行。
+- 執行前重新檢查儲存庫、路徑和遠端狀態；狀態變更時停止計畫、顯示漂移詳情並提供復原入口。
+- 提交前檢查有效 Git 作者與提交者身分，執行時再次複核，避免身分缺失造成部分執行。
 - 支援暫存、取消暫存、提交、推送與多平台遠端管理。
+- 可檢視 upstream、ahead/behind，並透過執行計畫取得目前 upstream 或全部遠端。
+- 安全 Pull 僅允許乾淨、未分叉的落後分支，透過 Fetch 後執行 `git merge --ff-only`。
 - 可建立、切換、重新命名和刪除本機分支，分支操作同樣先進入執行計畫。
 - 可建立、檢視、套用、彈出和刪除 Git Stash，並支援包含未追蹤檔案。
 - 可管理 GitHub、Gitee、GitLab、Bitbucket 與一般 Git 遠端。
@@ -64,9 +68,9 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 | Git 功能 | 狀態 | 說明 |
 | --- | --- | --- |
 | 開啟已初始化儲存庫 | ✅ | Windows 標準選擇器與最近儲存庫記錄 |
-| `git init` 初始化儲存庫 | ✅ | 開啟非 Git 空白資料夾時詢問是否初始化 |
-| `git clone` 複製儲存庫 | ✅ | 提供網址與目標目錄對話框 |
-| 清除 Git 中繼資料（`.git`） | ✅ | 僅在未設定遠端時允許，工作檔案保留 |
+| `git init` 初始化儲存庫 | ✅ | 一次性預覽、目標複核和明確確認 |
+| `git clone` 複製儲存庫 | ✅ | 預覽視窗、目標複核和明確確認 |
+| 清除 Git 中繼資料（`.git`） | ✅ | 作為獨立計畫步驟；僅在未設定遠端時允許，工作檔案保留 |
 | `git status` 狀態 | ✅ | 顯示分支、暫存、未暫存和未追蹤狀態 |
 | 列出已追蹤和未追蹤檔案 | ✅ | 遵循 `.gitignore` |
 | 選擇性暫存 / 按區塊暫存 | ❌ | 目前只能全部暫存或全部取消 |
@@ -89,7 +93,8 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 | 衝突編輯器 | ❌ | 未實現 |
 | 檢視、新增、修改、刪除遠端 | ✅ | 支援多平台遠端 |
 | 推送目前分支 | ✅ | 支援單一或全部遠端並設定 upstream |
-| Fetch 和 pull | ❌ | 內部 fetch 僅用於清除遠端前備份 |
+| Fetch | ✅ | 目前 upstream/全部遠端 Fetch 先進入計畫；部分失敗時保留成功更新 |
+| Pull | ✅ | 僅限乾淨且已追蹤的落後分支；Fetch 後 `git merge --ff-only`，分叉時拒絕 |
 | 清除遠端歷史 | ✅ | 強確認後以空根提交原子替換 |
 | SSH/HTTPS 認證 | ✅ | 由系統 Git 憑證機制處理 |
 | 子模組、worktree、sparse checkout | ❌ | 未實現 |
@@ -124,7 +129,7 @@ build\windows\x64\runner\Release\
 建立發布 ZIP：
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.7
+.\tool\package_windows_release.ps1 -Tag v0.9.9
 ```
 
 ## 發布目錄結構
@@ -134,7 +139,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.7/
+    0.9.9/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe
@@ -158,7 +163,9 @@ Git GUI Expand/
 ## 操作安全
 
 檔案移動、複製、重新命名、刪除、提交、推送、遠端設定與清除遠端歷史都會先加入
-待執行計畫。危險操作需要明確勾選確認；清除遠端歷史還必須準確輸入
+待執行計畫。執行前會重新檢查儲存庫、分支、HEAD、狀態、路徑、初始化/複製目標與
+遠端引用；危險操作需要明確勾選確認。清除遠端歷史會比較每個引用和物件雜湊，並以
+atomic push 加逐引用 `--force-with-lease` 執行，還必須準確輸入
 `遠端擁有者/專案/分支`。
 
 ## 自動更新與版本保留

@@ -13,7 +13,6 @@ class GitMetadataClearDialog extends StatefulWidget {
 }
 
 class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
-  final TextEditingController _confirmationController = TextEditingController();
   GitMetadataClearInspection? _inspection;
   bool _loading = true;
   bool _clearing = false;
@@ -23,12 +22,6 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
   void initState() {
     super.initState();
     _inspect();
-  }
-
-  @override
-  void dispose() {
-    _confirmationController.dispose();
-    super.dispose();
   }
 
   Future<void> _inspect() async {
@@ -43,10 +36,6 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
 
   Future<void> _clear() async {
     if (_clearing) return;
-    if (_confirmationController.text.trim() != 'CLEAR GIT') {
-      setState(() => _error = context.l10n.tr('请输入 CLEAR GIT 以确认。'));
-      return;
-    }
     setState(() {
       _clearing = true;
       _error = null;
@@ -121,7 +110,10 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    l10n.tr('清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。'),
+                    l10n.tr(
+                      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。'
+                      '现在只加入清除计划；还需要在操作计划中输入 CLEAR GIT 并确认执行。',
+                    ),
                     style: TextStyle(
                       fontSize: 11.5,
                       height: 1.5,
@@ -167,16 +159,6 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                 style: TextStyle(color: colors.error, fontSize: 11.5),
               ),
             ],
-            if (canClear) ...[
-              const SizedBox(height: 14),
-              TextField(
-                controller: _confirmationController,
-                enabled: !_clearing,
-                decoration: InputDecoration(
-                  labelText: l10n.tr('输入 CLEAR GIT 以确认'),
-                ),
-              ),
-            ],
             if (_error != null) ...[
               const SizedBox(height: 10),
               SelectableText(
@@ -201,7 +183,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.delete_forever_rounded, size: 18),
-          label: Text(l10n.tr('永久清除 Git')),
+          label: Text(l10n.tr('加入清除计划')),
           style: FilledButton.styleFrom(backgroundColor: colors.error),
         ),
       ],

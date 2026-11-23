@@ -18,6 +18,13 @@ plan.
 If a step fails, execution stops. The failed step and later steps remain in the
 plan. Completed steps are not automatically rolled back.
 
+Before the first mutation, the application refreshes the repository root,
+branch, HEAD, Git status, remote configuration, and affected path types. The
+same check runs before each later step against the state produced by earlier
+steps. If an external tool changed that state, nothing in the affected step
+runs. Review the displayed drift details, then use **Refresh repository and
+rebuild plan**.
+
 ## 2. Opening a repository
 
 Click **Open Git repository**. The Windows standard **Open** dialog is shown.
@@ -28,13 +35,20 @@ Explorer. Verified repositories are saved to the recent list; the list stores
 only existing Git roots and keeps at most ten entries.
 
 Use **Open empty folder** to select a directory without `.git`. The application
-asks whether to initialize it with `git init`. Use **Clone Git repository** to
-enter an HTTPS/SSH/local URL, a parent directory, and a project folder name.
+opens a one-step initialization plan with the target path. Cancel creates no
+repository; confirming rechecks that `.git` is still absent, runs `git init`,
+and opens the new repository.
+
+Use **Clone Git repository** to enter an HTTPS/SSH/local URL, a parent directory,
+and a project folder name. The dialog only prepares a preview. Cancelling
+creates no files; confirming rechecks the parent and destination emptiness,
+runs `git clone`, and opens the cloned repository.
 
 The top bar **Git metadata** action can remove `.git` only when the repository
 has no configured remote. It deletes commit history, branches, tags, index,
 stashes, refs, remote configuration, and repository Git settings, while preserving
-working files. Type `CLEAR GIT` to confirm.
+working files. This action first enters the operation plan as an exclusive step;
+type `CLEAR GIT` and confirm the plan to execute it.
 
 Start distributed releases with `GitGuiExpandLauncher.exe`. If
 `current-version.txt` is missing from a freshly extracted package, the Launcher
@@ -84,6 +98,18 @@ Enter a meaningful commit message, review the plan, then confirm execution.
 After a commit step is queued, additional file-change steps are blocked until the
 commit step is removed or executed.
 
+Before adding a commit plan, the application reads effective Git author and
+committer identity. A missing `user.name` or `user.email` blocks planning, and
+identity is checked again before `git add -A`. Configure it in the project:
+
+```powershell
+git config --local user.name "Your Name"
+git config --local user.email "you@example.com"
+```
+
+Use `--global` instead of `--local` to configure the current user's default
+identity.
+
 ## 5. Branch management
 
 Click the current branch name in the commit workspace to open Branch management.
@@ -113,6 +139,20 @@ Pushes are planned first. If upstream is configured, the software runs
 `git push`; otherwise it prefers `origin`, configures upstream, and reports
 authentication or network failures.
 
+The synchronization view shows the current upstream and ahead/behind counts.
+**Fetch current** plans `git fetch --prune <upstream-remote>`, while **Fetch
+all** attempts every configured remote and reports each result. Fetch updates
+remote-tracking refs without changing worktree files. On a partial fetch-all
+failure, successful updates remain and failed remotes are listed separately.
+
+**Safe fast-forward pull** is enabled only when the current branch has an
+upstream, the worktree/index is clean, and the branch is behind without local
+ahead commits. It fetches first, recomputes ahead/behind, and runs only
+`git merge --ff-only <upstream>`. Diverged histories, dirty files, detached HEAD,
+or missing upstream are rejected. If divergence is discovered after fetch,
+remote-tracking refs remain refreshed but the current branch and files are not
+changed. Resolve Merge or Rebase with external Git before retrying.
+
 ## 7. Clearing remote history
 
 This is a dangerous operation. It replaces the selected remote branch with a
@@ -124,12 +164,15 @@ Before execution:
 
 1. The local current branch must match the target remote branch.
 2. Review the remote reference list.
-3. Select the dangerous-operation confirmation.
-4. Enter the exact `owner/project/branch` confirmation.
+3. Re-read the remote refs and reject any change from the confirmed snapshot.
+4. Select the dangerous-operation confirmation.
+5. Enter the exact `owner/project/branch` confirmation.
 
 Reference backups are stored under
 `refs/gitgui-expand/backup/<remote>`. Protected branches, missing permissions,
-network failures, or servers without atomic push can reject the operation.
+network failures, or servers without atomic push can reject the operation. The
+push uses atomic push with one lease per target/deleted ref, so changed known
+refs abort before replacement.
 
 ## 8. Settings
 

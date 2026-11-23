@@ -14,6 +14,28 @@ class ChangelogEntry {
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.9.9',
+    date: '2026-11-23',
+    title: '分支同步、安全快进 Pull 与提交身份预检',
+    items: [
+      '显示 upstream、ahead、behind 和工作区同步状态。',
+      '新增当前 upstream 或全部远端 Fetch 计划，并逐项报告结果。',
+      '新增仅快进 Pull，拒绝脏工作区、无 upstream 和分叉历史。',
+      '提交前及执行前检查有效的 Git 作者和提交者身份。',
+    ],
+  ),
+  ChangelogEntry(
+    version: '0.9.8',
+    date: '2026-11-23',
+    title: '统一操作计划与执行前状态复核',
+    items: [
+      '初始化、克隆、仓库修改和 .git 清除统一使用可确认的操作预览。',
+      '执行前复核仓库根目录、分支、HEAD、状态、路径和远端引用。',
+      '状态漂移时停止操作，显示详情并提供刷新仓库、重建计划入口。',
+      '清空远端前比较引用哈希，并使用 atomic push 和逐引用 lease。',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.7',
     date: '2026-11-17',
     title: '空白目录初始化、克隆与 Stash 管理',

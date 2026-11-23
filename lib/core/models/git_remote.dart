@@ -97,6 +97,7 @@ class RemoteClearPreview {
     required this.targetBranch,
     required this.emptyCommitMessage,
     required this.refs,
+    required this.refHashes,
     required this.backupRefspecs,
   });
 
@@ -105,6 +106,7 @@ class RemoteClearPreview {
   final String targetBranch;
   final String emptyCommitMessage;
   final List<String> refs;
+  final Map<String, String> refHashes;
   final List<String> backupRefspecs;
 
   int get branchCount =>

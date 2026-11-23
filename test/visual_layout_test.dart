@@ -6,12 +6,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
+import 'package:git_gui_expand/core/models/operation_safety.dart';
 import 'package:git_gui_expand/core/models/recent_repository.dart';
+import 'package:git_gui_expand/core/models/repository_sync.dart';
 import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/remote_management_dialog.dart';
+import 'package:git_gui_expand/features/dialogs/repository_sync_dialog.dart';
 import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
 import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
@@ -82,7 +85,7 @@ void main() {
     ];
 
     await tester.pumpWidget(
-      _visualApp(OperationPlanDialog(controller: controller)),
+      _visualApp(OperationPlanDialog(planHost: controller)),
     );
     await tester.pump();
 
@@ -150,7 +153,7 @@ void main() {
 
     await tester.pumpWidget(
       _visualApp(
-        OperationPlanDialog(controller: controller),
+        OperationPlanDialog(planHost: controller),
         themeMode: ThemeMode.light,
         textScale: 0.9,
       ),
@@ -160,6 +163,72 @@ void main() {
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/operation_plan_light_90.png'),
+    );
+  });
+
+  testWidgets('operation plan drift recovery is readable at 90 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDriftPlan(
+      tester,
+      textScale: 0.9,
+      themeMode: ThemeMode.light,
+      golden: 'goldens/operation_plan_drift_light_90.png',
+    );
+  });
+
+  testWidgets('operation plan drift recovery is readable at 100 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDriftPlan(
+      tester,
+      textScale: 1,
+      themeMode: ThemeMode.dark,
+      golden: 'goldens/operation_plan_drift_dark_100.png',
+    );
+  });
+
+  testWidgets('operation plan drift recovery is readable at 110 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpDriftPlan(
+      tester,
+      textScale: 1.1,
+      themeMode: ThemeMode.dark,
+      golden: 'goldens/operation_plan_drift_dark_110.png',
+    );
+  });
+
+  testWidgets('repository sync dialog is readable at 90 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSyncDialog(
+      tester,
+      textScale: 0.9,
+      themeMode: ThemeMode.light,
+      golden: 'goldens/repository_sync_light_90.png',
+    );
+  });
+
+  testWidgets('repository sync dialog is readable at 100 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSyncDialog(
+      tester,
+      textScale: 1,
+      themeMode: ThemeMode.dark,
+      golden: 'goldens/repository_sync_dark_100.png',
+    );
+  });
+
+  testWidgets('repository sync dialog is readable at 110 percent', (
+    WidgetTester tester,
+  ) async {
+    await _pumpSyncDialog(
+      tester,
+      textScale: 1.1,
+      themeMode: ThemeMode.dark,
+      golden: 'goldens/repository_sync_dark_110.png',
     );
   });
 
@@ -378,4 +447,148 @@ class _FakeFontCatalogService extends FontCatalogService {
     'Microsoft YaHei UI',
     'SimSun',
   ];
+}
+
+Future<void> _pumpDriftPlan(
+  WidgetTester tester, {
+  required double textScale,
+  required ThemeMode themeMode,
+  required String golden,
+}) async {
+  await _setViewport(tester);
+  final host = _DriftPlanHost();
+  addTearDown(host.dispose);
+  await tester.pumpWidget(
+    _visualApp(
+      OperationPlanDialog(planHost: host),
+      textScale: textScale,
+      themeMode: themeMode,
+    ),
+  );
+  await tester.tap(find.text('确认并逐步执行'));
+  await tester.pumpAndSettle();
+
+  expect(find.text('执行前状态已变化'), findsOneWidget);
+  expect(find.text('状态变化详情'), findsOneWidget);
+  expect(find.text('刷新仓库并重建计划'), findsOneWidget);
+  expect(tester.takeException(), isNull);
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile(golden));
+}
+
+class _DriftPlanHost extends ChangeNotifier implements OperationPlanHost {
+  _DriftPlanHost()
+    : pendingOperations = [
+        PlannedRepositoryOperation(
+          id: 'drift',
+          kind: PlannedOperationKind.rename,
+          title: '重命名 docs/这是用于验证漂移提示的长文件名.md',
+          description:
+              '执行前会重新检查仓库分支、HEAD、工作区、远端配置和路径类型，'
+              '发现任何变化都会停止。',
+          run: () async => const OperationOutcome.success('not run'),
+        ),
+      ];
+
+  @override
+  List<PlannedRepositoryOperation> pendingOperations;
+
+  @override
+  bool get canExecutePlan => pendingOperations.isNotEmpty && !isBusy;
+
+  @override
+  bool get isBusy => false;
+
+  @override
+  OperationOutcome clearPendingOperations() {
+    pendingOperations = const [];
+    notifyListeners();
+    return const OperationOutcome.success('Cleared');
+  }
+
+  @override
+  Future<OperationPlanResult> executePendingOperations({
+    required bool confirmedDangerous,
+    String? strongConfirmationText,
+    void Function(OperationPlanProgress progress)? onProgress,
+  }) async {
+    return OperationPlanResult(
+      isSuccess: false,
+      message: '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。',
+      completed: 0,
+      total: pendingOperations.length,
+      remaining: pendingOperations,
+      validation: const OperationValidationResult.failure([
+        OperationDrift(
+          kind: OperationDriftKind.branch,
+          label: 'branch',
+          expected: 'main',
+          actual: 'feature/repository-operation-safety-with-a-very-long-name',
+        ),
+        OperationDrift(
+          kind: OperationDriftKind.status,
+          label: 'status',
+          expected: '(clean)',
+          actual: ' M docs/一个很长的文件名称.md',
+        ),
+      ]),
+    );
+  }
+
+  @override
+  OperationOutcome removePendingOperation(String id) {
+    pendingOperations = pendingOperations
+        .where((operation) => operation.id != id)
+        .toList(growable: false);
+    notifyListeners();
+    return const OperationOutcome.success('Removed');
+  }
+
+  @override
+  Future<void> recoverFromSafetyRejection() async {
+    pendingOperations = const [];
+    notifyListeners();
+  }
+}
+
+Future<void> _pumpSyncDialog(
+  WidgetTester tester, {
+  required double textScale,
+  required ThemeMode themeMode,
+  required String golden,
+}) async {
+  await _setViewport(tester);
+  final controller = RepositoryController()
+    ..branch = 'feature/repository-synchronization-with-a-long-name'
+    ..syncState = const BranchSyncState(
+      kind: BranchSyncKind.tracked,
+      branch: 'feature/repository-synchronization-with-a-long-name',
+      upstreamRef: 'origin/feature/repository-synchronization-with-a-long-name',
+      upstreamRemote: 'origin',
+      upstreamBranch: 'feature/repository-synchronization-with-a-long-name',
+      ahead: 2,
+      behind: 11,
+      worktreeClean: true,
+    )
+    ..remotes = const [
+      GitRemote(
+        name: 'origin',
+        fetchUrl: 'git@github.com:CY68GI/Git_Gui_Expand.git',
+        pushUrl: 'git@github.com:CY68GI/Git_Gui_Expand.git',
+        platform: GitRemotePlatform.github,
+      ),
+    ];
+  addTearDown(controller.dispose);
+  await tester.pumpWidget(
+    _visualApp(
+      RepositorySyncDialog(controller: controller),
+      textScale: textScale,
+      themeMode: themeMode,
+    ),
+  );
+  await tester.pump();
+
+  expect(find.text('分支同步'), findsOneWidget);
+  expect(find.textContaining('不会自动 Merge 或 Rebase'), findsOneWidget);
+  expect(tester.takeException(), isNull);
+  await expectLater(find.byType(MaterialApp), matchesGoldenFile(golden));
 }

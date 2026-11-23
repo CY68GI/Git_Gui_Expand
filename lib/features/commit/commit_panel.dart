@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/localization/app_localizations.dart';
 import '../../core/models/app_models.dart';
+import '../../core/models/repository_sync.dart';
+import '../dialogs/repository_sync_dialog.dart';
 import '../repository/repository_controller.dart';
 
 class CommitPanel extends StatefulWidget {
@@ -102,6 +104,33 @@ class _CommitPanelState extends State<CommitPanel> {
                   ),
                 ],
                 const Spacer(),
+                Tooltip(
+                  message: context.l10n.tr('查看分支同步状态'),
+                  child: TextButton.icon(
+                    onPressed: controller.isBusy
+                        ? null
+                        : () => showDialog<void>(
+                            context: context,
+                            builder: (context) =>
+                                RepositorySyncDialog(controller: controller),
+                          ),
+                    icon: const Icon(Icons.sync_rounded, size: 16),
+                    label: Text(_syncBadge(controller.syncState, context.l10n)),
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 7,
+                        vertical: 6,
+                      ),
+                      textStyle: Theme.of(context).textTheme.labelMedium
+                          ?.copyWith(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 5),
                 Tooltip(
                   message: context.l10n.tr('查看和管理全部远端仓库'),
                   child: TextButton.icon(
@@ -214,6 +243,13 @@ class _CommitPanelState extends State<CommitPanel> {
         ],
       ),
     );
+  }
+
+  String _syncBadge(BranchSyncState? state, AppLocalizations l10n) {
+    if (state == null) return l10n.tr('同步');
+    if (state.isDetached) return l10n.tr('detached');
+    if (!state.hasUpstream) return l10n.tr('无 upstream');
+    return '↑${state.ahead} ↓${state.behind}';
   }
 
   Widget _buildChangeList(BuildContext context) {

@@ -1,5 +1,64 @@
 # Changelog
 
+## 0.9.9 - 2026-11-23
+
+### English
+
+- Added upstream, ahead, behind, and worktree synchronization status.
+- Added planned fetch for the current upstream or all remotes, with pruning,
+  per-remote results, and refreshed tracking refs.
+- Added safe Pull through fetch followed by `git merge --ff-only`; dirty,
+  detached, missing-upstream, and diverged states are rejected.
+- Added effective Git author/committer identity preflight before commit planning
+  and again before staging or commit creation.
+
+### 简体中文
+
+- 新增 upstream、ahead、behind 和工作区同步状态显示。
+- 新增当前 upstream 或全部远端 Fetch 计划，支持 prune、逐远端结果和跟踪引用刷新。
+- 新增安全 Pull：先 Fetch，再执行 `git merge --ff-only`；脏工作区、detached、
+  缺少 upstream 和分叉状态都会被拒绝。
+- 提交计划前和执行前新增有效 Git 作者/提交者身份检查。
+
+### 繁體中文
+
+- 新增 upstream、ahead、behind 與工作區同步狀態顯示。
+- 新增目前 upstream 或全部遠端 Fetch 計畫，支援 prune、逐遠端結果和追蹤引用更新。
+- 新增安全 Pull：先 Fetch，再執行 `git merge --ff-only`；髒工作區、detached、
+  缺少 upstream 和分叉狀態都會被拒絕。
+- 提交計畫前和執行前新增有效 Git 作者/提交者身分檢查。
+
+## 0.9.8 - 2026-11-23
+
+### English
+
+- Unified operation previews and confirmation for repository bootstrap, clone,
+  opened-repository mutations, and `.git` metadata removal.
+- Revalidate repository root, branch, HEAD, status, affected paths, and bootstrap
+  destinations before mutation and before each later plan step.
+- Show localized drift details and a one-click repository refresh/rebuild action
+  when state changes after a plan is created.
+- Re-read remote refs and object hashes before clearing history, then use atomic
+  per-ref leases so known ref drift aborts before target replacement.
+
+### 简体中文
+
+- 统一初始化、克隆、已打开仓库修改和 `.git` 元数据清除的操作预览与确认流程。
+- 执行前及后续步骤执行前重新检查仓库根目录、分支、HEAD、状态、受影响路径和
+  初始化/克隆目标。
+- 计划建立后状态变化时，显示本地化漂移详情，并提供一键刷新仓库和重建计划入口。
+- 清空远端历史前重新读取引用和对象哈希，使用 atomic push 与逐引用 lease；
+  已知引用变化会在替换目标分支前中止。
+
+### 繁體中文
+
+- 統一初始化、複製、已開啟儲存庫修改和 `.git` 中繼資料清除的操作預覽與確認流程。
+- 執行前及後續步驟執行前重新檢查儲存庫根目錄、分支、HEAD、狀態、受影響路徑和
+  初始化/複製目標。
+- 計畫建立後狀態變更時，顯示在地化漂移詳情，並提供一鍵重新整理儲存庫和重建計畫。
+- 清除遠端歷史前重新讀取引用和物件雜湊，使用 atomic push 與逐引用 lease；
+  已知引用變更會在替換目標分支前中止。
+
 ## 0.9.7 - 2026-11-17
 
 ### English

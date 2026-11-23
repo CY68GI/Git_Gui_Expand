@@ -6,6 +6,21 @@ import '../../core/localization/app_localizations.dart';
 import '../../core/services/folder_picker_service.dart';
 import '../../core/services/git_service.dart';
 
+class CloneRepositoryRequest {
+  const CloneRepositoryRequest({
+    required this.remoteUrl,
+    required this.parentPath,
+    required this.repositoryName,
+  });
+
+  final String remoteUrl;
+  final String parentPath;
+  final String repositoryName;
+
+  String get destinationPath =>
+      '$parentPath${Platform.pathSeparator}$repositoryName';
+}
+
 class CloneRepositoryDialog extends StatefulWidget {
   const CloneRepositoryDialog({
     super.key,
@@ -53,7 +68,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
     setState(() {});
   }
 
-  Future<void> _clone() async {
+  Future<void> _previewClone() async {
     if (_cloning) return;
     final parent = _parentController.text.trim();
     final name = _nameController.text.trim();
@@ -62,21 +77,38 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
       setState(() => _error = context.l10n.tr('请填写克隆地址、父目录和项目名称。'));
       return;
     }
-    final destination = '$parent${Platform.pathSeparator}$name';
     setState(() {
       _cloning = true;
       _error = null;
     });
     try {
-      await GitService.cloneRepository(url, destination);
-      if (mounted) {
-        Navigator.pop(context, destination);
+      final snapshot = await GitService.inspectCloneTarget(
+        url,
+        '$parent${Platform.pathSeparator}$name',
+      );
+      if (!await Directory(snapshot.parentPath).exists()) {
+        throw const FileSystemException('克隆目标父目录不存在。');
       }
+      if (snapshot.targetExists && !snapshot.targetIsEmpty) {
+        throw const FileSystemException('克隆目标目录不是空目录。');
+      }
+      if (!mounted) return;
+      Navigator.pop(
+        context,
+        CloneRepositoryRequest(
+          remoteUrl: url,
+          parentPath: parent,
+          repositoryName: name,
+        ),
+      );
     } catch (error) {
       if (mounted) {
         setState(() {
           _cloning = false;
-          _error = error.toString();
+          _error = error
+              .toString()
+              .replaceFirst('FileSystemException: ', '')
+              .replaceFirst('GitException: ', '');
         });
       }
     }
@@ -144,7 +176,10 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
             ],
             const SizedBox(height: 12),
             Text(
-              l10n.tr('克隆会创建新的本地 Git 仓库，并保留远端已有的提交和分支。'),
+              l10n.tr(
+                '下一步只创建克隆操作预览；取消不会创建任何文件，'
+                '确认计划时才会再次检查目标目录并执行 git clone。',
+              ),
               style: TextStyle(
                 fontSize: 11.5,
                 height: 1.45,
@@ -167,7 +202,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
           child: Text(l10n.tr('取消')),
         ),
         FilledButton.icon(
-          onPressed: _cloning ? null : _clone,
+          onPressed: _cloning ? null : _previewClone,
           icon: _cloning
               ? const SizedBox(
                   width: 15,
@@ -175,7 +210,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.download_rounded, size: 18),
-          label: Text(_cloning ? l10n.tr('正在克隆…') : l10n.tr('开始克隆')),
+          label: Text(_cloning ? l10n.tr('正在检查…') : l10n.tr('加入克隆计划')),
         ),
       ],
     );

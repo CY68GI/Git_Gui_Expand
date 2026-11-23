@@ -155,8 +155,17 @@ void main() {
       await _execute(controller);
       final finalInspection = await controller.inspectGitMetadataForClear();
       expect(finalInspection.remotes, isEmpty);
-      final metadataCleared = await controller.clearGitMetadata();
-      expect(metadataCleared.isSuccess, isTrue);
+      final metadataQueued = await controller.clearGitMetadata();
+      expect(metadataQueued.isSuccess, isTrue);
+      final metadataCleared = await controller.executePendingOperations(
+        confirmedDangerous: true,
+        strongConfirmationText: 'CLEAR GIT',
+      );
+      expect(
+        metadataCleared.isSuccess,
+        isTrue,
+        reason: metadataCleared.message,
+      );
       expect(
         await Directory('$repositoryPath${Platform.pathSeparator}.git')
             .exists(),

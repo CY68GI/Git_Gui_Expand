@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 
 import '../models/app_models.dart';
+import '../models/git_identity.dart';
 import '../models/git_remote.dart';
+import '../models/operation_safety.dart';
+import '../models/repository_sync.dart';
 import '../utils/path_utils.dart';
 import 'app_log_service.dart';
 
@@ -51,11 +54,41 @@ class GitService {
     if (!await Directory(folder).exists()) {
       throw const GitException('要初始化的文件夹不存在。');
     }
+    final gitType = await FileSystemEntity.type(
+      '$folder${Platform.pathSeparator}.git',
+      followLinks: false,
+    );
+    if (gitType != FileSystemEntityType.notFound) {
+      throw const GitException('目标文件夹已经包含 Git 元数据，已拒绝重复初始化。');
+    }
     final result = await _runStandaloneGit(['init'], folder);
     if (!result.success) {
       throw GitException('git init 初始化失败。', commandOutput: result.output);
     }
     AppLogService.instance.info('repository', '已初始化 Git 仓库：$folder');
+  }
+
+  static Future<BootstrapTargetSnapshot> inspectInitializationTarget(
+    String folderPath,
+  ) async {
+    final target = Directory(folderPath).absolute;
+    final targetExists = await target.exists();
+    final parent = target.parent;
+    final gitType = await FileSystemEntity.type(
+      '${target.path}${Platform.pathSeparator}.git',
+      followLinks: false,
+    );
+    return BootstrapTargetSnapshot(
+      contextKind: OperationContextKind.bootstrap,
+      targetPath: target.path,
+      parentPath: parent.absolute.path,
+      targetExists: targetExists,
+      targetIsEmpty: targetExists
+          ? (await target.list(followLinks: false).take(1).toList()).isEmpty
+          : true,
+      gitMetadataType: _fileSystemEntityTypeName(gitType),
+      source: 'git init',
+    );
   }
 
   static Future<void> cloneRepository(
@@ -89,6 +122,31 @@ class GitService {
     AppLogService.instance.info(
       'repository',
       '已克隆 Git 仓库：${remoteUrl.trim()} -> ${destination.path}',
+    );
+  }
+
+  static Future<BootstrapTargetSnapshot> inspectCloneTarget(
+    String remoteUrl,
+    String destinationPath,
+  ) async {
+    _validateCloneUrl(remoteUrl);
+    final destination = Directory(destinationPath).absolute;
+    final targetExists = await destination.exists();
+    final gitType = await FileSystemEntity.type(
+      '${destination.path}${Platform.pathSeparator}.git',
+      followLinks: false,
+    );
+    return BootstrapTargetSnapshot(
+      contextKind: OperationContextKind.bootstrap,
+      targetPath: destination.path,
+      parentPath: destination.parent.absolute.path,
+      targetExists: targetExists,
+      targetIsEmpty: targetExists
+          ? (await destination.list(followLinks: false).take(1).toList())
+                .isEmpty
+          : true,
+      gitMetadataType: _fileSystemEntityTypeName(gitType),
+      source: remoteUrl.trim(),
     );
   }
 
@@ -385,6 +443,62 @@ class GitService {
     return statuses;
   }
 
+  Future<RepositoryStateSnapshot> stateSnapshot({
+    Iterable<String> selectedPaths = const [],
+  }) async {
+    final root = await _canonicalDirectoryPath(rootPath);
+    final branch = await currentBranch();
+    final headResult = await _run([
+      'rev-parse',
+      '--verify',
+      'HEAD',
+    ], allowFailure: true);
+    final head = headResult.success ? headResult.stdout.trim() : 'UNBORN';
+    final statusResult = await _run([
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    ]);
+    final remoteList = await remotes();
+    final remoteUrls = <String, String>{
+      for (final remote in remoteList) remote.name: remote.effectiveUrl,
+    };
+    final pathTypes = await pathTypeSnapshot(selectedPaths);
+    final snapshot = RepositoryStateSnapshot(
+      rootPath: root,
+      branch: branch,
+      head: head,
+      statusFingerprint: statusResult.stdout,
+      remoteUrls: Map.unmodifiable(remoteUrls),
+      pathTypes: Map.unmodifiable(pathTypes),
+    );
+    _log.detail(
+      'safety',
+      '已采集仓库状态快照：branch=$branch head=$head '
+          'statusBytes=${statusResult.stdout.length} '
+          'remotes=${remoteUrls.length} paths=${pathTypes.length}',
+    );
+    return snapshot;
+  }
+
+  Future<Map<String, String>> pathTypeSnapshot(
+    Iterable<String> selectedPaths,
+  ) async {
+    final normalizedPaths = _validateRepositoryPaths(
+      selectedPaths.toList(growable: false),
+    );
+    final pathTypes = <String, String>{};
+    for (final path in normalizedPaths) {
+      final type = await FileSystemEntity.type(
+        absoluteRepositoryPath(rootPath, path),
+        followLinks: false,
+      );
+      pathTypes[path] = _fileSystemEntityTypeName(type);
+    }
+    return Map.unmodifiable(pathTypes);
+  }
+
   Future<String> currentBranch() async {
     final branch = await _run(['branch', '--show-current'], allowFailure: true);
     final name = branch.stdout.trim();
@@ -398,6 +512,131 @@ class GitService {
     ], allowFailure: true);
     final hash = commit.stdout.trim();
     return hash.isEmpty ? '尚未提交' : 'detached@$hash';
+  }
+
+  Future<BranchSyncState> syncState() async {
+    final branchResult = await _run([
+      'branch',
+      '--show-current',
+    ], allowFailure: true);
+    final branch = branchResult.stdout.trim();
+    final statusResult = await _run([
+      'status',
+      '--porcelain=v1',
+      '-z',
+      '--untracked-files=all',
+    ]);
+    final clean = statusResult.stdout.isEmpty;
+
+    if (branch.isEmpty) {
+      final head = await _run([
+        'rev-parse',
+        '--verify',
+        'HEAD',
+      ], allowFailure: true);
+      return head.success
+          ? BranchSyncState.detached(worktreeClean: clean)
+          : BranchSyncState.unborn(worktreeClean: clean);
+    }
+
+    final head = await _run([
+      'rev-parse',
+      '--verify',
+      'HEAD',
+    ], allowFailure: true);
+    if (!head.success) {
+      return BranchSyncState.unborn(worktreeClean: clean);
+    }
+
+    final upstreamResult = await _run([
+      'rev-parse',
+      '--abbrev-ref',
+      '--symbolic-full-name',
+      '@{u}',
+    ], allowFailure: true);
+    final upstreamRef = upstreamResult.stdout.trim();
+    if (!upstreamResult.success || upstreamRef.isEmpty) {
+      return BranchSyncState.noUpstream(branch: branch, worktreeClean: clean);
+    }
+    final separator = upstreamRef.indexOf('/');
+    if (separator <= 0 || separator == upstreamRef.length - 1) {
+      throw GitException('无法解析当前分支的 upstream：$upstreamRef');
+    }
+    final counts = await _run([
+      'rev-list',
+      '--left-right',
+      '--count',
+      'HEAD...@{u}',
+    ]);
+    final parts = counts.stdout.trim().split(RegExp(r'\s+'));
+    if (parts.length != 2) {
+      throw GitException(
+        '无法解析当前分支与 upstream 的 ahead/behind 数量。',
+        commandOutput: counts.output,
+      );
+    }
+    final ahead = int.tryParse(parts[0]);
+    final behind = int.tryParse(parts[1]);
+    if (ahead == null || behind == null) {
+      throw GitException(
+        '当前分支与 upstream 的 ahead/behind 数量无效。',
+        commandOutput: counts.output,
+      );
+    }
+    final state = BranchSyncState(
+      kind: BranchSyncKind.tracked,
+      branch: branch,
+      upstreamRef: upstreamRef,
+      upstreamRemote: upstreamRef.substring(0, separator),
+      upstreamBranch: upstreamRef.substring(separator + 1),
+      ahead: ahead,
+      behind: behind,
+      worktreeClean: clean,
+    );
+    _log.detail(
+      'sync',
+      '同步状态：branch=${state.branch} upstream=${state.upstreamRef} '
+          'ahead=${state.ahead} behind=${state.behind} clean=${state.worktreeClean}',
+    );
+    return state;
+  }
+
+  Future<GitIdentityState> identityState() async {
+    final authorResult = await _run([
+      'var',
+      'GIT_AUTHOR_IDENT',
+    ], allowFailure: true);
+    final committerResult = await _run([
+      'var',
+      'GIT_COMMITTER_IDENT',
+    ], allowFailure: true);
+    final author = authorResult.success
+        ? GitIdentityPerson.tryParse(authorResult.stdout)
+        : null;
+    final committer = committerResult.success
+        ? GitIdentityPerson.tryParse(committerResult.stdout)
+        : null;
+    if (author != null && committer != null) {
+      _log.detail(
+        'identity',
+        'Git 提交身份有效：author=${author.name}; '
+            'committer=${committer.name}',
+      );
+      return GitIdentityState(
+        isReady: true,
+        author: author,
+        committer: committer,
+      );
+    }
+    final details = [
+      if (!authorResult.success) authorResult.output.trim(),
+      if (!committerResult.success) committerResult.output.trim(),
+      if (authorResult.success && author == null) 'GIT_AUTHOR_IDENT 输出无法解析',
+      if (committerResult.success && committer == null)
+        'GIT_COMMITTER_IDENT 输出无法解析',
+    ].where((line) => line.isNotEmpty).join('\n');
+    _log.warning('identity', 'Git 提交身份不可用：$details');
+    return GitIdentityState.unavailable(details);
   }
 
   Future<List<String>> localBranches() async {
@@ -556,6 +795,70 @@ class GitService {
         : result.output;
   }
 
+  Future<String> fetchRemote(String remoteName) async {
+    _validateRemoteName(remoteName);
+    final result = await _run(['fetch', '--prune', remoteName]);
+    _log.info('sync', '已从远端 $remoteName 获取更新');
+    return result.output.trim();
+  }
+
+  Future<SafePullResult> pullFastForward() async {
+    final initial = await syncState();
+    _validatePullState(initial);
+    await fetchRemote(initial.upstreamRemote);
+    final refreshed = await syncState();
+    _validatePullState(refreshed, rejectDiverged: false);
+    if (refreshed.relation == BranchSyncRelation.upToDate ||
+        refreshed.relation == BranchSyncRelation.ahead) {
+      return SafePullResult(
+        updated: false,
+        state: refreshed,
+        output: refreshed.relation == BranchSyncRelation.ahead
+            ? '当前分支包含 upstream 的全部提交，但仍有本地提交未推送。'
+            : '当前分支已经与 upstream 同步。',
+      );
+    }
+    if (refreshed.relation == BranchSyncRelation.diverged) {
+      throw const GitException(
+        '本地分支与 upstream 已分叉，已拒绝快进 Pull。'
+        '远端跟踪引用已更新，当前分支和工作区未改变；'
+        '请先使用外部 Git 执行 Merge 或 Rebase。',
+      );
+    }
+    final result = await _run(['merge', '--ff-only', refreshed.upstreamRef]);
+    final completed = await syncState();
+    _log.info(
+      'sync',
+      '快进 Pull 完成：${completed.branch} behind=${completed.behind}',
+    );
+    return SafePullResult(
+      updated: true,
+      state: completed,
+      output: result.output.trim(),
+    );
+  }
+
+  void _validatePullState(BranchSyncState state, {bool rejectDiverged = true}) {
+    if (state.isDetached) {
+      throw const GitException('当前处于 detached HEAD，不能 Pull 分支。');
+    }
+    if (state.isUnborn) {
+      throw const GitException('当前分支尚无提交，不能 Pull。');
+    }
+    if (!state.hasUpstream) {
+      throw const GitException('当前分支没有可用的 upstream。');
+    }
+    if (!state.worktreeClean) {
+      throw const GitException('工作区或索引不干净，已拒绝 Pull。请先提交或 Stash 更改。');
+    }
+    if (rejectDiverged && state.relation == BranchSyncRelation.diverged) {
+      throw const GitException(
+        '本地分支与 upstream 已分叉，已拒绝快进 Pull。'
+        '请使用外部 Git 执行 Merge 或 Rebase。',
+      );
+    }
+  }
+
   Future<List<GitRemote>> remotes() async {
     final namesResult = await _run(['remote'], allowFailure: true);
     final names = namesResult.stdout
@@ -652,6 +955,7 @@ class GitService {
       targetBranch: targetBranch,
       emptyCommitMessage: emptyCommitMessage,
       refs: List.unmodifiable(sortedRefs),
+      refHashes: Map.unmodifiable(refHashes),
       backupRefspecs: List.unmodifiable(backupRefspecs),
     );
   }
@@ -684,6 +988,21 @@ class GitService {
     ], allowFailure: true);
     if (!localHeadBefore.success) {
       throw const GitException('当前本地分支没有可备份的提交。');
+    }
+
+    final currentTargetBranch = await _remoteHeadBranch(remoteName);
+    final currentRefHashes = await _readRemoteRefHashes(remoteName);
+    if (currentTargetBranch != inspected.targetBranch ||
+        !_remoteRefMapsEqual(inspected.refHashes, currentRefHashes)) {
+      final drift = _remoteRefDiff(
+        expected: inspected.refHashes,
+        actual: currentRefHashes,
+      );
+      _log.warning('remote-clear', '远端引用在确认后发生变化：$drift');
+      throw GitException(
+        '远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。',
+        commandOutput: drift,
+      );
     }
 
     _log.warning(
@@ -724,13 +1043,18 @@ class GitService {
     }
 
     final targetRef = 'refs/heads/${inspected.targetBranch}';
-    final refsToDelete = inspected.refs
-        .where((ref) => ref != targetRef)
-        .toList(growable: false);
+    final refsToDelete =
+        currentRefHashes.keys
+            .where((ref) => ref != targetRef)
+            .toList(growable: false)
+          ..sort();
     final pushArguments = <String>[
       'push',
       '--atomic',
-      '--force',
+      '--force-with-lease=$targetRef:'
+          '${currentRefHashes[targetRef] ?? ''}',
+      for (final ref in refsToDelete)
+        '--force-with-lease=$ref:${currentRefHashes[ref]}',
       remoteName,
       '$emptyCommit:$targetRef',
       ...refsToDelete.map((ref) => ':$ref'),
@@ -752,8 +1076,10 @@ class GitService {
     final expectedRefs = {targetRef};
     if (remaining.keys.toSet().difference(expectedRefs).isNotEmpty ||
         remaining[targetRef] != emptyCommit) {
+      final backupRoot = 'refs/gitgui-expand/backup/$remoteName';
       throw GitException(
-        '清空远端后验证失败，远端未达到预期的单个空提交状态。',
+        '清空远端后验证失败，远端未达到预期的单个空提交状态。'
+        '原始引用已备份到 $backupRoot，软件不会自动再次修改远端。',
         commandOutput: remaining.entries
             .map((entry) => '${entry.key} ${entry.value}')
             .join('\n'),
@@ -812,6 +1138,38 @@ class GitService {
       }
     }
     return refs;
+  }
+
+  bool _remoteRefMapsEqual(
+    Map<String, String> expected,
+    Map<String, String> actual,
+  ) {
+    if (expected.length != actual.length) return false;
+    for (final entry in expected.entries) {
+      if (actual[entry.key] != entry.value) return false;
+    }
+    return true;
+  }
+
+  String _remoteRefDiff({
+    required Map<String, String> expected,
+    required Map<String, String> actual,
+  }) {
+    final lines = <String>[];
+    for (final ref in expected.keys.toSet().union(actual.keys.toSet())) {
+      final before = expected[ref];
+      final after = actual[ref];
+      if (before == after) continue;
+      if (before == null) {
+        lines.add('added $ref $after');
+      } else if (after == null) {
+        lines.add('removed $ref $before');
+      } else {
+        lines.add('changed $ref $before -> $after');
+      }
+    }
+    lines.sort();
+    return lines.join('\n');
   }
 
   Future<String> _remoteHeadBranch(String remoteName) async {
@@ -1342,6 +1700,14 @@ class GitService {
       normalized = normalized.substring(0, normalized.length - 1);
     }
     return Platform.isWindows ? normalized.replaceAll('/', '\\') : normalized;
+  }
+
+  static String _fileSystemEntityTypeName(FileSystemEntityType type) {
+    if (type == FileSystemEntityType.file) return 'file';
+    if (type == FileSystemEntityType.directory) return 'directory';
+    if (type == FileSystemEntityType.link) return 'link';
+    if (type == FileSystemEntityType.notFound) return 'notFound';
+    return 'unknown';
   }
 }
 

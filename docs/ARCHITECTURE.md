@@ -88,13 +88,18 @@ GitService ───────── SettingsService
 成功步骤从计划中移除；任一步失败立即停止。文件操作仍由
 `GitService` 重新验证源路径、目标冲突和仓库边界。
 
-清空远端要求该步骤独占计划。执行时先用 `git ls-remote --refs` 快照 heads/tags，
-把原引用 `git fetch` 到 `refs/gitgui-expand/backup/<remote>`；然后使用
+清空远端要求该步骤独占计划。预览会用 `git ls-remote --refs` 保存 heads/tags
+及其对象哈希；执行前立即重新读取并逐项比较，任何新增、删除或哈希变化都会在推送前
+拒绝操作。通过比较后，把原引用 `git fetch` 到
+`refs/gitgui-expand/backup/<remote>`；然后使用
 `git mktree` 和 `git commit-tree` 创建空目录树及空根提交，不修改工作区或索引。
-最后以 `git push --atomic --force` 把目标分支替换为该提交，并删除其它 heads/tags。
+最后以 `git push --atomic` 和目标/待删除引用各自的 `--force-with-lease=<ref>:<oid>`
+把目标分支替换为该提交，并删除其它 heads/tags。
 推送成功后使用 `git reset --mixed` 把本地同名分支和索引同步到空提交，磁盘文件仍保留，
 因此刷新后会显示为未跟踪。
-平台保护、atomic push 不支持、认证或网络失败都会终止并记录。
+平台保护、atomic push 不支持、引用漂移、认证或网络失败都会终止并记录。推送后
+仍会再次验证远端；若最后网络窗口出现意外引用，会报告备份位置而不会自动执行第二次
+破坏性回滚。
 
 ## 自动更新
 

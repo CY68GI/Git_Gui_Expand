@@ -330,7 +330,7 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
   Future<void> _showOperationPlan() async {
     await showDialog<void>(
       context: context,
-      builder: (context) => OperationPlanDialog(controller: widget.controller),
+      builder: (context) => OperationPlanDialog(planHost: widget.controller),
     );
     if (mounted) {
       setState(() {});
@@ -398,10 +398,15 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                 SelectableText(
                   l10n.tr(
                     '项目：{project}\n目标分支：{branch}\n'
-                    '空提交说明：{message}\n计划执行确认：{confirmation}',
+                    '目标提交：{target}\n空提交说明：{message}\n'
+                    '计划执行确认：{confirmation}',
                     {
                       'project': preview.projectName,
                       'branch': preview.targetBranch,
+                      'target':
+                          preview.refHashes['refs/heads/'
+                              '${preview.targetBranch}'] ??
+                          l10n.tr('不存在'),
                       'message': preview.emptyCommitMessage,
                       'confirmation': preview.confirmationText,
                     },
@@ -423,6 +428,14 @@ class _RemoteManagementDialogState extends State<RemoteManagementDialog> {
                   ),
                 ),
                 const SizedBox(height: 12),
+                Text(
+                  l10n.tr('远端引用列表'),
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 Container(
                   width: double.infinity,
                   height: 210,

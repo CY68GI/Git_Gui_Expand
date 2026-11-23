@@ -166,7 +166,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Empty-folder initialization, cloning, and Stash management'),
+      find.text('Branch sync, safe fast-forward pull, and commit identity checks'),
       findsOneWidget,
     );
     expect(find.text('v0.9.6'), findsNothing);
@@ -256,8 +256,8 @@ void main() {
     );
     expect(find.text('一键发送到桌面'), findsOneWidget);
     expect(find.text('扫描旧版本与安装包'), findsOneWidget);
-    expect(find.text('0.9.7+20'), findsOneWidget);
-    expect(find.text('0.9.7.20'), findsOneWidget);
+    expect(find.text('0.9.9+22'), findsOneWidget);
+    expect(find.text('0.9.9.22'), findsOneWidget);
     expect(find.text('本项目使用 MIT License 开源许可证。'), findsOneWidget);
   });
 
@@ -330,7 +330,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: OperationPlanDialog(controller: controller)),
+        home: Scaffold(body: OperationPlanDialog(planHost: controller)),
       ),
     );
     await tester.pump();
@@ -492,7 +492,8 @@ void main() {
     expect(find.text('远程仓库地址'), findsOneWidget);
     expect(find.text('克隆到父目录'), findsOneWidget);
     expect(find.text('项目文件夹名称'), findsOneWidget);
-    expect(find.text('开始克隆'), findsOneWidget);
+    expect(find.text('加入克隆计划'), findsOneWidget);
+    expect(find.textContaining('下一步只创建克隆操作预览'), findsOneWidget);
   });
 
   testWidgets('stash dialog exposes create and restore workflow', (
@@ -529,7 +530,7 @@ void main() {
     expect(find.text('清除 Git 元数据'), findsOneWidget);
     expect(find.text('此操作会删除仓库根目录中的 .git 文件夹。'), findsOneWidget);
     expect(find.textContaining('全部提交历史和 reflog'), findsOneWidget);
-    expect(find.text('永久清除 Git'), findsOneWidget);
+    expect(find.text('加入清除计划'), findsOneWidget);
   });
 }
 
@@ -590,9 +591,9 @@ class _FakeExecutableVersionService extends ExecutableVersionService {
   @override
   Future<ExecutableVersionInfo> load() async {
     return const ExecutableVersionInfo(
-      applicationVersion: '0.9.7+20',
-      launcherVersion: '0.9.7.20',
-      applicationPath: 'C:\\Software\\versions\\0.9.7\\git_gui_expand.exe',
+      applicationVersion: '0.9.9+22',
+      launcherVersion: '0.9.9.22',
+      applicationPath: 'C:\\Software\\versions\\0.9.9\\git_gui_expand.exe',
       launcherPath: 'C:\\Software\\GitGuiExpandLauncher.exe',
     );
   }

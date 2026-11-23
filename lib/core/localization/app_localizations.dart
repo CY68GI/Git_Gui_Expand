@@ -759,6 +759,288 @@ class AppLocalizations {
           : '執行計畫異常：${match.group(1)}';
     }
 
+    match = RegExp(r'^执行前安全校验失败：危险确认文字不匹配；操作=(.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Pre-execution safety check failed: dangerous-operation '
+                'confirmation did not match; operation=${tr(match.group(1)!)}'
+          : '執行前安全檢查失敗：危險操作確認文字不符；操作='
+                '${tr(match.group(1)!)}';
+    }
+
+    if (source == '执行前安全校验失败：未勾选危险操作确认') {
+      return english
+          ? 'Pre-execution safety check failed: the dangerous-operation '
+                'confirmation was not selected'
+          : '執行前安全檢查失敗：未勾選危險操作確認';
+    }
+
+    match = RegExp(r'^开始执行操作计划：(\d+) 步$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Starting operation plan: ${match.group(1)} steps'
+          : '開始執行操作計畫：${match.group(1)} 步';
+    }
+
+    match = RegExp(
+      r'^已创建操作预览 (\d+)：(.+)；(.*)$',
+      dotAll: true,
+    ).firstMatch(source);
+    if (match != null) {
+      final title = tr(match.group(2)!);
+      final description = tr(match.group(3)!);
+      return english
+          ? 'Operation preview ${match.group(1)} created: $title; $description'
+          : '已建立操作預覽 ${match.group(1)}：$title；$description';
+    }
+
+    match = RegExp(r'^已创建 (.+) 的操作预览；(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Operation preview created for ${tr(match.group(1)!)}; '
+                '${tr(match.group(2)!)}'
+          : '已建立 ${tr(match.group(1)!)} 的操作預覽；${tr(match.group(2)!)}';
+    }
+
+    match = RegExp(r'^引导操作执行前状态校验失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Bootstrap pre-execution safety check failed: ${match.group(1)}'
+          : '引導操作執行前安全檢查失敗：${match.group(1)}';
+    }
+
+    match = RegExp(r'^开始执行：(.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Starting: ${tr(match.group(1)!)}'
+          : '開始執行：${tr(match.group(1)!)}';
+    }
+
+    match = RegExp(r'^执行完成：(.+)；(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Completed: ${tr(match.group(1)!)}; ${tr(match.group(2)!)}'
+          : '執行完成：${tr(match.group(1)!)}；${tr(match.group(2)!)}';
+    }
+
+    match = RegExp(r'^执行失败：(.+)；原因=(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Execution failed: ${tr(match.group(1)!)}; reason=${tr(match.group(2)!)}'
+          : '執行失敗：${tr(match.group(1)!)}；原因=${tr(match.group(2)!)}';
+    }
+
+    match = RegExp(r'^执行异常：(.+)；(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Execution error: ${tr(match.group(1)!)}; ${match.group(2)}'
+          : '執行異常：${tr(match.group(1)!)}；${match.group(2)}';
+    }
+
+    match = RegExp(r'^执行引导操作失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Bootstrap operation failed: ${match.group(1)}'
+          : '執行引導操作失敗：${match.group(1)}';
+    }
+
+    match = RegExp(r'^远端引用在确认后发生变化：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Remote refs changed after confirmation: ${match.group(1)}'
+          : '遠端引用在確認後發生變化：${match.group(1)}';
+    }
+
+    match = RegExp(r'^刷新后的远端状态：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Refreshed remote state: ${tr(match.group(1)!)}'
+          : '重新整理後的遠端狀態：${tr(match.group(1)!)}';
+    }
+
+    match = RegExp(
+      r'^清空远端预览：remote=(.+) refs=(\d+) project=(.+) branch=(.+) refs=(.*)$',
+      dotAll: true,
+    ).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Remote clear preview: remote=${match.group(1)} '
+                'refs=${match.group(2)} project=${match.group(3)} '
+                'branch=${match.group(4)} refs=${match.group(5)}'
+          : '清除遠端預覽：remote=${match.group(1)} '
+                'refs=${match.group(2)} project=${match.group(3)} '
+                'branch=${match.group(4)} refs=${match.group(5)}';
+    }
+
+    match = RegExp(r'^获取远端 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetch remote ${match.group(1)}'
+          : '取得遠端 ${match.group(1)}';
+    }
+
+    match = RegExp(r'^获取全部 (\d+) 个远端$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetch all ${match.group(1)} remotes'
+          : '取得全部 ${match.group(1)} 個遠端';
+    }
+
+    match = RegExp(r'^执行 git fetch --prune (.+)，更新远端跟踪引用，不修改工作区文件。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git fetch --prune ${match.group(1)} to update remote-tracking '
+                'refs without modifying worktree files.'
+          : '執行 git fetch --prune ${match.group(1)}，更新遠端追蹤引用，'
+                '不修改工作區檔案。';
+    }
+
+    match = RegExp(r'^依次执行 git fetch --prune：(.+)。成功获取的远端跟踪引用会保留，失败的远端会逐项报告。$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Run git fetch --prune in order for: ${match.group(1)}. '
+                'Successful updates are retained and each failed remote is reported.'
+          : '依序執行 git fetch --prune：${match.group(1)}。'
+                '成功取得的遠端追蹤引用會保留，失敗的遠端會逐項回報。';
+    }
+
+    match = RegExp(r'^已获取远端 (.+) 的更新$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetched updates from remote ${match.group(1)}'
+          : '已取得遠端 ${match.group(1)} 的更新';
+    }
+
+    match = RegExp(r'^已获取全部 (\d+) 个远端$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetched all ${match.group(1)} remotes'
+          : '已取得全部 ${match.group(1)} 個遠端';
+    }
+
+    match = RegExp(r'^成功 (\d+) 个，失败 (\d+) 个。\n([\s\S]+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? '${match.group(1)} succeeded, ${match.group(2)} failed.\n'
+                '${tr(match.group(3)!)}'
+          : '${match.group(1)} 個成功，${match.group(2)} 個失敗。\n'
+                '${tr(match.group(3)!)}';
+    }
+
+    match = RegExp(r'^已从远端 (.+) 获取更新$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetched updates from remote ${match.group(1)}'
+          : '已從遠端 ${match.group(1)} 取得更新';
+    }
+
+    match = RegExp(r'^远端 (.+) fetch 输出：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Remote ${match.group(1)} fetch output: ${match.group(2)}'
+          : '遠端 ${match.group(1)} fetch 輸出：${match.group(2)}';
+    }
+
+    match = RegExp(r'^获取远端 (.+) 失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetching remote ${match.group(1)} failed: ${match.group(2)}'
+          : '取得遠端 ${match.group(1)} 失敗：${match.group(2)}';
+    }
+
+    match = RegExp(r'^读取分支同步状态失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Failed to read branch synchronization state: ${match.group(1)}'
+          : '讀取分支同步狀態失敗：${match.group(1)}';
+    }
+
+    match = RegExp(r'^安全快进 Pull (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Safe fast-forward Pull ${match.group(1)}'
+          : '安全快進 Pull ${match.group(1)}';
+    }
+
+    match = RegExp(
+      r'^先从 (.+) 获取更新并重新检查 ahead/behind；仅在当前分支落后且不分叉时执行 git merge --ff-only (.+)。不会自动创建 Merge 提交。$',
+    ).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fetch updates from ${match.group(1)} and recheck ahead/behind first; '
+                'run git merge --ff-only ${match.group(2)} only when the branch '
+                'is behind and not diverged. No merge commit is created automatically.'
+          : '先從 ${match.group(1)} 取得更新並重新檢查 ahead/behind；'
+                '僅在目前分支落後且未分叉時執行 git merge --ff-only ${match.group(2)}。'
+                '不會自動建立 Merge 提交。';
+    }
+
+    match = RegExp(r'^已快进更新 (.+) 到 (.+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fast-forwarded ${match.group(1)} to ${match.group(2)}'
+          : '已快進更新 ${match.group(1)} 到 ${match.group(2)}';
+    }
+
+    match = RegExp(r'^快进 Pull 完成：branch=(.+) behind=(\d+)$').firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fast-forward Pull completed: branch=${match.group(1)} '
+                'behind=${match.group(2)}'
+          : '快進 Pull 完成：branch=${match.group(1)} behind=${match.group(2)}';
+    }
+
+    match = RegExp(r'^快进 Pull 输出：(.*)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Fast-forward Pull output: ${match.group(1)}'
+          : '快進 Pull 輸出：${match.group(1)}';
+    }
+
+    match = RegExp(r'^安全快进 Pull 失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Safe fast-forward Pull failed: ${match.group(1)}'
+          : '安全快進 Pull 失敗：${match.group(1)}';
+    }
+
+    match = RegExp(
+      r'^提交未加入计划：有效 Git 身份不可用；(.+)$',
+      dotAll: true,
+    ).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Commit was not added to the plan: effective Git identity is '
+                'unavailable; ${match.group(1)}'
+          : '提交未加入計畫：有效的 Git 身分不可用；${match.group(1)}';
+    }
+
+    match = RegExp(r'^提交执行前身份复核失败：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Commit identity recheck failed before execution: ${match.group(1)}'
+          : '提交執行前身分複核失敗：${match.group(1)}';
+    }
+
+    match = RegExp(r'^Git 提交身份有效：author=(.+); committer=(.+)$')
+        .firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Valid Git commit identity: author=${match.group(1)}; '
+                'committer=${match.group(2)}'
+          : 'Git 提交身分有效：author=${match.group(1)}; '
+                'committer=${match.group(2)}';
+    }
+
+    match = RegExp(r'^Git 提交身份不可用：(.+)$', dotAll: true).firstMatch(source);
+    if (match != null) {
+      return english
+          ? 'Git commit identity is unavailable: ${match.group(1)}'
+          : 'Git 提交身分不可用：${match.group(1)}';
+    }
+
     return null;
   }
 
@@ -798,8 +1080,40 @@ class AppLocalizations {
       '设置已更新': 'Settings updated',
       '远端列表已刷新': 'Remotes refreshed',
       '执行计划为空。': 'The operation plan is empty.',
+      '当前分支没有可用的 upstream，请先配置远端跟踪分支。': 'The current branch has no usable upstream. Configure a remote-tracking branch first.',
+      '认证失败：请检查 Git 凭据、SSH Key 或远端访问权限。': 'Authentication failed. Check Git credentials, SSH keys, or remote permissions.',
+      '网络连接失败：请检查网络后重试。':
+          'Network connection failed. Check the network and try again.',
       '请勾选危险操作确认项后再执行。':
           'Select the dangerous-operation confirmation before executing.',
+      '执行前状态已变化': 'Repository state changed before execution',
+      '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。': 'Repository state no longer matches the confirmed preview. Execution stopped. Refresh the repository and build a new plan.',
+      '状态变化详情': 'State changes',
+      '刷新仓库并重建计划': 'Refresh repository and rebuild plan',
+      '清除 Git 元数据必须单独执行': 'Git metadata removal must run alone',
+      '清除 Git 元数据不能与其他待执行操作同时存在。': 'Git metadata removal cannot be combined with other pending operations.',
+      '此生命周期操作必须单独执行。请先移除或执行当前计划中的其他步骤。': 'This lifecycle operation must run alone. Remove or execute the other pending steps first.',
+      '当前计划包含必须单独执行的生命周期操作，不能再添加步骤。': 'The current plan contains a lifecycle operation that must run alone. No more steps can be added.',
+      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。现在只加入清除计划；还需要在操作计划中输入 CLEAR GIT 并确认执行。': 'The folder becomes a normal directory and can be initialized again with Open empty folder. This action is only added to the plan now; enter CLEAR GIT and confirm execution in the operation plan.',
+      '加入清除计划': 'Add to clear plan',
+      '仓库状态已变化，无法继续扩展当前计划。请刷新仓库并重新建立操作计划。': 'Repository state changed, so the current plan cannot be extended. Refresh the repository and build a new plan.',
+      '远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。': 'Remote refs changed after confirmation. Clearing was rejected. Refresh the remote preview and confirm again.',
+      '远端引用状态': 'Remote ref status',
+      '远端引用列表': 'Remote ref list',
+      '目标提交': 'Target commit',
+      '不存在': 'Not present',
+      '项目：{project}\n目标分支：{branch}\n目标提交：{target}\n空提交说明：{message}\n计划执行确认：{confirmation}': 'Project: {project}\nTarget branch: {branch}\nTarget commit: {target}\nEmpty commit: {message}\nPlan confirmation: {confirmation}',
+      '仓库根目录': 'Repository root',
+      '分支': 'Branch',
+      '工作区状态': 'Worktree state',
+      '远端配置': 'Remote configuration',
+      '路径类型': 'Path type',
+      '父目录': 'Parent directory',
+      '目标是否存在': 'Target exists',
+      '目标是否为空': 'Target is empty',
+      '来源': 'Source',
+      '目标分支': 'Target branch',
+      '远端引用': 'Remote refs',
       '桌面快捷方式': 'Desktop shortcut',
       '在当前用户桌面创建 Git GUI Expand 快捷方式，并通过稳定 Launcher 启动。': 'Create a Git GUI Expand shortcut on the current user desktop and launch through the stable Launcher.',
       '正在创建快捷方式…': 'Creating shortcut…',
@@ -901,6 +1215,19 @@ class AppLocalizations {
       '更新支持 GitHub 与 Gitee 双源，并使用 SHA-256 校验。': 'Updates now support GitHub and Gitee sources with SHA-256 verification.',
       '打开空白文件夹': 'Open empty folder',
       '克隆 Git 仓库': 'Clone Git repository',
+      '初始化 Git 仓库': 'Initialize Git repository',
+      '初始化目标必须存在且不能已经包含 Git 元数据。': 'The initialization target must exist and must not already contain Git metadata.',
+      '目标目录：{path}\n确认后在目标目录执行 git init，然后打开该仓库。': 'Target folder: {path}\nAfter confirmation, run git init in the target folder and open the repository.',
+      'Git 仓库已初始化': 'Git repository initialized',
+      '下一步只创建克隆操作预览；取消不会创建任何文件，确认计划时才会再次检查目标目录并执行 git clone。': 'The next step only creates a clone preview. Cancelling creates no files; the destination is checked again and git clone runs only after plan confirmation.',
+      '正在检查…': 'Checking…',
+      '加入克隆计划': 'Add to clone plan',
+      '地址：{url}\n目标目录：{path}\n取消不会创建任何文件，确认计划后才会再次检查目标并执行 git clone。': 'URL: {url}\nTarget folder: {path}\nCancelling creates no files. The target is checked again and git clone runs only after plan confirmation.',
+      'Git 仓库已克隆': 'Git repository cloned',
+      '克隆目标父目录不存在。': 'The clone parent directory does not exist.',
+      '克隆目标目录不是空目录。': 'The clone destination is not an empty directory.',
+      '目标状态与确认预览不一致，已停止执行。请刷新预览后重新确认。': 'The target state no longer matches the confirmed preview. Execution stopped. Refresh the preview and confirm again.',
+      '此操作已经执行或正在执行，请重新打开预览。': 'This operation has already run or is currently running. Open a new preview.',
       '打开现有仓库、初始化空白目录，或克隆远程仓库': 'Open an existing repository, initialize an empty folder, or clone a remote repository.',
       '是否马上初始化 Git 仓库？': 'Initialize a Git repository now?',
       '当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。': 'This folder is not a Git repository yet. Run git init now to manage and commit it here.',
@@ -931,6 +1258,21 @@ class AppLocalizations {
       'Stash': 'Stash',
       'Stash 已创建': 'Stash created',
       '当前没有可暂存的更改。': 'There are no changes to stash.',
+      '统一操作计划与执行前状态复核': 'Unified operation plans and pre-execution checks',
+      '分支同步、安全快进 Pull 与提交身份预检':
+          'Branch sync, safe fast-forward pull, and commit identity checks',
+      '显示 upstream、ahead、behind 和工作区同步状态。':
+          'Show upstream, ahead, behind, and worktree synchronization state.',
+      '新增当前 upstream 或全部远端 Fetch 计划，并逐项报告结果。':
+          'Plan fetch for current upstream or all remotes with per-remote results.',
+      '新增仅快进 Pull，拒绝脏工作区、无 upstream 和分叉历史。':
+          'Add fast-forward-only Pull and reject dirty, upstream-less, or diverged states.',
+      '提交前及执行前检查有效的 Git 作者和提交者身份。':
+          'Check effective Git author and committer identity before planning and execution.',
+      '初始化、克隆、仓库修改和 .git 清除统一使用可确认的操作预览。': 'Initialization, clone, repository changes, and .git removal use confirmable operation previews.',
+      '执行前复核仓库根目录、分支、HEAD、状态、路径和远端引用。': 'Revalidate repository root, branch, HEAD, status, paths, and remote refs before execution.',
+      '状态漂移时停止操作，显示详情并提供刷新仓库、重建计划入口。': 'Stop on state drift, show details, and offer repository refresh and plan rebuild.',
+      '清空远端前比较引用哈希，并使用 atomic push 和逐引用 lease。': 'Compare remote ref hashes and use atomic push with per-ref leases before clearing.',
       '空白目录初始化、克隆与 Stash 管理':
           'Empty-folder initialization, cloning, and Stash management',
       '打开空白文件夹时可立即询问是否执行 git init。':
@@ -1001,7 +1343,40 @@ class AppLocalizations {
       '设置已更新': '設定已更新',
       '远端列表已刷新': '遠端清單已重新整理',
       '执行计划为空。': '執行計畫為空。',
+      '当前分支没有可用的 upstream，请先配置远端跟踪分支。': '目前分支沒有可用的 upstream。請先設定遠端追蹤分支。',
+      '认证失败：请检查 Git 凭据、SSH Key 或远端访问权限。': '認證失敗。請檢查 Git 認證資料、SSH Key 或遠端存取權限。',
+      '网络连接失败：请检查网络后重试。': '網路連線失敗。請檢查網路後重試。',
       '请勾选危险操作确认项后再执行。': '請勾選危險操作確認項後再執行。',
+      '执行前状态已变化': '執行前狀態已變更',
+      '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。':
+          '儲存庫狀態與確認預覽不一致，已停止執行。請重新整理儲存庫並重新建立操作計畫。',
+      '状态变化详情': '狀態變更詳情',
+      '刷新仓库并重建计划': '重新整理儲存庫並重建計畫',
+      '清除 Git 元数据必须单独执行': '清除 Git 中繼資料必須單獨執行',
+      '清除 Git 元数据不能与其他待执行操作同时存在。': '清除 Git 中繼資料不能與其他待執行操作同時存在。',
+      '此生命周期操作必须单独执行。请先移除或执行当前计划中的其他步骤。': '此生命週期操作必須單獨執行。請先移除或執行目前計畫中的其他步驟。',
+      '当前计划包含必须单独执行的生命周期操作，不能再添加步骤。': '目前計畫包含必須單獨執行的生命週期操作，不能再新增步驟。',
+      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。现在只加入清除计划；还需要在操作计划中输入 CLEAR GIT 并确认执行。': '清理後該資料夾會變成一般目錄，仍可用「開啟空白資料夾」重新執行 git init。現在只加入清除計畫；還需要在操作計畫中輸入 CLEAR GIT 並確認執行。',
+      '加入清除计划': '加入清除計畫',
+      '仓库状态已变化，无法继续扩展当前计划。请刷新仓库并重新建立操作计划。':
+          '儲存庫狀態已變更，無法繼續擴充目前計畫。請重新整理儲存庫並重新建立操作計畫。',
+      '远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。': '遠端引用在確認後發生變化，已拒絕清空。請重新整理遠端預覽後重新確認。',
+      '远端引用状态': '遠端引用狀態',
+      '远端引用列表': '遠端引用清單',
+      '目标提交': '目標提交',
+      '不存在': '不存在',
+      '项目：{project}\n目标分支：{branch}\n目标提交：{target}\n空提交说明：{message}\n计划执行确认：{confirmation}': '專案：{project}\n目標分支：{branch}\n目標提交：{target}\n空提交說明：{message}\n計畫執行確認：{confirmation}',
+      '仓库根目录': '儲存庫根目錄',
+      '分支': '分支',
+      '工作区状态': '工作區狀態',
+      '远端配置': '遠端設定',
+      '路径类型': '路徑類型',
+      '父目录': '父目錄',
+      '目标是否存在': '目標是否存在',
+      '目标是否为空': '目標是否為空',
+      '来源': '來源',
+      '目标分支': '目標分支',
+      '远端引用': '遠端引用',
       '桌面快捷方式': '桌面捷徑',
       '在当前用户桌面创建 Git GUI Expand 快捷方式，并通过稳定 Launcher 启动。':
           '在目前使用者桌面建立 Git GUI Expand 捷徑，並透過穩定 Launcher 啟動。',
@@ -1102,6 +1477,22 @@ class AppLocalizations {
           '更新支援 GitHub 與 Gitee 雙來源，並使用 SHA-256 校驗。',
       '打开空白文件夹': '開啟空白資料夾',
       '克隆 Git 仓库': '複製 Git 儲存庫',
+      '初始化 Git 仓库': '初始化 Git 儲存庫',
+      '初始化目标必须存在且不能已经包含 Git 元数据。': '初始化目標必須存在，且不能已經包含 Git 中繼資料。',
+      '目标目录：{path}\n确认后在目标目录执行 git init，然后打开该仓库。':
+          '目標目錄：{path}\n確認後在目標目錄執行 git init，然後開啟該儲存庫。',
+      'Git 仓库已初始化': 'Git 儲存庫已初始化',
+      '下一步只创建克隆操作预览；取消不会创建任何文件，确认计划时才会再次检查目标目录并执行 git clone。':
+          '下一步只建立複製操作預覽；取消不會建立任何檔案，確認計畫時才會再次檢查目標目錄並執行 git clone。',
+      '正在检查…': '正在檢查…',
+      '加入克隆计划': '加入複製計畫',
+      '地址：{url}\n目标目录：{path}\n取消不会创建任何文件，确认计划后才会再次检查目标并执行 git clone。':
+          '網址：{url}\n目標目錄：{path}\n取消不會建立任何檔案，確認計畫後才會再次檢查目標並執行 git clone。',
+      'Git 仓库已克隆': 'Git 儲存庫已複製',
+      '克隆目标父目录不存在。': '複製目標父目錄不存在。',
+      '克隆目标目录不是空目录。': '複製目標目錄不是空目錄。',
+      '目标状态与确认预览不一致，已停止执行。请刷新预览后重新确认。': '目標狀態與確認預覽不一致，已停止執行。請重新整理預覽後重新確認。',
+      '此操作已经执行或正在执行，请重新打开预览。': '此操作已經執行或正在執行，請重新開啟預覽。',
       '打开现有仓库、初始化空白目录，或克隆远程仓库': '開啟現有儲存庫、初始化空白目錄，或複製遠端儲存庫。',
       '是否马上初始化 Git 仓库？': '是否立即初始化 Git 儲存庫？',
       '当前文件夹还不是 Git 仓库。现在执行 git init 后即可在软件中管理和提交。':
@@ -1132,6 +1523,22 @@ class AppLocalizations {
       'Stash': 'Stash',
       'Stash 已创建': 'Stash 已建立',
       '当前没有可暂存的更改。': '目前沒有可暫存的變更。',
+      '统一操作计划与执行前状态复核': '統一操作計畫與執行前狀態複核',
+      '分支同步、安全快进 Pull 与提交身份预检':
+          '分支同步、安全快進 Pull 與提交身分預檢',
+      '显示 upstream、ahead、behind 和工作区同步状态。':
+          '顯示 upstream、ahead、behind 和工作區同步狀態。',
+      '新增当前 upstream 或全部远端 Fetch 计划，并逐项报告结果。':
+          '新增目前 upstream 或全部遠端 Fetch 計畫，並逐項回報結果。',
+      '新增仅快进 Pull，拒绝脏工作区、无 upstream 和分叉历史。':
+          '新增僅快進 Pull，拒絕髒工作區、無 upstream 和分叉歷史。',
+      '提交前及执行前检查有效的 Git 作者和提交者身份。':
+          '提交前及執行前檢查有效的 Git 作者與提交者身分。',
+      '初始化、克隆、仓库修改和 .git 清除统一使用可确认的操作预览。': '初始化、複製、儲存庫修改和 .git 清除統一使用可確認的操作預覽。',
+      '执行前复核仓库根目录、分支、HEAD、状态、路径和远端引用。': '執行前複核儲存庫根目錄、分支、HEAD、狀態、路徑和遠端引用。',
+      '状态漂移时停止操作，显示详情并提供刷新仓库、重建计划入口。': '狀態漂移時停止操作，顯示詳情並提供重新整理儲存庫、重建計畫入口。',
+      '清空远端前比较引用哈希，并使用 atomic push 和逐引用 lease。':
+          '清除遠端前比較引用雜湊，並使用 atomic push 和逐引用 lease。',
       '空白目录初始化、克隆与 Stash 管理': '空白目錄初始化、複製與 Stash 管理',
       '打开空白文件夹时可立即询问是否执行 git init。': '開啟空白資料夾時可立即詢問是否執行 git init。',
       '新增克隆仓库窗口，可填写远程地址、父目录和项目名称。': '新增複製儲存庫視窗，可填寫遠端網址、父目錄和專案名稱。',
@@ -1438,6 +1845,8 @@ class AppLocalizations {
       '远端 {count}': 'Remotes {count}',
       '推送当前分支 (Ctrl+Shift+U)': 'Push current branch (Ctrl+Shift+U)',
       '推送': 'Push',
+      '获取 upstream': 'Fetch upstream',
+      '获取全部远端': 'Fetch all remotes',
       '文件变更尚未执行，请在待执行操作计划中确认': 'File changes are pending in the operation plan',
       '工作区干净，没有待提交的更改': 'Working tree clean',
       '填写本次提交说明…': 'Enter a commit message…',
@@ -1614,6 +2023,55 @@ class AppLocalizations {
       '专为数字界面设计的开源无衬线字体，适合工具栏和高密度正文。': 'An open-source sans-serif designed for digital interfaces and dense text.',
       '覆盖简体中文的现代界面字体，中英文混排清晰、字形稳定。': 'A modern UI font for Simplified Chinese with clear mixed-language text.',
       '为产品界面和企业信息设计，数字与英文阅读性突出。': 'Designed for product interfaces and business information with strong numeral readability.',
+      '分支同步': 'Branch synchronization',
+      '刷新同步状态': 'Refresh synchronization state',
+      '获取当前 upstream': 'Fetch current upstream',
+      '安全快进 Pull': 'Safe fast-forward pull',
+      'Pull 会先 Fetch 并重新检查 ahead/behind，只允许快进，不会自动创建 Merge 提交；工作区或索引不干净时禁止 Pull。': 'Pull fetches and rechecks ahead/behind, allows fast-forward only, never creates a merge commit, and is disabled for a dirty worktree or index.',
+      '无法读取分支同步状态。请刷新后重试。':
+          'Unable to read branch synchronization state. Refresh and try again.',
+      '当前处于 detached HEAD，不能 Fetch 当前 upstream 或 Pull。':
+          'Detached HEAD cannot fetch current upstream or pull a branch.',
+      '当前分支尚无提交，不能 Pull。':
+          'The current branch has no commit and cannot be pulled.',
+      '当前分支没有 upstream。可获取全部远端，但 Pull 前需要配置跟踪分支。': 'The current branch has no upstream. Fetch-all is available, but Pull requires tracking.',
+      '工作区或索引不干净。请先提交或 Stash 更改，再执行安全 Pull。': 'The worktree or index is dirty. Commit or stash changes before safe Pull.',
+      '本地分支与 upstream 已分叉。软件不会自动 Merge 或 Rebase，请先使用外部 Git 处理分叉。': 'Local and upstream histories have diverged. The app will not merge or rebase automatically; resolve the divergence in external Git first.',
+      '本地分支有未推送提交，当前不需要 Pull。':
+          'The local branch has unpushed commits and does not need Pull.',
+      '当前分支已经与 upstream 同步。':
+          'The current branch is synchronized with upstream.',
+      '正在读取同步状态…': 'Reading synchronization state…',
+      'detached HEAD': 'detached HEAD',
+      '尚无可提交分支': 'No committed branch yet',
+      'upstream': 'upstream',
+      '未配置': 'Not configured',
+      '待推送': 'Ahead',
+      '待拉取': 'Behind',
+      '工作区': 'Worktree',
+      '有更改': 'Changed',
+      '干净': 'Clean',
+      '查看分支同步状态': 'View branch synchronization',
+      '同步': 'Sync',
+      'detached': 'detached',
+      '无 upstream': 'No upstream',
+      '无法读取当前分支同步状态。':
+          'Unable to read the current branch synchronization state.',
+      '当前处于 detached HEAD，不能 Pull 分支。': 'Detached HEAD cannot pull a branch.',
+      '当前分支没有可用的 upstream。': 'The current branch has no usable upstream.',
+      '工作区或索引不干净，已拒绝 Pull。请先提交或 Stash 更改。': 'Pull was rejected because the worktree or index is dirty. Commit or stash changes first.',
+      '当前分支已经与 upstream 同步，不需要 Pull。': 'The current branch is already synchronized with upstream; Pull is not needed.',
+      '当前分支包含 upstream 的全部提交，但有本地提交未推送。': 'The current branch contains all upstream commits and has local commits to push.',
+      '本地分支与 upstream 已分叉，已拒绝快进 Pull。请先使用外部 Git 执行 Merge 或 Rebase。': 'Fast-forward Pull was rejected because local and upstream histories diverged. Use external Git to merge or rebase.',
+      '当前分支同步关系未知。': 'The current branch synchronization relation is unknown.',
+      '当前分支包含 upstream 的全部提交，但仍有本地提交未推送。': 'The current branch contains all upstream commits and still has local commits to push.',
+      '本地分支与 upstream 已分叉，已拒绝快进 Pull。远端跟踪引用已更新，当前分支和工作区未改变；请先使用外部 Git 执行 Merge 或 Rebase。': 'Fast-forward Pull was rejected because local and upstream histories diverged. Remote-tracking refs were refreshed, while the current branch and worktree were not changed. Use external Git to merge or rebase.',
+      'Git 提交身份不可用：无法解析有效的 user.name 或 user.email。\n请在项目目录执行：\ngit config --local user.name "Your Name"\ngit config --local user.email "you@example.com"\n或改用 --global 配置当前用户的默认 Git 身份。':
+          'Git commit identity is unavailable: a valid user.name or user.email '
+          'could not be resolved.\nRun in the project folder:\n'
+          'git config --local user.name "Your Name"\n'
+          'git config --local user.email "you@example.com"\n'
+          'Or use --global to configure the current user default.',
     },
     'zh': {
       '设置': '设置',
@@ -1726,6 +2184,8 @@ class AppLocalizations {
       '远端 {count}': '远端 {count}',
       '推送当前分支 (Ctrl+Shift+U)': '推送当前分支 (Ctrl+Shift+U)',
       '推送': '推送',
+      '获取 upstream': '取得 upstream',
+      '获取全部远端': '取得全部遠端',
       '文件变更尚未执行，请在待执行操作计划中确认': '文件变更尚未执行，请在待执行操作计划中确认',
       '工作区干净，没有待提交的更改': '工作区干净，没有待提交的更改',
       '填写本次提交说明…': '填写本次提交说明…',
@@ -1902,6 +2362,8 @@ class AppLocalizations {
       '远端 {count}': '遠端 {count}',
       '推送当前分支 (Ctrl+Shift+U)': '推送目前分支 (Ctrl+Shift+U)',
       '推送': '推送',
+      '获取 upstream': '取得 upstream',
+      '获取全部远端': '取得全部遠端',
       '文件变更尚未执行，请在待执行操作计划中确认': '檔案變更尚未執行，請在待執行操作計畫中確認',
       '工作区干净，没有待提交的更改': '工作區乾淨，沒有待提交的變更',
       '填写本次提交说明…': '填寫本次提交說明…',
@@ -1965,6 +2427,55 @@ class AppLocalizations {
           '此操作只會加入待執行計畫。確認並執行計畫後，軟體才會執行 git mv。',
       '新名称': '新名稱',
       '加入执行计划': '加入執行計畫',
+      '分支同步': '分支同步',
+      '刷新同步状态': '重新整理同步狀態',
+      '获取当前 upstream': '取得目前 upstream',
+      '安全快进 Pull': '安全快進 Pull',
+      'Pull 会先 Fetch 并重新检查 ahead/behind，只允许快进，不会自动创建 Merge 提交；工作区或索引不干净时禁止 Pull。': 'Pull 會先 Fetch 並重新檢查 ahead/behind，只允許快進，不會自動建立 Merge 提交；工作區或索引不乾淨時禁止 Pull。',
+      '无法读取分支同步状态。请刷新后重试。': '無法讀取分支同步狀態。請重新整理後重試。',
+      '当前处于 detached HEAD，不能 Fetch 当前 upstream 或 Pull。':
+          '目前處於 detached HEAD，不能 Fetch 目前 upstream 或 Pull。',
+      '当前分支尚无提交，不能 Pull。': '目前分支尚無提交，不能 Pull。',
+      '当前分支没有 upstream。可获取全部远端，但 Pull 前需要配置跟踪分支。':
+          '目前分支沒有 upstream。可取得全部遠端，但 Pull 前需要設定追蹤分支。',
+      '工作区或索引不干净。请先提交或 Stash 更改，再执行安全 Pull。':
+          '工作區或索引不乾淨。請先提交或 Stash 變更，再執行安全 Pull。',
+      '本地分支与 upstream 已分叉。软件不会自动 Merge 或 Rebase，请先使用外部 Git 处理分叉。':
+          '本機分支與 upstream 已分叉。軟體不會自動 Merge 或 Rebase，請先使用外部 Git 處理分叉。',
+      '本地分支有未推送提交，当前不需要 Pull。': '本機分支有未推送提交，目前不需要 Pull。',
+      '当前分支已经与 upstream 同步。': '目前分支已經與 upstream 同步。',
+      '正在读取同步状态…': '正在讀取同步狀態…',
+      'detached HEAD': 'detached HEAD',
+      '尚无可提交分支': '尚無可提交分支',
+      'upstream': 'upstream',
+      '未配置': '未設定',
+      '待推送': '待推送',
+      '待拉取': '待拉取',
+      '工作区': '工作區',
+      '有更改': '有變更',
+      '干净': '乾淨',
+      '查看分支同步状态': '檢視分支同步狀態',
+      '同步': '同步',
+      'detached': 'detached',
+      '无 upstream': '無 upstream',
+      '无法读取当前分支同步状态。': '無法讀取目前分支同步狀態。',
+      '当前处于 detached HEAD，不能 Pull 分支。': '目前處於 detached HEAD，不能 Pull 分支。',
+      '当前分支没有可用的 upstream。': '目前分支沒有可用的 upstream。',
+      '工作区或索引不干净，已拒绝 Pull。请先提交或 Stash 更改。':
+          '工作區或索引不乾淨，已拒絕 Pull。請先提交或 Stash 變更。',
+      '当前分支已经与 upstream 同步，不需要 Pull。': '目前分支已經與 upstream 同步，不需要 Pull。',
+      '当前分支包含 upstream 的全部提交，但有本地提交未推送。': '目前分支包含 upstream 的全部提交，但有本機提交未推送。',
+      '本地分支与 upstream 已分叉，已拒绝快进 Pull。请先使用外部 Git 执行 Merge 或 Rebase。':
+          '本機分支與 upstream 已分叉，已拒絕快進 Pull。請先使用外部 Git 執行 Merge 或 Rebase。',
+      '当前分支同步关系未知。': '目前分支同步關係未知。',
+      '当前分支包含 upstream 的全部提交，但仍有本地提交未推送。': '目前分支包含 upstream 的全部提交，但仍有本機提交未推送。',
+      '本地分支与 upstream 已分叉，已拒绝快进 Pull。远端跟踪引用已更新，当前分支和工作区未改变；请先使用外部 Git 执行 Merge 或 Rebase。': '本機分支與 upstream 已分叉，已拒絕快進 Pull。遠端追蹤引用已更新，目前分支和工作區未變更；請先使用外部 Git 執行 Merge 或 Rebase。',
+      'Git 提交身份不可用：无法解析有效的 user.name 或 user.email。\n请在项目目录执行：\ngit config --local user.name "Your Name"\ngit config --local user.email "you@example.com"\n或改用 --global 配置当前用户的默认 Git 身份。':
+          'Git 提交身分不可用：無法解析有效的 user.name 或 user.email。\n'
+          '請在專案目錄執行：\n'
+          'git config --local user.name "Your Name"\n'
+          'git config --local user.email "you@example.com"\n'
+          '或改用 --global 設定目前使用者的預設 Git 身分。',
     },
   };
 }

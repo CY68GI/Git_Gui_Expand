@@ -174,6 +174,16 @@ void main() {
       '刪除 3 個項目',
     );
     expect(
+      const AppLocalizations(AppLocalizations.english)
+          .tr('远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。'),
+      contains('Remote refs changed after confirmation'),
+    );
+    expect(
+      const AppLocalizations(AppLocalizations.traditionalChinese)
+          .tr('远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。'),
+      contains('已拒絕清空'),
+    );
+    expect(
       const AppLocalizations(AppLocalizations.english).tr('已按顺序执行全部 4 步操作。'),
       'Executed all 4 steps in order.',
     );
