@@ -8,6 +8,8 @@ import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/core/models/repository_sync.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
+import 'support/localized_message_fixture.dart';
+
 void main() {
   late Directory temporaryRoot;
   late Directory repository;
@@ -45,7 +47,7 @@ void main() {
     );
     await controller.initialize();
     final opened = await controller.openRepository(repository.path);
-    expect(opened.isSuccess, isTrue, reason: opened.message);
+    expect(opened.isSuccess, isTrue, reason: fixtureText(opened.message));
   });
 
   tearDown(() async {
@@ -193,7 +195,7 @@ void main() {
         confirmedDangerous: true,
         strongConfirmationText: 'CLEAR GIT',
       );
-      expect(cleared.isSuccess, isTrue, reason: cleared.message);
+      expect(cleared.isSuccess, isTrue, reason: fixtureText(cleared.message));
       expect(controller.hasRepository, isFalse);
       expect(
         await Directory('${repository.path}${Platform.pathSeparator}.git')
@@ -333,7 +335,7 @@ void main() {
     final queued = await controller.commitAll('Should not be queued');
 
     expect(queued.isSuccess, isFalse);
-    expect(queued.message, contains('git config --local user.name'));
+    expect(fixtureText(queued.message), contains('user.name and user.email'));
     expect(controller.pendingOperations, isEmpty);
   });
 
@@ -354,7 +356,7 @@ void main() {
     );
 
     expect(result.isSuccess, isFalse);
-    expect(result.message, contains('提交身份不可用'));
+    expect(fixtureText(result.message).toLowerCase(), contains('identity'));
     expect(await _commitCount(repository), commitsBefore);
     final staged = await _gitOutput(repository, [
       'diff',
@@ -372,13 +374,13 @@ void main() {
     expect(controller.changedFiles, isEmpty);
 
     final commit = await controller.commitAll('Rename from execution plan');
-    expect(commit.isSuccess, isTrue, reason: commit.message);
+    expect(commit.isSuccess, isTrue, reason: fixtureText(commit.message));
     expect(controller.pendingOperations, hasLength(2));
 
     final result = await controller.executePendingOperations(
       confirmedDangerous: true,
     );
-    expect(result.isSuccess, isTrue, reason: result.message);
+    expect(result.isSuccess, isTrue, reason: fixtureText(result.message));
     expect(await _commitCount(repository), 2);
     expect(
       await File('${repository.path}${Platform.pathSeparator}renamed.txt')
@@ -448,7 +450,11 @@ void main() {
       await _git(repository, ['push', '-u', 'origin', 'main']);
 
       final inspection = await controller.inspectRemoteForClear('origin');
-      expect(inspection.isSuccess, isTrue, reason: inspection.message);
+      expect(
+        inspection.isSuccess,
+        isTrue,
+        reason: fixtureText(inspection.message),
+      );
       expect(inspection.preview, isNotNull);
       final queued = await controller.queueClearRemote(inspection.preview!);
       expect(queued.isSuccess, isTrue);
@@ -470,7 +476,7 @@ void main() {
         confirmedDangerous: true,
         strongConfirmationText: inspection.preview!.confirmationText,
       );
-      expect(executed.isSuccess, isTrue, reason: executed.message);
+      expect(executed.isSuccess, isTrue, reason: fixtureText(executed.message));
       final after = await Process.run(
         'git',
         ['ls-remote', '--heads', '--refs', remote.path],
@@ -520,8 +526,7 @@ void main() {
     );
 
     expect(result.isSuccess, isFalse);
-    expect(result.message, contains('远端引用在确认后发生了变化'));
-    expect(result.message, contains('刷新后的远端状态'));
+    expect(fixtureText(result.message), contains('added-after-preview'));
     final refs = await Process.run(
       'git',
       ['ls-remote', '--refs', remote.path],
@@ -540,31 +545,33 @@ void main() {
         PlannedRepositoryOperation(
           id: 'first',
           kind: PlannedOperationKind.stageAll,
-          title: '第一步',
-          description: '成功步骤',
+          title: fixturePlanTitle('First step'),
+          description: fixturePlanDescription('Successful step'),
           run: () async {
             runCount += 1;
-            return const OperationOutcome.success('first');
+            return OperationOutcome.success(fixtureMessage('first'));
           },
         ),
         PlannedRepositoryOperation(
           id: 'second',
           kind: PlannedOperationKind.commit,
-          title: '第二步',
-          description: '失败步骤',
+          title: fixturePlanTitle('Second step'),
+          description: fixturePlanDescription('Failing step'),
           run: () async {
             runCount += 1;
-            return const OperationOutcome.failure('simulated failure');
+            return OperationOutcome.failure(
+              fixtureMessage('simulated failure'),
+            );
           },
         ),
         PlannedRepositoryOperation(
           id: 'third',
           kind: PlannedOperationKind.pushCurrentBranch,
-          title: '第三步',
-          description: '不应执行的步骤',
+          title: fixturePlanTitle('Third step'),
+          description: fixturePlanDescription('Step that must not run'),
           run: () async {
             runCount += 1;
-            return const OperationOutcome.success('third');
+            return OperationOutcome.success(fixtureMessage('third'));
           },
         ),
       ];

@@ -24,7 +24,11 @@ class SettingsService {
         if (migrated != null) {
           return migrated;
         }
-        logService.detail('settings', '设置文件不存在，使用默认值：${file.path}');
+        logService.detailEvent(
+          'settings',
+          'settings.file.missing',
+          details: {'path': file.path},
+        );
         return const AppSettings();
       }
       final text = await file.readAsString();
@@ -35,10 +39,18 @@ class SettingsService {
       final settings = decoded is Map<String, dynamic>
           ? AppSettings.fromJson(decoded)
           : const AppSettings();
-      logService.detail('settings', '已读取设置：${file.path}');
+      logService.detailEvent(
+        'settings',
+        'settings.read.completed',
+        details: {'path': file.path},
+      );
       return settings;
     } catch (error) {
-      logService.error('settings', '读取设置失败：$error');
+      logService.errorEvent(
+        'settings',
+        'settings.read.failed',
+        details: {'error': '$error'},
+      );
       return const AppSettings();
     }
   }
@@ -48,7 +60,11 @@ class SettingsService {
     await file.parent.create(recursive: true);
     const encoder = JsonEncoder.withIndent('  ');
     await file.writeAsString(encoder.convert(settings.toJson()), flush: true);
-    logService.detail('settings', '已保存设置：${file.path}');
+    logService.detailEvent(
+      'settings',
+      'settings.write.completed',
+      details: {'path': file.path},
+    );
   }
 
   Future<File> _settingsFile() async {
@@ -71,10 +87,18 @@ class SettingsService {
       final settings = AppSettings.fromJson(decoded);
       await targetFile.parent.create(recursive: true);
       await targetFile.writeAsString(text, flush: true);
-      logService.info('settings', '已将旧设置迁移到软件目录：${targetFile.path}');
+      logService.infoEvent(
+        'settings',
+        'settings.migrate.completed',
+        details: {'path': targetFile.path},
+      );
       return settings;
     } catch (error) {
-      logService.warning('settings', '旧设置迁移失败：$error');
+      logService.warningEvent(
+        'settings',
+        'settings.migrate.failed',
+        details: {'error': '$error'},
+      );
       return null;
     }
   }

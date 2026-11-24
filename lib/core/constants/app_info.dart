@@ -2,7 +2,7 @@ class AppInfo {
   const AppInfo._();
 
   static const String englishName = 'Git GUI Expand';
-  static const String version = '0.9.9';
+  static const String version = '0.10.0';
   static const String owner = 'CY68GI';
   static const String repository = 'Git_Gui_Expand';
   static const String repositoryUrl =
@@ -19,4 +19,6 @@ class AppInfo {
       'https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases';
   static const String giteeLatestReleaseApi =
       'https://gitee.com/api/v5/repos/CY68EWZRY/Git_Gui_Expand/releases/latest';
+  static const String gitForWindowsDownloadUrl =
+      'https://git-scm.com/download/win';
 }

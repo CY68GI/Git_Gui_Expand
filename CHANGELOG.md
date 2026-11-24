@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.10.0 - 2026-11-24
+
+### English
+
+- Runtime operation outcomes, queued plans, and logs now use semantic templates
+  with stable event IDs, write-time locale capture, and credential redaction.
+- Replaced the legacy sentence adapter and line-based guide parser; source
+  checks now reject formatted runtime outcomes and unregistered dynamic keys.
+- Bundled guides now render native Markdown headings, lists, tables, quotes,
+  code blocks, local images, and inline formatting with selectable text.
+- Guide navigation now supports HTTPS links, approved relative guides, and
+  heading anchors with keyboard focus and safe light/dark responsive layouts.
+
+### 简体中文
+
+- 操作结果、待执行计划和日志改用语义模板，并增加稳定事件 ID、写入时语言捕获和
+  凭据遮蔽。
+- 移除旧句子翻译适配器和逐行指南解析器；源码检查会拒绝格式化运行消息和
+  未注册的动态键。
+- 内置指南改为真正的 Markdown 渲染，支持标题、列表、表格、引用、代码块、
+  本地图片和行内格式，正文可选择复制。
+- 指南支持 HTTPS、内置相对指南和标题锚点，并提供键盘焦点及安全的浅色/深色
+  响应式布局。
+
+### 繁體中文
+
+- 操作結果、待執行計畫和日誌改用具語意範本，並加入穩定事件 ID、寫入時語言
+  擷取和憑證遮蔽。
+- 移除舊句子翻譯轉接器和逐行指南解析器；原始碼檢查會拒絕格式化執行訊息和
+  未註冊的動態鍵。
+- 內建指南改為真正的 Markdown 呈現，支援標題、清單、表格、引用、程式碼區塊、
+  本機圖片和行內格式，正文可以選取複製。
+- 指南支援 HTTPS、內建相對指南和標題錨點，並提供鍵盤焦點及安全的淺色/深色
+  響應式版面。
+
 ## 0.9.9 - 2026-11-23
 
 ### English

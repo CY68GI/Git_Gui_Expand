@@ -14,6 +14,7 @@ class StartView extends StatelessWidget {
     required this.recentRepositories,
     required this.onOpenRecent,
     required this.onRemoveRecent,
+    this.isGitAvailable = true,
     this.error,
   });
 
@@ -24,6 +25,7 @@ class StartView extends StatelessWidget {
   final List<RecentRepository> recentRepositories;
   final Future<void> Function(String path) onOpenRecent;
   final Future<void> Function(String path) onRemoveRecent;
+  final bool isGitAvailable;
   final String? error;
 
   @override
@@ -79,7 +81,7 @@ class StartView extends StatelessWidget {
                   ),
                   const SizedBox(height: 26),
                   Text(
-                    l10n.tr('把 Git 文件操作，\n变成一次直观的移动。'),
+                    l10n.tr('turnGitFileOperationsIntoAnIntuitiveWorkspace'),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                       color: colors.onSurface,
@@ -89,8 +91,7 @@ class StartView extends StatelessWidget {
                   const SizedBox(height: 17),
                   Text(
                     l10n.tr(
-                      '左右双栏浏览同一仓库，勾选、剪切、粘贴和重命名。'
-                      '\n每一步文件变更都通过 Git，最后填写说明直接提交。',
+                      'browseOneRepositoryInTwoPanesSelectCutPasteAndRenameEveryChangeRunsThroughGit',
                     ),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
@@ -105,7 +106,9 @@ class StartView extends StatelessWidget {
                     runSpacing: 10,
                     children: [
                       FilledButton.icon(
-                        onPressed: isOpening ? null : onOpenRepository,
+                        onPressed: isOpening || !isGitAvailable
+                            ? null
+                            : onOpenRepository,
                         icon: isOpening
                             ? SizedBox(
                                 width: 17,
@@ -117,7 +120,9 @@ class StartView extends StatelessWidget {
                               )
                             : const Icon(Icons.folder_open_rounded, size: 20),
                         label: Text(
-                          isOpening ? l10n.tr('正在读取仓库…') : l10n.tr('打开 Git 仓库'),
+                          isOpening
+                              ? l10n.tr('openingRepository')
+                              : l10n.tr('openGitRepository'),
                         ),
                         style: FilledButton.styleFrom(
                           minimumSize: const Size(200, 52),
@@ -125,17 +130,21 @@ class StartView extends StatelessWidget {
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: isOpening ? null : onOpenEmptyFolder,
+                        onPressed: isOpening || !isGitAvailable
+                            ? null
+                            : onOpenEmptyFolder,
                         icon: const Icon(Icons.create_new_folder_outlined),
-                        label: Text(l10n.tr('打开空白文件夹')),
+                        label: Text(l10n.tr('openEmptyFolder')),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(180, 52),
                         ),
                       ),
                       OutlinedButton.icon(
-                        onPressed: isOpening ? null : onCloneRepository,
+                        onPressed: isOpening || !isGitAvailable
+                            ? null
+                            : onCloneRepository,
                         icon: const Icon(Icons.download_rounded),
-                        label: Text(l10n.tr('克隆 Git 仓库')),
+                        label: Text(l10n.tr('cloneGitRepository')),
                         style: OutlinedButton.styleFrom(
                           minimumSize: const Size(180, 52),
                         ),
@@ -144,7 +153,9 @@ class StartView extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    l10n.tr('打开现有仓库、初始化空白目录，或克隆远程仓库'),
+                    l10n.tr(
+                      'openAnExistingRepositoryInitializeAnEmptyFolderOrCloneARemoteRepository',
+                    ),
                     style: Theme.of(context).textTheme.bodySmall
                         ?.copyWith(color: colors.onSurfaceVariant),
                   ),
@@ -183,7 +194,7 @@ class StartView extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          l10n.tr('最近打开'),
+                          l10n.tr('recentlyOpened'),
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w800),
                         ),
@@ -198,7 +209,7 @@ class StartView extends StatelessWidget {
                             borderRadius: BorderRadius.circular(5),
                           ),
                           child: Text(
-                            l10n.tr('{count} 个 Git 仓库', {
+                            l10n.tr('gitRepositories', {
                               'count': recentRepositories.length,
                             }),
                             style: TextStyle(
@@ -210,7 +221,7 @@ class StartView extends StatelessWidget {
                         ),
                         const Spacer(),
                         Text(
-                          l10n.tr('仅保存验证成功的仓库根目录'),
+                          l10n.tr('onlyVerifiedRepositoryRootsAreSaved'),
                           style: TextStyle(
                             fontSize: 11,
                             color: colors.onSurfaceVariant,
@@ -226,7 +237,7 @@ class StartView extends StatelessWidget {
                         for (final repository in recentRepositories)
                           _RecentRepositoryCard(
                             repository: repository,
-                            disabled: isOpening,
+                            disabled: isOpening || !isGitAvailable,
                             onOpen: () => onOpenRecent(repository.path),
                             onRemove: () => onRemoveRecent(repository.path),
                           ),
@@ -241,18 +252,20 @@ class StartView extends StatelessWidget {
                     children: [
                       _FeatureCard(
                         icon: Icons.splitscreen_rounded,
-                        title: l10n.tr('双栏批量操作'),
-                        caption: l10n.tr('独立浏览，跨栏移动'),
+                        title: l10n.tr('dualPaneOperations'),
+                        caption: l10n.tr(
+                          'browseIndependentlyAndMoveAcrossPanes',
+                        ),
                       ),
                       _FeatureCard(
                         icon: Icons.drive_file_rename_outline_rounded,
-                        title: l10n.tr('Git 原生变更'),
-                        caption: l10n.tr('git mv · index · commit'),
+                        title: l10n.tr('nativeGitChanges'),
+                        caption: l10n.tr('gitMvIndexCommit'),
                       ),
                       _FeatureCard(
                         icon: Icons.straighten_rounded,
-                        title: l10n.tr('精确大小视图'),
-                        caption: l10n.tr('IEC / SI，可切换 bit'),
+                        title: l10n.tr('preciseSizeView'),
+                        caption: l10n.tr('iecSiOptionalBits'),
                       ),
                     ],
                   ),
@@ -262,13 +275,16 @@ class StartView extends StatelessWidget {
                     runSpacing: 8,
                     alignment: WrapAlignment.center,
                     children: [
-                      _ShortcutHint(keys: 'Ctrl O', label: l10n.tr('打开仓库')),
+                      _ShortcutHint(
+                        keys: 'Ctrl O',
+                        label: l10n.tr('openRepository2'),
+                      ),
                       _ShortcutHint(
                         keys: 'Ctrl X / C / V',
                         label:
-                            '${l10n.tr('剪切')} · ${l10n.tr('复制')} · ${l10n.tr('粘贴')}',
+                            '${l10n.tr('cut')} · ${l10n.tr('copy')} · ${l10n.tr('paste')}',
                       ),
-                      _ShortcutHint(keys: 'F2', label: l10n.tr('重命名')),
+                      _ShortcutHint(keys: 'F2', label: l10n.tr('rename')),
                     ],
                   ),
                 ],
@@ -367,7 +383,7 @@ class _RecentRepositoryCard extends StatelessWidget {
                 ),
                 IconButton(
                   onPressed: disabled ? null : onRemove,
-                  tooltip: l10n.tr('从历史记录移除'),
+                  tooltip: l10n.tr('removeFromHistory'),
                   visualDensity: VisualDensity.compact,
                   icon: const Icon(Icons.close_rounded, size: 15),
                   constraints: const BoxConstraints.tightFor(
@@ -390,7 +406,7 @@ class _RecentRepositoryCard extends StatelessWidget {
     if (local.year == now.year &&
         local.month == now.month &&
         local.day == now.day) {
-      return l10n.tr('今天 {time}', {
+      return l10n.tr('today', {
         'time':
             '${local.hour.toString().padLeft(2, '0')}:'
             '${local.minute.toString().padLeft(2, '0')}',

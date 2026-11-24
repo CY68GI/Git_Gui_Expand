@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../core/localization/localized_message.dart';
+import '../../core/localization/runtime_messages.dart';
 import '../../core/models/operation_plan.dart';
 import '../../core/models/operation_safety.dart';
 import '../../core/services/app_log_service.dart';
@@ -16,9 +18,14 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
        _precondition = precondition,
        _log = logService ?? AppLogService.instance {
     pendingOperations = [_operation];
-    _log.info(
+    _log.infoEvent(
       'bootstrap',
-      '已创建 ${_operation.title} 的操作预览；${_operation.description}',
+      'bootstrap.plan.preview.created',
+      details: {
+        'kind': _operation.kind.name,
+        'titleKey': _operation.title.key,
+        'descriptionKey': _operation.description.key,
+      },
     );
   }
 
@@ -47,12 +54,20 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
   @override
   OperationOutcome clearPendingOperations() {
     if (_isRunning) {
-      return const OperationOutcome.failure('当前操作尚未完成。');
+      return OperationOutcome.failure(
+        RuntimeMessages.messageFor('operationInProgress'),
+      );
     }
     final count = pendingOperations.length;
     pendingOperations = const [];
     notifyListeners();
-    return OperationOutcome.success('已清空 $count 步待执行操作');
+    return OperationOutcome.success(
+      RuntimeMessages.messageFor(
+        'planCleared',
+        parameters: {'count': count},
+        eventId: 'bootstrap.plan.clear.succeeded',
+      ),
+    );
   }
 
   @override
@@ -62,18 +77,25 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
     void Function(OperationPlanProgress progress)? onProgress,
   }) async {
     if (_isRunning || _used) {
-      return _failure('此操作已经执行或正在执行，请重新打开预览。');
+      return _failure(RuntimeMessages.messageFor('bootstrapPlanAlreadyUsed'));
     }
     if (pendingOperations.isEmpty) {
-      return _failure('执行计划为空。');
+      return _failure(RuntimeMessages.messageFor('emptyOperationPlan'));
     }
     final operation = pendingOperations.single;
     if (operation.strongConfirmationText != null &&
         strongConfirmationText != operation.strongConfirmationText) {
-      return _failure('请准确输入 ${operation.strongConfirmationText} 以确认危险操作。');
+      return _failure(
+        RuntimeMessages.messageFor(
+          'planStrongConfirmationRequired',
+          parameters: {'confirmation': operation.strongConfirmationText ?? ''},
+        ),
+      );
     }
     if (operation.isDangerous && !confirmedDangerous) {
-      return _failure('请勾选危险操作确认项后再执行。');
+      return _failure(
+        RuntimeMessages.messageFor('planDangerousAcknowledgmentRequired'),
+      );
     }
 
     _isRunning = true;
@@ -81,14 +103,14 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
     try {
       final validation = await validate(_precondition);
       if (!validation.isSuccess) {
-        _log.warning(
+        _log.warningEvent(
           'bootstrap',
-          '引导操作执行前状态校验失败：'
-              '${validation.summary.replaceAll('\n', ' | ')}',
+          'bootstrap.preflight.state.changed',
+          details: {'validation': validation.summary.replaceAll('\n', ' | ')},
         );
         final result = OperationPlanResult(
           isSuccess: false,
-          message: '目标状态与确认预览不一致，已停止执行。请刷新预览后重新确认。',
+          message: RuntimeMessages.messageFor('bootstrapStateChanged'),
           completed: 0,
           total: 1,
           remaining: pendingOperations,
@@ -101,12 +123,20 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
       onProgress?.call(
         OperationPlanProgress(step: 1, total: 1, title: operation.title),
       );
-      _log.info('bootstrap', '开始执行：${operation.title}');
+      _log.infoEvent(
+        'bootstrap',
+        'bootstrap.execute.started',
+        details: {'kind': operation.kind.name},
+      );
       final outcome = await operation.run();
       if (!outcome.isSuccess) {
-        _log.error(
+        _log.errorEvent(
           'bootstrap',
-          '执行失败：${operation.title}；原因=${outcome.message}',
+          'bootstrap.execute.failed',
+          details: {
+            'kind': operation.kind.name,
+            'outcomeKey': outcome.message.key,
+          },
         );
         final result = OperationPlanResult(
           isSuccess: false,
@@ -127,13 +157,24 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
         remaining: const [],
       );
       lastResult = result;
-      _log.info('bootstrap', '执行完成：${operation.title}；${outcome.message}');
+      _log.infoEvent(
+        'bootstrap',
+        'bootstrap.execute.completed',
+        details: {'kind': operation.kind.name},
+      );
       return result;
     } catch (error) {
-      _log.error('bootstrap', '执行异常：${operation.title}；$error');
+      _log.errorEvent(
+        'bootstrap',
+        'bootstrap.execute.exception',
+        details: {'kind': operation.kind.name, 'error': '$error'},
+      );
       final result = OperationPlanResult(
         isSuccess: false,
-        message: '执行引导操作失败：$error',
+        message: RuntimeMessages.operationFailed(
+          error,
+          eventId: 'bootstrap.execute.exception',
+        ),
         completed: 0,
         total: 1,
         remaining: pendingOperations,
@@ -149,14 +190,20 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
   @override
   OperationOutcome removePendingOperation(String id) {
     if (_isRunning) {
-      return const OperationOutcome.failure('当前操作尚未完成。');
+      return OperationOutcome.failure(
+        RuntimeMessages.messageFor('operationInProgress'),
+      );
     }
     if (pendingOperations.every((operation) => operation.id != id)) {
-      return const OperationOutcome.failure('待执行操作不存在。');
+      return OperationOutcome.failure(
+        RuntimeMessages.messageFor('planOperationMissing'),
+      );
     }
     pendingOperations = const [];
     notifyListeners();
-    return OperationOutcome.success('已移除：${_operation.title}');
+    return OperationOutcome.success(
+      RuntimeMessages.messageFor('planOperationRemoved'),
+    );
   }
 
   @override
@@ -169,7 +216,7 @@ class RepositoryBootstrapPlanController extends ChangeNotifier
     notifyListeners();
   }
 
-  OperationPlanResult _failure(String message) {
+  OperationPlanResult _failure(LocalizedMessage message) {
     final result = OperationPlanResult(
       isSuccess: false,
       message: message,

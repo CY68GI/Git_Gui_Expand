@@ -81,7 +81,7 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 9),
                 Text(
-                  context.l10n.tr('提交工作区'),
+                  context.l10n.tr('commitWorkspace'),
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
@@ -89,23 +89,19 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 8),
                 _CountBadge(
-                  text: context.l10n.tr('{count} 项变更', {
-                    'count': changes.length,
-                  }),
+                  text: context.l10n.tr('changes', {'count': changes.length}),
                   color: hasChanges ? colors.tertiary : colors.onSurfaceVariant,
                 ),
                 if (stagedCount > 0) ...[
                   const SizedBox(width: 6),
                   _CountBadge(
-                    text: context.l10n.tr('{count} 项已暂存', {
-                      'count': stagedCount,
-                    }),
+                    text: context.l10n.tr('staged', {'count': stagedCount}),
                     color: colors.primary,
                   ),
                 ],
                 const Spacer(),
                 Tooltip(
-                  message: context.l10n.tr('查看分支同步状态'),
+                  message: context.l10n.tr('viewBranchSynchronization'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
@@ -132,14 +128,14 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 5),
                 Tooltip(
-                  message: context.l10n.tr('查看和管理全部远端仓库'),
+                  message: context.l10n.tr('viewAndManageAllRemotes'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
                         : widget.onManageRemotes,
                     icon: const Icon(Icons.hub_outlined, size: 15),
                     label: Text(
-                      context.l10n.tr('远端 {count}', {
+                      context.l10n.tr('remotes', {
                         'count': controller.remotes.length,
                       }),
                     ),
@@ -159,13 +155,13 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 5),
                 Tooltip(
-                  message: context.l10n.tr('推送当前分支 (Ctrl+Shift+U)'),
+                  message: context.l10n.tr('pushCurrentBranchCtrlShiftU'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
                         : widget.onPushRequested,
                     icon: const Icon(Icons.cloud_upload_outlined, size: 16),
-                    label: Text(context.l10n.tr('推送')),
+                    label: Text(context.l10n.tr('push')),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
@@ -182,13 +178,13 @@ class _CommitPanelState extends State<CommitPanel> {
                 ),
                 const SizedBox(width: 8),
                 Tooltip(
-                  message: context.l10n.tr('Stash 管理'),
+                  message: context.l10n.tr('stashManagement'),
                   child: TextButton.icon(
                     onPressed: controller.isBusy
                         ? null
                         : widget.onManageStashes,
                     icon: const Icon(Icons.inventory_2_outlined, size: 15),
-                    label: Text(context.l10n.tr('Stash')),
+                    label: Text(context.l10n.tr('stash')),
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,
                       padding: const EdgeInsets.symmetric(
@@ -206,7 +202,7 @@ class _CommitPanelState extends State<CommitPanel> {
                 const SizedBox(width: 6),
                 if (controller.branch.isNotEmpty)
                   Tooltip(
-                    message: context.l10n.tr('分支管理'),
+                    message: context.l10n.tr('branchManagement'),
                     child: TextButton.icon(
                       onPressed: controller.isBusy
                           ? null
@@ -246,9 +242,9 @@ class _CommitPanelState extends State<CommitPanel> {
   }
 
   String _syncBadge(BranchSyncState? state, AppLocalizations l10n) {
-    if (state == null) return l10n.tr('同步');
+    if (state == null) return l10n.tr('sync');
     if (state.isDetached) return l10n.tr('detached');
-    if (!state.hasUpstream) return l10n.tr('无 upstream');
+    if (!state.hasUpstream) return l10n.tr('noUpstream');
     return '↑${state.ahead} ↓${state.behind}';
   }
 
@@ -268,7 +264,7 @@ class _CommitPanelState extends State<CommitPanel> {
               ),
               const SizedBox(width: 8),
               Text(
-                context.l10n.tr('文件变更尚未执行，请在待执行操作计划中确认'),
+                context.l10n.tr('fileChangesArePendingInTheOperationPlan'),
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -289,7 +285,7 @@ class _CommitPanelState extends State<CommitPanel> {
             ),
             const SizedBox(width: 8),
             Text(
-              context.l10n.tr('工作区干净，没有待提交的更改'),
+              context.l10n.tr('workingTreeClean'),
               style: TextStyle(
                 fontSize: 11.5,
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -325,8 +321,8 @@ class _CommitPanelState extends State<CommitPanel> {
               maxLines: 3,
               textInputAction: TextInputAction.newline,
               decoration: InputDecoration(
-                hintText: context.l10n.tr('填写本次提交说明…'),
-                labelText: context.l10n.tr('提交说明'),
+                hintText: context.l10n.tr('enterACommitMessage'),
+                labelText: context.l10n.tr('commitMessage'),
                 alignLabelWithHint: true,
                 isDense: true,
               ),
@@ -349,7 +345,7 @@ class _CommitPanelState extends State<CommitPanel> {
                         }
                       : null,
                   icon: const Icon(Icons.add_task_rounded, size: 16),
-                  label: Text(context.l10n.tr('暂存全部')),
+                  label: Text(context.l10n.tr('stageAll')),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -372,7 +368,7 @@ class _CommitPanelState extends State<CommitPanel> {
                         }
                       : null,
                   icon: const Icon(Icons.remove_done_rounded, size: 16),
-                  label: Text(context.l10n.tr('取消暂存')),
+                  label: Text(context.l10n.tr('unstage')),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -412,7 +408,7 @@ class _CommitPanelState extends State<CommitPanel> {
                           ),
                         )
                       : const Icon(Icons.check_rounded, size: 17),
-                  label: Text(context.l10n.tr('加入提交计划')),
+                  label: Text(context.l10n.tr('addCommitToPlan')),
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
@@ -426,7 +422,7 @@ class _CommitPanelState extends State<CommitPanel> {
           const SizedBox(height: 7),
           Text(
             context.l10n.tr(
-              '提交不会立即执行。请在待执行操作计划中确认后，再运行 git add -A 和 git commit。',
+              'commitsAreDeferredConfirmThePlanBeforeGitAddAAndGitCommitRun',
             ),
             style: TextStyle(
               fontSize: 11.5,

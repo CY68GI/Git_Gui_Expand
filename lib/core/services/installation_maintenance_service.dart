@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 
 import 'app_log_service.dart';
 import 'app_storage_service.dart';
+import 'git_runtime_installation_service.dart';
 
 enum MaintenanceItemKind {
   oldVersion,
@@ -13,6 +14,9 @@ enum MaintenanceItemKind {
   legacyUpdater,
   legacyFlatFile,
   legacyFlatDirectory,
+  obsoleteGitRuntime,
+  gitRuntimeArchive,
+  gitRuntimeStaging,
 }
 
 class MaintenanceItem {
@@ -88,6 +92,7 @@ class InstallationMaintenanceService {
       await _scanVersions(root, currentVersion, items);
       await _scanLegacyFlatPayload(root, items);
     }
+    await _scanGitRuntimes(root, items);
     await _scanUpdateArtifacts(root, items);
     items.sort((left, right) => left.path.compareTo(right.path));
     return MaintenanceScanResult(
@@ -103,6 +108,10 @@ class InstallationMaintenanceService {
     final updatesRoot =
         '$root${Platform.pathSeparator}userdata'
         '${Platform.pathSeparator}updates';
+    final gitRuntimeVersionsRoot =
+        '$root${Platform.pathSeparator}runtime'
+        '${Platform.pathSeparator}git'
+        '${Platform.pathSeparator}versions';
     final removed = <MaintenanceItem>[];
     final failed = <MaintenanceItem>[];
     var removedBytes = 0;
@@ -111,10 +120,15 @@ class InstallationMaintenanceService {
       final allowed =
           _isWithin(item.path, versionsRoot) ||
           _isWithin(item.path, updatesRoot) ||
+          _isWithin(item.path, gitRuntimeVersionsRoot) ||
           _isRootMaintenancePath(item.path, root);
       if (!allowed) {
         failed.add(item);
-        _log.warning('maintenance', '拒绝清理越界路径：${item.path}');
+        _log.warningEvent(
+          'maintenance',
+          'maintenance.cleanup.outsideRoot',
+          details: {'path': item.path},
+        );
         continue;
       }
       try {
@@ -131,10 +145,22 @@ class InstallationMaintenanceService {
         }
         removed.add(item);
         removedBytes += item.size;
-        _log.info('maintenance', '已清理旧版本内容：${item.path}');
+        _log.infoEvent(
+          'maintenance',
+          'maintenance.cleanup.item.removed',
+          details: {'path': item.path, 'kind': item.kind.name},
+        );
       } catch (error) {
         failed.add(item);
-        _log.error('maintenance', '清理失败：${item.path}；$error');
+        _log.errorEvent(
+          'maintenance',
+          'maintenance.cleanup.item.failed',
+          details: {
+            'path': item.path,
+            'kind': item.kind.name,
+            'error': '$error',
+          },
+        );
       }
     }
     return MaintenanceCleanupResult(
@@ -207,7 +233,7 @@ Add-Content -LiteralPath $logPath -Value "$(Get-Date -Format o) Launcher update 
       includeParentEnvironment: true,
       runInShell: false,
     );
-    _log.info('maintenance', '已安排下一次退出时更新根目录 Launcher');
+    _log.infoEvent('maintenance', 'maintenance.launcher.update.scheduled');
   }
 
   Future<void> _scanVersions(
@@ -283,10 +309,16 @@ Add-Content -LiteralPath $logPath -Value "$(Get-Date -Format o) Launcher update 
       MaintenanceItemKind? kind;
       if (entity is Directory && name.startsWith('stage-v')) {
         kind = MaintenanceItemKind.stagingDirectory;
+      } else if (entity is Directory && name.startsWith('git-stage-')) {
+        kind = MaintenanceItemKind.gitRuntimeStaging;
       } else if (entity is File &&
           name.startsWith('git_gui_expand-') &&
           name.endsWith('.zip')) {
         kind = MaintenanceItemKind.updateArchive;
+      } else if (entity is File &&
+          name.contains('portablegit') &&
+          name.endsWith('.zip')) {
+        kind = MaintenanceItemKind.gitRuntimeArchive;
       } else if (entity is File &&
           name.startsWith('git_gui_expand-') &&
           (name.endsWith('.sha256') || name.endsWith('.sha256sum'))) {
@@ -304,6 +336,36 @@ Add-Content -LiteralPath $logPath -Value "$(Get-Date -Format o) Launcher update 
           size: entity is File
               ? await entity.length()
               : await _sizeOf(entity as Directory),
+        ),
+      );
+    }
+  }
+
+  Future<void> _scanGitRuntimes(
+    Directory root,
+    List<MaintenanceItem> items,
+  ) async {
+    final versions = Directory(
+      '${root.path}${Platform.pathSeparator}runtime'
+      '${Platform.pathSeparator}git'
+      '${Platform.pathSeparator}versions',
+    );
+    if (!await versions.exists()) return;
+    final pointer = await GitRuntimePointerStore(storage: storage).read();
+    final retained = {
+      if (pointer.activeVersion.isNotEmpty) pointer.activeVersion,
+      if (pointer.previousVersion.isNotEmpty) pointer.previousVersion,
+    };
+    await for (final entity in versions.list(followLinks: false)) {
+      if (entity is! Directory) continue;
+      if (await FileSystemEntity.isLink(entity.path)) continue;
+      final name = _lastSegment(entity.path);
+      if (retained.contains(name)) continue;
+      items.add(
+        MaintenanceItem(
+          path: entity.path,
+          kind: MaintenanceItemKind.obsoleteGitRuntime,
+          size: await _sizeOf(entity),
         ),
       );
     }

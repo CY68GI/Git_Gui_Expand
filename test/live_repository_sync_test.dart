@@ -9,14 +9,14 @@ import 'package:git_gui_expand/core/services/recent_repositories_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
+import 'support/localized_message_fixture.dart';
+
 void main() {
   test('live isolated fetch and fast-forward pull workflows', () async {
     if (Platform.environment['GIT_GUI_LIVE_SYNC_TEST'] != '1') {
       return;
     }
-    final root = await Directory.systemTemp.createTemp(
-      'git_gui_live_sync_',
-    );
+    final root = await Directory.systemTemp.createTemp('git_gui_live_sync_');
     final remote = Directory('${root.path}${Platform.pathSeparator}remote.git');
     final publisher = Directory(
       '${root.path}${Platform.pathSeparator}publisher',
@@ -32,9 +32,8 @@ void main() {
       await publisher.create();
       await _git(publisher, ['init', '-b', 'main']);
       await _configureIdentity(publisher);
-      await File(
-        '${publisher.path}${Platform.pathSeparator}README.md',
-      ).writeAsString('initial');
+      await File('${publisher.path}${Platform.pathSeparator}README.md')
+          .writeAsString('initial');
       await _git(publisher, ['add', '-A']);
       await _git(publisher, ['commit', '-m', 'initial']);
       await _git(publisher, ['remote', 'add', 'origin', remote.path]);
@@ -56,19 +55,15 @@ void main() {
       await controller.initialize();
       expect((await controller.openRepository(local.path)).isSuccess, isTrue);
 
-      await File(
-        '${publisher.path}${Platform.pathSeparator}update.txt',
-      ).writeAsString('remote update');
+      await File('${publisher.path}${Platform.pathSeparator}update.txt')
+          .writeAsString('remote update');
       await _git(publisher, ['add', '-A']);
       await _git(publisher, ['commit', '-m', 'remote update']);
       await _git(publisher, ['push', 'origin', 'main']);
       expect((await controller.fetchCurrentUpstream()).isSuccess, isTrue);
       expect(
-        (
-          await controller.executePendingOperations(
-            confirmedDangerous: true,
-          )
-        ).isSuccess,
+        (await controller.executePendingOperations(confirmedDangerous: true))
+            .isSuccess,
         isTrue,
       );
       expect(
@@ -76,28 +71,28 @@ void main() {
         isTrue,
         reason: controller.syncState?.relation.name,
       );
-      expect((await controller.pullCurrentBranchFastForward()).isSuccess, isTrue);
+      expect(
+        (await controller.pullCurrentBranchFastForward()).isSuccess,
+        isTrue,
+      );
       final pulled = await controller.executePendingOperations(
         confirmedDangerous: true,
       );
-      expect(pulled.isSuccess, isTrue, reason: pulled.message);
+      expect(pulled.isSuccess, isTrue, reason: fixtureText(pulled.message));
       expect(
-        await File(
-          '${local.path}${Platform.pathSeparator}update.txt',
-        ).readAsString(),
+        await File('${local.path}${Platform.pathSeparator}update.txt')
+            .readAsString(),
         'remote update',
       );
 
-      await File(
-        '${publisher.path}${Platform.pathSeparator}second.txt',
-      ).writeAsString('second');
+      await File('${publisher.path}${Platform.pathSeparator}second.txt')
+          .writeAsString('second');
       await _git(publisher, ['add', '-A']);
       await _git(publisher, ['commit', '-m', 'second']);
       await _git(publisher, ['push', 'origin', 'main']);
       await GitService(local.path).fetchRemote('origin');
-      await File(
-        '${local.path}${Platform.pathSeparator}README.md',
-      ).writeAsString('dirty');
+      await File('${local.path}${Platform.pathSeparator}README.md')
+          .writeAsString('dirty');
       await expectLater(
         GitService(local.path).pullFastForward(),
         throwsA(isA<GitException>()),

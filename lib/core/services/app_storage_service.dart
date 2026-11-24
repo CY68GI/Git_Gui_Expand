@@ -1,20 +1,31 @@
 import 'dart:io';
 
 class AppStorageService {
-  const AppStorageService({this.softwareDirectoryOverride});
+  const AppStorageService({
+    this.softwareDirectoryOverride,
+    this.launcherRootOverride,
+    this.executablePathOverride,
+    this.launchedByLauncherOverride,
+  });
 
   final String? softwareDirectoryOverride;
+  final String? launcherRootOverride;
+  final String? executablePathOverride;
+  final bool? launchedByLauncherOverride;
 
   String get softwareDirectory {
     final override = softwareDirectoryOverride;
     if (override != null && override.isNotEmpty) {
       return override;
     }
-    final launcherRoot = Platform.environment['GIT_GUI_EXPAND_ROOT'];
+    final launcherRoot =
+        launcherRootOverride ?? Platform.environment['GIT_GUI_EXPAND_ROOT'];
     if (launcherRoot != null && launcherRoot.trim().isNotEmpty) {
       return launcherRoot.trim();
     }
-    final executableDirectory = File(Platform.resolvedExecutable).parent;
+    final executableDirectory = File(
+      executablePathOverride ?? Platform.resolvedExecutable,
+    ).parent;
     final versionDirectoryName = _lastPathSegment(executableDirectory.uri);
     final versionsDirectory = executableDirectory.parent;
     if (versionDirectoryName != null &&
@@ -34,10 +45,60 @@ class AppStorageService {
       File('${dataDirectory.path}${Platform.pathSeparator}settings.json');
 
   bool get isLaunchedByLauncher =>
+      launchedByLauncherOverride ??
       Platform.environment['GIT_GUI_EXPAND_LAUNCHED'] == '1';
 
   Directory get versionsDirectory =>
       Directory('$softwareDirectory${Platform.pathSeparator}versions');
+
+  Directory get runtimeDirectory =>
+      Directory('$softwareDirectory${Platform.pathSeparator}runtime');
+
+  Directory get gitRuntimeRoot =>
+      Directory('${runtimeDirectory.path}${Platform.pathSeparator}git');
+
+  Directory get gitRuntimeVersionsDirectory =>
+      Directory('${gitRuntimeRoot.path}${Platform.pathSeparator}versions');
+
+  Directory get gitRuntimeCurrentDirectory =>
+      Directory('${gitRuntimeRoot.path}${Platform.pathSeparator}current');
+
+  File get gitRuntimeCurrentPointerFile =>
+      File('${gitRuntimeRoot.path}${Platform.pathSeparator}current.json');
+
+  File get gitRuntimeExecutableFile => File(
+    '${gitRuntimeCurrentDirectory.path}${Platform.pathSeparator}cmd'
+    '${Platform.pathSeparator}git.exe',
+  );
+
+  Directory get gitRuntimeStableCommandDirectory => Directory(
+    '${gitRuntimeCurrentDirectory.path}${Platform.pathSeparator}cmd',
+  );
+
+  Directory get gitPathBackupDirectory => Directory(
+    '${dataDirectory.path}${Platform.pathSeparator}git-path-backups',
+  );
+
+  Directory gitRuntimeStageDirectory(String version) => Directory(
+    '${dataDirectory.path}${Platform.pathSeparator}updates'
+    '${Platform.pathSeparator}git-stage-$version',
+  );
+
+  Directory gitRuntimeVersionDirectory(String version) {
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(version)) {
+      throw const FormatException(
+        'Git runtime version contains unsafe characters.',
+      );
+    }
+    return Directory(
+      '${gitRuntimeVersionsDirectory.path}${Platform.pathSeparator}$version',
+    );
+  }
+
+  File gitRuntimeManifestFile(String version) => File(
+    '${gitRuntimeVersionDirectory(version).path}${Platform.pathSeparator}'
+    'git-runtime.json',
+  );
 
   File get currentVersionFile =>
       File('$softwareDirectory${Platform.pathSeparator}current-version.txt');

@@ -86,17 +86,12 @@ void main() {
 
     final normal = await logger.readRecent(AppLogType.normal);
     final detailed = await logger.readRecent(AppLogType.detailed);
-    expect(normal, contains('Git commit identity is unavailable'));
-    expect(detailed, contains('Valid Git commit identity'));
+    expect(normal, contains('git.identity.unavailable'));
+    expect(detailed, contains('git.identity.valid'));
     expect(
-      const AppLocalizations(AppLocalizations.english).tr(
-        'Git 提交身份不可用：无法解析有效的 user.name 或 user.email。\n'
-        '请在项目目录执行：\n'
-        'git config --local user.name "Your Name"\n'
-        'git config --local user.email "you@example.com"\n'
-        '或改用 --global 配置当前用户的默认 Git 身份。',
-      ),
-      contains('git config --local user.name'),
+      const AppLocalizations(AppLocalizations.english)
+          .tr('commitIdentityUnavailable'),
+      contains('user.name and user.email'),
     );
   });
 }

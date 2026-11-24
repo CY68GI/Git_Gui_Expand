@@ -2,13 +2,18 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/models/operation_plan.dart';
 import 'package:git_gui_expand/core/models/operation_safety.dart';
+import 'package:git_gui_expand/core/localization/localized_message.dart';
+import 'package:git_gui_expand/core/localization/runtime_messages.dart';
 import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
 import 'package:git_gui_expand/core/services/git_service.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
 import 'package:git_gui_expand/features/start/repository_bootstrap_plan_controller.dart';
+
+import 'support/localized_message_fixture.dart';
 
 void main() {
   late Directory root;
@@ -51,7 +56,7 @@ void main() {
         confirmedDangerous: true,
       );
 
-      expect(first.isSuccess, isTrue, reason: first.message);
+      expect(first.isSuccess, isTrue, reason: fixtureText(first.message));
       expect(second.isSuccess, isFalse);
       expect(runCount, 1);
       expect(
@@ -128,7 +133,7 @@ void main() {
     );
     await tester.tap(find.text('Open bootstrap plan'));
     await tester.pumpAndSettle();
-    expect(find.text('Initialize'), findsOneWidget);
+    expect(find.text('初始化 Git 仓库'), findsOneWidget);
     await tester.tap(find.text('关闭'));
     await tester.pumpAndSettle();
 
@@ -160,12 +165,18 @@ void main() {
       operation: PlannedRepositoryOperation(
         id: 'bootstrap-clone',
         kind: PlannedOperationKind.cloneRepository,
-        title: 'Clone',
-        description: 'Clone the local source.',
+        title: RuntimeMessages.messageFor('planTitleCloneRepository'),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionCloneRepository',
+          parameters: {
+            'path': destination.path,
+            'url': GitRemote.maskRemoteUrl(source.path),
+          },
+        ),
         run: () async {
           runCount += 1;
           await GitService.cloneRepository(source.path, destination.path);
-          return const OperationOutcome.success('cloned');
+          return OperationOutcome.success(fixtureMessage('cloned'));
         },
       ),
       precondition: OperationPrecondition(bootstrap: snapshot),
@@ -230,12 +241,18 @@ void main() {
       operation: PlannedRepositoryOperation(
         id: 'bootstrap-clone',
         kind: PlannedOperationKind.cloneRepository,
-        title: 'Clone',
-        description: 'Clone the local source.',
+        title: RuntimeMessages.messageFor('planTitleCloneRepository'),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionCloneRepository',
+          parameters: {
+            'path': destination.path,
+            'url': GitRemote.maskRemoteUrl(source.path),
+          },
+        ),
         run: () async {
           runCount += 1;
           await GitService.cloneRepository(source.path, destination.path);
-          return const OperationOutcome.success('cloned');
+          return OperationOutcome.success(fixtureMessage('cloned'));
         },
       ),
       precondition: OperationPrecondition(bootstrap: snapshot),
@@ -262,7 +279,7 @@ void main() {
       confirmedDangerous: true,
     );
 
-    expect(result.isSuccess, isTrue, reason: result.message);
+    expect(result.isSuccess, isTrue, reason: fixtureText(result.message));
     expect(runCount, 1);
     expect(
       await Directory('${destination.path}${Platform.pathSeparator}.git')
@@ -283,12 +300,15 @@ RepositoryBootstrapPlanController _initializationPlan({
     operation: PlannedRepositoryOperation(
       id: 'bootstrap-init',
       kind: PlannedOperationKind.initializeRepository,
-      title: 'Initialize',
-      description: 'Initialize the selected folder.',
+      title: RuntimeMessages.messageFor('planTitleInitializeRepository'),
+      description: RuntimeMessages.messageFor(
+        'planDescriptionInitializeRepository',
+        parameters: {'path': target.path},
+      ),
       run: () async {
         onRun();
         await GitService.initializeRepository(target.path);
-        return const OperationOutcome.success('initialized');
+        return OperationOutcome.success(fixtureMessage('initialized'));
       },
     ),
     precondition: OperationPrecondition(bootstrap: snapshot),
@@ -320,16 +340,11 @@ Future<void> _git(Directory directory, List<String> arguments) async {
 
 class _SilentLogService extends AppLogService {
   @override
-  void info(String area, String message) {}
-
-  @override
-  void detail(String area, String message) {}
-
-  @override
-  void warning(String area, String message) {}
-
-  @override
-  void error(String area, String message) {}
+  void event({
+    required AppLogLevel level,
+    required String area,
+    required LocalizedMessage message,
+  }) {}
 
   @override
   Future<void> flush() async {}

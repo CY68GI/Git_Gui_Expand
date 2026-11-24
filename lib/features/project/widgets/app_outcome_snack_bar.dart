@@ -12,10 +12,10 @@ void showAppOutcomeSnackBar(
   final colors = Theme.of(context).colorScheme;
   final background = outcome.isSuccess ? colors.primary : colors.error;
   final foreground = outcome.isSuccess ? colors.onPrimary : colors.onError;
-  final localizedMessage = context.l10n.tr(outcome.message);
+  final localizedMessage = outcome.message.resolve(context.l10n);
   final isLongFailure = !outcome.isSuccess && localizedMessage.length > 520;
   final displayMessage = isLongFailure
-      ? '${localizedMessage.substring(0, 520)}…\n${context.l10n.tr('详细原因已写入操作日志。')}'
+      ? '${localizedMessage.substring(0, 520)}…\n${context.l10n.tr('theDetailedReasonHasBeenWrittenToTheApplicationLog')}'
       : localizedMessage;
   messenger
     ..hideCurrentSnackBar()
@@ -54,7 +54,7 @@ void showAppOutcomeSnackBar(
         closeIconColor: foreground,
         action: isLongFailure && onViewLogs != null
             ? SnackBarAction(
-                label: context.l10n.tr('查看日志'),
+                label: context.l10n.tr('viewLogs'),
                 textColor: foreground,
                 onPressed: onViewLogs,
               )

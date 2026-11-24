@@ -8,6 +8,8 @@ import 'package:git_gui_expand/core/services/recent_repositories_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
+import 'support/localized_message_fixture.dart';
+
 void main() {
   test(
     'plan preview and execution are localized while Git output stays raw',
@@ -52,14 +54,14 @@ void main() {
         final result = await controller.executePendingOperations(
           confirmedDangerous: true,
         );
-        expect(result.isSuccess, true, reason: result.message);
+        expect(result.isSuccess, true, reason: fixtureText(result.message));
         await logger.flush();
 
         final normal = await logger.readRecent(AppLogType.normal);
         final detailed = await logger.readRecent(AppLogType.detailed);
-        expect(normal, contains('Operation preview 1 created'));
-        expect(normal, contains('Starting operation plan: 1 steps'));
-        expect(detailed, contains('Operation preview 1 created'));
+        expect(normal, contains('plan.entry.queued'));
+        expect(normal, contains('plan.execute.started'));
+        expect(detailed, contains('plan.entry.queued'));
         expect(detailed, contains('command=git mv'));
         expect(detailed, contains('stdout='));
         expect(detailed, contains('stderr='));

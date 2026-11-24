@@ -63,7 +63,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (!outcome.isSuccess) {
-      _showMessage(context.l10n.tr(outcome.message), isError: true);
+      _showMessage(outcome.message.resolve(context.l10n), isError: true);
       return;
     }
     _nameController.clear();
@@ -98,10 +98,10 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
         children: [
           Icon(Icons.account_tree_outlined, color: colors.primary),
           const SizedBox(width: 9),
-          Expanded(child: Text(l10n.tr('分支管理'))),
+          Expanded(child: Text(l10n.tr('branchManagement'))),
           IconButton(
             onPressed: _loading || _busy ? null : _loadBranches,
-            tooltip: l10n.tr('刷新分支'),
+            tooltip: l10n.tr('refreshBranches'),
             icon: const Icon(Icons.refresh_rounded, size: 18),
           ),
         ],
@@ -113,7 +113,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              l10n.tr('当前分支：{branch}', {'branch': widget.controller.branch}),
+              l10n.tr('currentBranch2', {'branch': widget.controller.branch}),
               style: TextStyle(
                 color: colors.primary,
                 fontSize: 12.5,
@@ -138,7 +138,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                     ? Padding(
                         padding: const EdgeInsets.all(18),
                         child: Text(
-                          l10n.tr('当前没有可显示的本地分支。'),
+                          l10n.tr('thereAreNoLocalBranchesToDisplay'),
                           textAlign: TextAlign.center,
                         ),
                       )
@@ -174,7 +174,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                             ),
                             trailing: isCurrent
                                 ? Text(
-                                    l10n.tr('当前'),
+                                    l10n.tr('current'),
                                     style: TextStyle(
                                       color: colors.primary,
                                       fontSize: 10.5,
@@ -191,8 +191,8 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
-                labelText: l10n.tr('新分支名称或重命名后的名称'),
-                hintText: l10n.tr('例如 feature/login'),
+                labelText: l10n.tr('newBranchNameOrRenamedBranchName'),
+                hintText: l10n.tr('forExampleFeatureLogin'),
               ),
             ),
             const SizedBox(height: 10),
@@ -209,7 +209,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                           ),
                         ),
                   icon: const Icon(Icons.add_rounded, size: 17),
-                  label: Text(l10n.tr('创建分支')),
+                  label: Text(l10n.tr('createBranch')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy || selected == null
@@ -218,7 +218,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                           () => widget.controller.switchBranch(selected),
                         ),
                   icon: const Icon(Icons.swap_horiz_rounded, size: 17),
-                  label: Text(l10n.tr('切换分支')),
+                  label: Text(l10n.tr('switchBranch')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy || selected == null
@@ -233,7 +233,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                     Icons.drive_file_rename_outline_rounded,
                     size: 17,
                   ),
-                  label: Text(l10n.tr('重命名分支')),
+                  label: Text(l10n.tr('renameBranch')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy || selected == null
@@ -245,7 +245,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
                           ),
                         ),
                   icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                  label: Text(l10n.tr('删除分支')),
+                  label: Text(l10n.tr('deleteBranch')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: colors.error,
                   ),
@@ -262,7 +262,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
-                l10n.tr('删除未合并分支时强制使用 git branch -D'),
+                l10n.tr('forceGitBranchDWhenDeletingAnUnmergedBranch'),
                 style: const TextStyle(fontSize: 11.5),
               ),
             ),
@@ -272,7 +272,7 @@ class _BranchManagementDialogState extends State<BranchManagementDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('关闭')),
+          child: Text(l10n.tr('close')),
         ),
       ],
     );

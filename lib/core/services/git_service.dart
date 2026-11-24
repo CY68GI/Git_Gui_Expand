@@ -8,18 +8,25 @@ import '../models/operation_safety.dart';
 import '../models/repository_sync.dart';
 import '../utils/path_utils.dart';
 import 'app_log_service.dart';
+import 'git_runtime_service.dart';
 
 class GitService {
-  GitService(this.rootPath, {AppLogService? logService})
-    : _log = logService ?? AppLogService.instance;
+  GitService(
+    this.rootPath, {
+    AppLogService? logService,
+    GitRuntimeManager? runtimeManager,
+  }) : _log = logService ?? AppLogService.instance,
+       _runtimeManager = runtimeManager ?? GitRuntimeManager.instance;
 
   final String rootPath;
   final AppLogService _log;
+  final GitRuntimeManager _runtimeManager;
 
   static Future<String> resolveRepositoryRoot(String selectedPath) async {
-    AppLogService.instance.detail(
+    AppLogService.instance.detailEvent(
       'git',
-      '验证仓库根目录：${Directory(selectedPath).absolute.path}',
+      'git.repository.root.validating',
+      details: {'path': Directory(selectedPath).absolute.path},
     );
     final selected = Directory(selectedPath).absolute.path;
     if (!await Directory(selected).exists()) {
@@ -65,7 +72,11 @@ class GitService {
     if (!result.success) {
       throw GitException('git init 初始化失败。', commandOutput: result.output);
     }
-    AppLogService.instance.info('repository', '已初始化 Git 仓库：$folder');
+    AppLogService.instance.infoEvent(
+      'repository',
+      'git.repository.initialize.succeeded',
+      details: {'path': folder},
+    );
   }
 
   static Future<BootstrapTargetSnapshot> inspectInitializationTarget(
@@ -119,9 +130,13 @@ class GitService {
     if (!result.success) {
       throw GitException('git clone 克隆失败。', commandOutput: result.output);
     }
-    AppLogService.instance.info(
+    AppLogService.instance.infoEvent(
       'repository',
-      '已克隆 Git 仓库：${remoteUrl.trim()} -> ${destination.path}',
+      'git.repository.clone.succeeded',
+      details: {
+        'url': GitRemote.maskRemoteUrl(remoteUrl.trim()),
+        'path': destination.path,
+      },
     );
   }
 
@@ -168,9 +183,10 @@ class GitService {
       throw const GitException('当前仓库已经连接远程仓库，不能清除 Git 元数据。');
     }
     await Directory(gitPath).delete(recursive: true);
-    AppLogService.instance.warning(
+    AppLogService.instance.warningEvent(
       'repository',
-      '已清除未连接远端的 Git 元数据，工作文件保留：$root',
+      'git.repository.metadata.cleared',
+      details: {'path': root},
     );
   }
 
@@ -232,18 +248,27 @@ class GitService {
     String? stdin,
   }) async {
     final displayCommand = 'git ${arguments.map(_quoteArgument).join(' ')}';
-    _log.detail('git', 'cwd=$rootPath command=$displayCommand');
+    _log.detailEvent(
+      'git',
+      'git.command.started',
+      details: {'cwd': rootPath, 'command': displayCommand},
+    );
     try {
       final result = await _runProcess(
         arguments,
         workingDirectory: rootPath,
         stdin: stdin,
+        runtimeManager: _runtimeManager,
       );
-      _log.detail(
+      _log.detailEvent(
         'git',
-        'exit=${result.exitCode} command=$displayCommand\n'
-            'stdout=${result.stdout.trim()}\n'
-            'stderr=${result.stderr.trim()}',
+        'git.command.completed',
+        details: {
+          'exitCode': '${result.exitCode}',
+          'command': displayCommand,
+          'stdout': result.stdout.trim(),
+          'stderr': result.stderr.trim(),
+        },
       );
       if (!allowFailure && !result.success) {
         throw GitException(
@@ -253,7 +278,11 @@ class GitService {
       }
       return result;
     } catch (error) {
-      _log.error('git', 'command=$displayCommand error=$error');
+      _log.errorEvent(
+        'git',
+        'git.command.failed',
+        details: {'command': displayCommand, 'error': '$error'},
+      );
       rethrow;
     }
   }
@@ -270,60 +299,88 @@ class GitService {
     List<String> arguments, {
     required String workingDirectory,
     String? stdin,
+    GitRuntimeManager? runtimeManager,
   }) async {
+    final runtime = runtimeManager ?? GitRuntimeManager.instance;
     try {
-      if (stdin != null) {
-        final process = await Process.start(
-          'git',
+      final executablePath = await runtime.requireExecutablePath();
+      final environment = _gitProcessEnvironment(
+        executablePath,
+        bundled: runtime.status.isBundled,
+      );
+      return await runtime.runWithCommandTracking(() async {
+        if (stdin != null) {
+          final process = await Process.start(
+            executablePath,
+            arguments,
+            workingDirectory: workingDirectory,
+            environment: environment,
+            includeParentEnvironment: true,
+            runInShell: false,
+          );
+          final stdoutFuture = process.stdout.transform(utf8.decoder).join();
+          final stderrFuture = process.stderr.transform(utf8.decoder).join();
+          process.stdin.encoding = utf8;
+          process.stdin.write(stdin);
+          await process.stdin.close();
+          final exitCode = await process.exitCode;
+          return GitCommandResult(
+            success: exitCode == 0,
+            exitCode: exitCode,
+            stdout: await stdoutFuture,
+            stderr: await stderrFuture,
+          );
+        }
+        final process = await Process.run(
+          executablePath,
           arguments,
           workingDirectory: workingDirectory,
-          environment: const {
-            'GIT_TERMINAL_PROMPT': '0',
-            'LC_ALL': 'C.UTF-8',
-            'LANG': 'C.UTF-8',
-          },
+          environment: environment,
           includeParentEnvironment: true,
           runInShell: false,
+          stdoutEncoding: utf8,
+          stderrEncoding: utf8,
         );
-        final stdoutFuture = process.stdout.transform(utf8.decoder).join();
-        final stderrFuture = process.stderr.transform(utf8.decoder).join();
-        process.stdin.encoding = utf8;
-        process.stdin.write(stdin);
-        await process.stdin.close();
-        final exitCode = await process.exitCode;
         return GitCommandResult(
-          success: exitCode == 0,
-          exitCode: exitCode,
-          stdout: await stdoutFuture,
-          stderr: await stderrFuture,
+          success: process.exitCode == 0,
+          exitCode: process.exitCode,
+          stdout: process.stdout as String? ?? '',
+          stderr: process.stderr as String? ?? '',
         );
-      }
-      final process = await Process.run(
-        'git',
-        arguments,
-        workingDirectory: workingDirectory,
-        environment: const {
-          'GIT_TERMINAL_PROMPT': '0',
-          'LC_ALL': 'C.UTF-8',
-          'LANG': 'C.UTF-8',
-        },
-        includeParentEnvironment: true,
-        runInShell: false,
-        stdoutEncoding: utf8,
-        stderrEncoding: utf8,
-      );
-      return GitCommandResult(
-        success: process.exitCode == 0,
-        exitCode: process.exitCode,
-        stdout: process.stdout as String? ?? '',
-        stderr: process.stderr as String? ?? '',
-      );
+      });
     } on ProcessException catch (error) {
       throw GitException(
-        '无法启动 Git。请确认 git 已安装并加入 PATH。',
+        '无法启动 Git。请确认 Git 仍可运行，或在设置中重新检测。',
         commandOutput: error.message,
       );
+    } on StateError catch (error) {
+      throw GitException(error.message);
     }
+  }
+
+  static Map<String, String> _gitProcessEnvironment(
+    String executablePath, {
+    required bool bundled,
+  }) {
+    final environment = <String, String>{
+      'GIT_TERMINAL_PROMPT': '0',
+      'LC_ALL': 'C.UTF-8',
+      'LANG': 'C.UTF-8',
+    };
+    if (bundled) {
+      final executableDirectory = File(executablePath).parent.path;
+      final bundleRoot = Directory(executableDirectory).parent.path;
+      final existingPath = Platform.environment['PATH'] ?? '';
+      final pathEntries = <String>[
+        executableDirectory,
+        '$bundleRoot${Platform.pathSeparator}bin',
+        '$bundleRoot${Platform.pathSeparator}usr'
+            '${Platform.pathSeparator}bin',
+        if (existingPath.isNotEmpty) existingPath,
+      ];
+      environment['PATH'] = pathEntries.join(Platform.isWindows ? ';' : ':');
+    }
+    return environment;
   }
 
   Future<List<RepositoryEntry>> listDirectory(String relativeDirectory) async {
@@ -473,11 +530,16 @@ class GitService {
       remoteUrls: Map.unmodifiable(remoteUrls),
       pathTypes: Map.unmodifiable(pathTypes),
     );
-    _log.detail(
+    _log.detailEvent(
       'safety',
-      '已采集仓库状态快照：branch=$branch head=$head '
-          'statusBytes=${statusResult.stdout.length} '
-          'remotes=${remoteUrls.length} paths=${pathTypes.length}',
+      'git.safety.snapshot.captured',
+      details: {
+        'branch': branch,
+        'head': head,
+        'statusBytes': '${statusResult.stdout.length}',
+        'remotes': '${remoteUrls.length}',
+        'paths': '${pathTypes.length}',
+      },
     );
     return snapshot;
   }
@@ -593,10 +655,16 @@ class GitService {
       behind: behind,
       worktreeClean: clean,
     );
-    _log.detail(
+    _log.detailEvent(
       'sync',
-      '同步状态：branch=${state.branch} upstream=${state.upstreamRef} '
-          'ahead=${state.ahead} behind=${state.behind} clean=${state.worktreeClean}',
+      'git.syncState.read',
+      details: {
+        'branch': state.branch,
+        'upstream': state.upstreamRef,
+        'ahead': '${state.ahead}',
+        'behind': '${state.behind}',
+        'clean': '${state.worktreeClean}',
+      },
     );
     return state;
   }
@@ -617,10 +685,10 @@ class GitService {
         ? GitIdentityPerson.tryParse(committerResult.stdout)
         : null;
     if (author != null && committer != null) {
-      _log.detail(
+      _log.detailEvent(
         'identity',
-        'Git 提交身份有效：author=${author.name}; '
-            'committer=${committer.name}',
+        'git.identity.valid',
+        details: {'author': author.name, 'committer': committer.name},
       );
       return GitIdentityState(
         isReady: true,
@@ -635,7 +703,11 @@ class GitService {
       if (committerResult.success && committer == null)
         'GIT_COMMITTER_IDENT 输出无法解析',
     ].where((line) => line.isNotEmpty).join('\n');
-    _log.warning('identity', 'Git 提交身份不可用：$details');
+    _log.warningEvent(
+      'identity',
+      'git.identity.unavailable',
+      details: {'error': details},
+    );
     return GitIdentityState.unavailable(details);
   }
 
@@ -768,11 +840,14 @@ class GitService {
       '--symbolic-full-name',
       '@{u}',
     ], allowFailure: true);
-    _log.info(
+    _log.infoEvent(
       'push',
-      upstream.success
-          ? '推送分支 $branch 到 ${upstream.stdout.trim()}'
-          : '推送分支 $branch 并设置远程 upstream',
+      'git.pushCurrent.started',
+      details: {
+        'branch': branch,
+        'upstream': upstream.success ? upstream.stdout.trim() : '',
+        'setUpstream': '${!upstream.success}',
+      },
     );
     if (upstream.success) {
       final result = await _run(['push']);
@@ -798,7 +873,11 @@ class GitService {
   Future<String> fetchRemote(String remoteName) async {
     _validateRemoteName(remoteName);
     final result = await _run(['fetch', '--prune', remoteName]);
-    _log.info('sync', '已从远端 $remoteName 获取更新');
+    _log.infoEvent(
+      'sync',
+      'git.fetch.succeeded',
+      details: {'remote': remoteName},
+    );
     return result.output.trim();
   }
 
@@ -827,9 +906,10 @@ class GitService {
     }
     final result = await _run(['merge', '--ff-only', refreshed.upstreamRef]);
     final completed = await syncState();
-    _log.info(
+    _log.infoEvent(
       'sync',
-      '快进 Pull 完成：${completed.branch} behind=${completed.behind}',
+      'git.pullFastForward.succeeded',
+      details: {'branch': completed.branch, 'behind': '${completed.behind}'},
     );
     return SafePullResult(
       updated: true,
@@ -901,20 +981,28 @@ class GitService {
     _validateRemoteName(name);
     _validateRemoteUrl(url);
     await _run(['remote', 'add', name, url]);
-    _log.info('remote', '新增远端 $name -> ${GitRemote.maskRemoteUrl(url)}');
+    _log.infoEvent(
+      'remote',
+      'git.remote.added',
+      details: {'remote': name, 'url': GitRemote.maskRemoteUrl(url)},
+    );
   }
 
   Future<void> setRemoteUrl(String name, String url) async {
     _validateRemoteName(name);
     _validateRemoteUrl(url);
     await _run(['remote', 'set-url', name, url]);
-    _log.info('remote', '更新远端 $name -> ${GitRemote.maskRemoteUrl(url)}');
+    _log.infoEvent(
+      'remote',
+      'git.remote.updated',
+      details: {'remote': name, 'url': GitRemote.maskRemoteUrl(url)},
+    );
   }
 
   Future<void> removeRemote(String name) async {
     _validateRemoteName(name);
     await _run(['remote', 'remove', name]);
-    _log.info('remote', '删除远端 $name');
+    _log.infoEvent('remote', 'git.remote.removed', details: {'remote': name});
   }
 
   Future<String> pushToRemote(String remoteName) async {
@@ -925,7 +1013,11 @@ class GitService {
       throw const GitException('当前为分离 HEAD，无法推送分支。');
     }
     final result = await _run(['push', remoteName, name]);
-    _log.info('remote', '已推送 $name 到远端 $remoteName');
+    _log.infoEvent(
+      'remote',
+      'git.remote.push.succeeded',
+      details: {'branch': name, 'remote': remoteName},
+    );
     return result.output.trim();
   }
 
@@ -943,11 +1035,16 @@ class GitService {
       '+refs/heads/*:refs/gitgui-expand/backup/$remoteName/heads/*',
       '+refs/tags/*:refs/gitgui-expand/backup/$remoteName/tags/*',
     ];
-    _log.info(
+    _log.infoEvent(
       'remote-clear',
-      '清空远端预览：remote=$remoteName refs=${sortedRefs.length} '
-          'project=$projectName branch=$targetBranch '
-          'refs=${sortedRefs.join(' | ')}',
+      'git.remote.clear.preview',
+      details: {
+        'remote': remoteName,
+        'refsCount': '${sortedRefs.length}',
+        'project': projectName,
+        'branch': targetBranch,
+        'refs': sortedRefs.join(' | '),
+      },
     );
     return RemoteClearPreview(
       remoteName: remoteName,
@@ -998,17 +1095,25 @@ class GitService {
         expected: inspected.refHashes,
         actual: currentRefHashes,
       );
-      _log.warning('remote-clear', '远端引用在确认后发生变化：$drift');
+      _log.warningEvent(
+        'remote-clear',
+        'git.remote.clear.drift',
+        details: {'drift': drift, 'remote': remoteName},
+      );
       throw GitException(
         '远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。',
         commandOutput: drift,
       );
     }
 
-    _log.warning(
+    _log.warningEvent(
       'remote-clear',
-      '即将备份并清空远端 $remoteName 的 ${inspected.refs.length} 个引用；'
-          '保留空分支 ${inspected.targetBranch}',
+      'git.remote.clear.started',
+      details: {
+        'remote': remoteName,
+        'refsCount': '${inspected.refs.length}',
+        'branch': inspected.targetBranch,
+      },
     );
     if (inspected.refs.isNotEmpty) {
       await _run([
@@ -1018,9 +1123,10 @@ class GitService {
         remoteName,
         ...inspected.backupRefspecs,
       ]);
-      _log.info(
+      _log.infoEvent(
         'remote-clear',
-        '远端 $remoteName 引用已备份到 refs/gitgui-expand/backup/$remoteName',
+        'git.remote.clear.backup.completed',
+        details: {'remote': remoteName},
       );
     }
 
@@ -1104,16 +1210,21 @@ class GitService {
       remoteName,
     ], allowFailure: true);
     if (!fetchResult.success) {
-      _log.warning(
+      _log.warningEvent(
         'remote-clear',
-        '远端已清空，但更新本地 remote-tracking 引用失败：'
-            '${fetchResult.output.trim()}',
+        'git.remote.clear.trackingUpdate.failed',
+        details: {'remote': remoteName, 'output': fetchResult.output.trim()},
       );
     }
-    _log.warning(
+    _log.warningEvent(
       'remote-clear',
-      '远端 $remoteName 历史已替换为空提交 $emptyCommit，'
-          '本地 ${inspected.targetBranch} 已同步，原提交备份到 $localBackupRef',
+      'git.remote.clear.completed',
+      details: {
+        'remote': remoteName,
+        'emptyCommit': emptyCommit,
+        'branch': inspected.targetBranch,
+        'localBackupRef': localBackupRef,
+      },
     );
     return RemoteClearResult(
       remoteName: remoteName,
@@ -1278,7 +1389,11 @@ class GitService {
     if (safePaths.isEmpty) {
       throw const GitException('没有选择要删除的项目。');
     }
-    _log.info('delete', '删除 ${safePaths.length} 项：${safePaths.join(' | ')}');
+    _log.infoEvent(
+      'delete',
+      'git.delete.started',
+      details: {'count': '${safePaths.length}', 'paths': safePaths.join(' | ')},
+    );
     for (final path in safePaths) {
       final type = await FileSystemEntity.type(
         absoluteRepositoryPath(rootPath, path),
@@ -1311,7 +1426,11 @@ class GitService {
         throw GitException('部分内容未能删除，可能被占用或受 Git 保护：$path');
       }
     }
-    _log.info('delete', '删除完成：${safePaths.length} 项');
+    _log.infoEvent(
+      'delete',
+      'git.delete.completed',
+      details: {'count': '${safePaths.length}'},
+    );
   }
 
   Future<void> commit(String message) async {
@@ -1520,7 +1639,11 @@ class GitService {
   }
 
   Future<RepositoryStats> repositoryStats() async {
-    _log.detail('storage', '开始统计仓库大小：$rootPath');
+    _log.detailEvent(
+      'storage',
+      'git.repositoryStats.started',
+      details: {'path': rootPath},
+    );
     var totalBytes = 0;
     var fileCount = 0;
     var directoryCount = 0;
@@ -1554,10 +1677,14 @@ class GitService {
       fileCount: fileCount,
       directoryCount: directoryCount,
     );
-    _log.detail(
+    _log.detailEvent(
       'storage',
-      '仓库统计完成：files=${stats.fileCount} '
-          'directories=${stats.directoryCount} bytes=${stats.totalBytes}',
+      'git.repositoryStats.completed',
+      details: {
+        'files': '${stats.fileCount}',
+        'directories': '${stats.directoryCount}',
+        'bytes': '${stats.totalBytes}',
+      },
     );
     return stats;
   }

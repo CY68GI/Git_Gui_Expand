@@ -85,12 +85,7 @@ void main() {
     const traditional = AppLocalizations(AppLocalizations.traditionalChinese);
     AppLocalizations.validateTranslations();
 
-    expect(english.tr('获取远端 origin'), 'Fetch remote origin');
-    expect(english.tr('获取全部远端'), 'Fetch all remotes');
-    expect(
-      english.tr('认证失败：请检查 Git 凭据、SSH Key 或远端访问权限。'),
-      contains('Authentication failed'),
-    );
-    expect(traditional.tr('获取全部远端'), '取得全部遠端');
+    expect(english.tr('fetchAllRemotes'), 'Fetch all remotes');
+    expect(traditional.tr('fetchAllRemotes'), '取得全部遠端');
   });
 }

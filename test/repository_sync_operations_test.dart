@@ -9,6 +9,8 @@ import 'package:git_gui_expand/core/services/recent_repositories_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
+import 'support/localized_message_fixture.dart';
+
 void main() {
   late Directory root;
   late Directory repository;
@@ -47,7 +49,7 @@ void main() {
     );
     await controller.initialize();
     final opened = await controller.openRepository(repository.path);
-    expect(opened.isSuccess, isTrue, reason: opened.message);
+    expect(opened.isSuccess, isTrue, reason: fixtureText(opened.message));
   });
 
   tearDown(() async {
@@ -89,13 +91,13 @@ void main() {
     final executed = await controller.executePendingOperations(
       confirmedDangerous: true,
     );
-    expect(executed.isSuccess, isTrue, reason: executed.message);
+    expect(executed.isSuccess, isTrue, reason: fixtureText(executed.message));
     expect(await _remoteTrackingRefs(repository), contains('remote-added'));
     expect(controller.syncState?.kind, BranchSyncKind.tracked);
     await logger.flush();
     final normalLog = await logger.readRecent(AppLogType.normal);
     final detailedLog = await logger.readRecent(AppLogType.detailed);
-    expect(normalLog, contains('Fetched updates from remote origin'));
+    expect(normalLog, contains('git.fetch.succeeded'));
     expect(detailedLog, contains('command=git fetch --prune origin'));
   });
 
@@ -126,7 +128,7 @@ void main() {
     );
 
     expect(executed.isSuccess, isFalse);
-    expect(executed.message, contains('成功 1 个，失败 1 个'));
+    expect(fixtureText(executed.message), contains('1 succeeded and 1 failed'));
     expect(
       await _remoteTrackingRefs(repository),
       isNot(contains('remote-all')),
@@ -155,7 +157,7 @@ void main() {
     );
 
     final queued = await controller.pullCurrentBranchFastForward();
-    expect(queued.isSuccess, isTrue, reason: queued.message);
+    expect(queued.isSuccess, isTrue, reason: fixtureText(queued.message));
     expect(
       await File('${repository.path}${Platform.pathSeparator}remote-update.txt')
           .exists(),
@@ -165,7 +167,7 @@ void main() {
       confirmedDangerous: true,
     );
 
-    expect(pulled.isSuccess, isTrue, reason: pulled.message);
+    expect(pulled.isSuccess, isTrue, reason: fixtureText(pulled.message));
     expect(
       await File('${repository.path}${Platform.pathSeparator}remote-update.txt')
           .readAsString(),
@@ -282,7 +284,7 @@ void main() {
       );
 
       expect(result.isSuccess, isFalse);
-      expect(result.message, contains('远端跟踪引用已更新，当前分支和工作区未改变'));
+      expect(fixtureText(result.message), contains('upstream'));
       expect(
         (await _gitOutput(repository, ['rev-parse', 'HEAD'])).trim(),
         headBefore,

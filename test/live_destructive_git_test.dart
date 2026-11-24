@@ -8,6 +8,8 @@ import 'package:git_gui_expand/core/services/recent_repositories_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 
+import 'support/localized_message_fixture.dart';
+
 void main() {
   test('destructive live test of all Git GUI Expand Git workflows', () async {
     if (Platform.environment['GIT_GUI_DESTRUCTIVE_TEST'] != '1') {
@@ -34,7 +36,7 @@ void main() {
     try {
       await controller.initialize();
       final opened = await controller.openRepository(repositoryPath);
-      expect(opened.isSuccess, isTrue, reason: opened.message);
+      expect(opened.isSuccess, isTrue, reason: fixtureText(opened.message));
       final service = GitService(repositoryPath, logService: logger);
 
       expect(await service.currentBranch(), 'main');
@@ -117,7 +119,11 @@ void main() {
       await service.removeRemote('backup');
 
       final inspection = await controller.inspectRemoteForClear('origin');
-      expect(inspection.isSuccess, isTrue, reason: inspection.message);
+      expect(
+        inspection.isSuccess,
+        isTrue,
+        reason: fixtureText(inspection.message),
+      );
       expect(inspection.preview, isNotNull);
       final preview = inspection.preview!;
       expect(preview.branchCount, greaterThanOrEqualTo(2));
@@ -132,7 +138,7 @@ void main() {
         confirmedDangerous: true,
         strongConfirmationText: preview.confirmationText,
       );
-      expect(cleared.isSuccess, isTrue, reason: cleared.message);
+      expect(cleared.isSuccess, isTrue, reason: fixtureText(cleared.message));
 
       final remoteRefs = await _gitOutput(repositoryPath, [
         'ls-remote',
@@ -164,7 +170,7 @@ void main() {
       expect(
         metadataCleared.isSuccess,
         isTrue,
-        reason: metadataCleared.message,
+        reason: fixtureText(metadataCleared.message),
       );
       expect(
         await Directory('$repositoryPath${Platform.pathSeparator}.git')
@@ -193,7 +199,7 @@ Future<void> _execute(
   final result = await controller.executePendingOperations(
     confirmedDangerous: dangerous,
   );
-  expect(result.isSuccess, isTrue, reason: result.message);
+  expect(result.isSuccess, isTrue, reason: fixtureText(result.message));
 }
 
 Future<void> _git(String repository, List<String> arguments) async {

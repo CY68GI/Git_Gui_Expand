@@ -39,7 +39,7 @@ String sizeUnitDescription(AppSettings settings) {
   final binary = settings.unitSystem == SizeUnitSystem.binary;
   final bits = settings.baseUnit == SizeBaseUnit.bit;
   if (bits) {
-    return binary ? 'IEC · 1024 进制 · bit' : 'SI · 1000 进制 · bit';
+    return binary ? 'iec1024BaseBit' : 'si1000BaseBit';
   }
-  return binary ? 'IEC · 1024 进制 · Byte' : 'SI · 1000 进制 · Byte';
+  return binary ? 'iec1024BaseByte' : 'si1000BaseByte';
 }

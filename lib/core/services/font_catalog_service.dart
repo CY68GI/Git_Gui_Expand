@@ -46,7 +46,11 @@ Add-Type -AssemblyName System.Drawing
         }
       }
     } catch (error) {
-      logService.warning('font', '读取系统字体失败，使用跨平台推荐列表：$error');
+      logService.warningEvent(
+        'font',
+        'font.system.read.failed',
+        details: {'error': '$error'},
+      );
     }
 
     final result =
@@ -58,7 +62,11 @@ Add-Type -AssemblyName System.Drawing
           ..sort(
             (left, right) => left.toLowerCase().compareTo(right.toLowerCase()),
           );
-    logService.detail('font', '已读取 ${result.length} 个可用字体');
+    logService.detailEvent(
+      'font',
+      'font.catalog.loaded',
+      details: {'count': '${result.length}'},
+    );
     return result;
   }
 

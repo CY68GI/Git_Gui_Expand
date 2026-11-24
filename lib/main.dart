@@ -5,6 +5,7 @@ import 'core/localization/app_localizations.dart';
 import 'core/models/settings_models.dart';
 import 'core/services/app_log_service.dart';
 import 'core/services/app_storage_service.dart';
+import 'core/services/git_runtime_service.dart';
 import 'core/services/settings_service.dart';
 
 Future<void> main(List<String> arguments) async {
@@ -17,6 +18,7 @@ Future<void> main(List<String> arguments) async {
   AppLogService.instance.setLocale(
     AppLocalizations.localeForPreference(settings.languagePreference),
   );
+  await GitRuntimeManager.instance.refresh();
   runApp(
     GitGuiExpandApp(
       initialRepositoryPath: arguments.isEmpty ? null : arguments.first,

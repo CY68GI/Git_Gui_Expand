@@ -8,14 +8,17 @@ import '../../core/services/app_log_service.dart';
 import '../../core/services/app_storage_service.dart';
 import '../../core/services/desktop_shortcut_service.dart';
 import '../../core/services/executable_version_service.dart';
+import '../../core/services/external_link_service.dart';
 import '../../core/services/font_catalog_service.dart';
+import '../../core/services/git_runtime_service.dart';
+import '../../core/services/git_environment_service.dart';
 import '../../core/services/update_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/size_formatter.dart';
 import '../repository/repository_controller.dart';
 import 'installation_cleanup_dialog.dart';
 
-enum _SettingsSection { font, language, appearance, units, about }
+enum SettingsSection { font, language, appearance, units, git, about }
 
 class SettingsDialog extends StatefulWidget {
   const SettingsDialog({
@@ -24,12 +27,16 @@ class SettingsDialog extends StatefulWidget {
     this.fontCatalogService,
     this.desktopShortcutService,
     this.versionInfoService,
+    this.initialSection = SettingsSection.font,
+    this.gitPathService,
   });
 
   final RepositoryController controller;
   final FontCatalogService? fontCatalogService;
   final DesktopShortcutService? desktopShortcutService;
   final ExecutableVersionService? versionInfoService;
+  final SettingsSection initialSection;
+  final GitPathIntegrationService? gitPathService;
 
   @override
   State<SettingsDialog> createState() => _SettingsDialogState();
@@ -44,6 +51,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
   late final ExecutableVersionService _versionInfo =
       widget.versionInfoService ?? const ExecutableVersionService();
   final UpdateService _externalLinks = const UpdateService();
+  final ExternalLinkService _gitLinks = ExternalLinkService();
+  late final GitPathIntegrationService _gitPaths =
+      widget.gitPathService ?? GitPathIntegrationService();
   final TextEditingController _fontSearchController = TextEditingController();
   List<String> _fontFamilies = const [];
   bool _loadingFonts = true;
@@ -51,11 +61,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
   bool _versionsRequested = false;
   bool _saving = false;
   bool _creatingShortcut = false;
-  _SettingsSection _section = _SettingsSection.font;
+  bool _checkingGit = false;
+  late SettingsSection _section;
 
   @override
   void initState() {
     super.initState();
+    _section = widget.initialSection;
     _loadFonts();
   }
 
@@ -154,7 +166,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                   const SizedBox(width: 11),
                   Text(
-                    context.l10n.tr('设置'),
+                    context.l10n.tr('settings2'),
                     style: const TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.w700,
@@ -163,7 +175,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   const Spacer(),
                   IconButton(
                     onPressed: _saving ? null : () => Navigator.pop(context),
-                    tooltip: context.l10n.tr('关闭'),
+                    tooltip: context.l10n.tr('close'),
                     icon: const Icon(Icons.close_rounded, size: 19),
                   ),
                 ],
@@ -182,35 +194,40 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       children: [
                         _SettingsNavItem(
                           icon: Icons.font_download_outlined,
-                          label: context.l10n.tr('字体'),
-                          selected: _section == _SettingsSection.font,
-                          onTap: () => _selectSection(_SettingsSection.font),
+                          label: context.l10n.tr('font'),
+                          selected: _section == SettingsSection.font,
+                          onTap: () => _selectSection(SettingsSection.font),
                         ),
                         _SettingsNavItem(
                           icon: Icons.translate_rounded,
-                          label: context.l10n.tr('语言'),
-                          selected: _section == _SettingsSection.language,
-                          onTap: () =>
-                              _selectSection(_SettingsSection.language),
+                          label: context.l10n.tr('language'),
+                          selected: _section == SettingsSection.language,
+                          onTap: () => _selectSection(SettingsSection.language),
                         ),
                         _SettingsNavItem(
                           icon: Icons.brightness_6_outlined,
-                          label: context.l10n.tr('外观设置'),
-                          selected: _section == _SettingsSection.appearance,
+                          label: context.l10n.tr('appearanceSettings'),
+                          selected: _section == SettingsSection.appearance,
                           onTap: () =>
-                              _selectSection(_SettingsSection.appearance),
+                              _selectSection(SettingsSection.appearance),
                         ),
                         _SettingsNavItem(
                           icon: Icons.straighten_rounded,
-                          label: context.l10n.tr('单位设置'),
-                          selected: _section == _SettingsSection.units,
-                          onTap: () => _selectSection(_SettingsSection.units),
+                          label: context.l10n.tr('units'),
+                          selected: _section == SettingsSection.units,
+                          onTap: () => _selectSection(SettingsSection.units),
+                        ),
+                        _SettingsNavItem(
+                          icon: Icons.terminal_rounded,
+                          label: context.l10n.tr('git'),
+                          selected: _section == SettingsSection.git,
+                          onTap: () => _selectSection(SettingsSection.git),
                         ),
                         _SettingsNavItem(
                           icon: Icons.info_outline_rounded,
-                          label: context.l10n.tr('关于'),
-                          selected: _section == _SettingsSection.about,
-                          onTap: () => _selectSection(_SettingsSection.about),
+                          label: context.l10n.tr('about'),
+                          selected: _section == SettingsSection.about,
+                          onTap: () => _selectSection(SettingsSection.about),
                         ),
                         const Spacer(),
                         Padding(
@@ -251,9 +268,13 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           child: Row(
                             children: [
                               Text(
-                                _section == _SettingsSection.about
-                                    ? context.l10n.tr('关于信息不会修改设置')
-                                    : context.l10n.tr('设置将在点击保存后应用到整个软件'),
+                                _section == SettingsSection.about
+                                    ? context.l10n.tr(
+                                        'aboutInformationDoesNotChangeSettings',
+                                      )
+                                    : context.l10n.tr(
+                                        'changesApplyAfterSaving',
+                                      ),
                                 style: TextStyle(
                                   fontSize: 11.5,
                                   color: colors.onSurfaceVariant,
@@ -264,7 +285,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                 onPressed: _saving
                                     ? null
                                     : () => Navigator.pop(context),
-                                child: Text(context.l10n.tr('取消')),
+                                child: Text(context.l10n.tr('cancel2')),
                               ),
                               const SizedBox(width: 4),
                               FilledButton.icon(
@@ -279,7 +300,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                                         ),
                                       )
                                     : const Icon(Icons.check_rounded, size: 17),
-                                label: Text(context.l10n.tr('保存设置')),
+                                label: Text(context.l10n.tr('saveSettings2')),
                               ),
                             ],
                           ),
@@ -298,24 +319,326 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   Widget _buildSection(BuildContext context) {
     return switch (_section) {
-      _SettingsSection.font => _buildFontPage(context),
-      _SettingsSection.language => _buildLanguagePage(context),
-      _SettingsSection.appearance => _buildAppearancePage(context),
-      _SettingsSection.units => _buildUnitsPage(context),
-      _SettingsSection.about => _buildAboutPage(context),
+      SettingsSection.font => _buildFontPage(context),
+      SettingsSection.language => _buildLanguagePage(context),
+      SettingsSection.appearance => _buildAppearancePage(context),
+      SettingsSection.units => _buildUnitsPage(context),
+      SettingsSection.git => _buildGitPage(context),
+      SettingsSection.about => _buildAboutPage(context),
     };
+  }
+
+  Future<void> _recheckGit() async {
+    if (_checkingGit) return;
+    setState(() => _checkingGit = true);
+    try {
+      await widget.controller.refreshGitRuntime();
+    } finally {
+      if (mounted) setState(() => _checkingGit = false);
+    }
+  }
+
+  Future<void> _downloadGit() async {
+    try {
+      await _gitLinks.openExternalUrl(AppInfo.gitForWindowsDownloadUrl);
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                context.l10n.tr('unableToOpenTheGitDownloadPage', {
+                  'error': error.toString(),
+                }),
+              ),
+              showCloseIcon: true,
+            ),
+          );
+      }
+    }
+  }
+
+  Future<void> _changeGitPath(GitPathScope scope, {required bool add}) async {
+    final l10n = context.l10n;
+    final scopeLabel = l10n.tr(
+      scope == GitPathScope.user ? 'userPath' : 'systemPath',
+    );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        icon: Icon(
+          scope == GitPathScope.system
+              ? Icons.admin_panel_settings_outlined
+              : Icons.account_circle_outlined,
+        ),
+        title: Text(
+          l10n.tr(add ? 'addPortableGitTo' : 'removePortableGitFrom', {
+            'scope': scopeLabel,
+          }),
+        ),
+        content: SizedBox(
+          width: 460,
+          child: Text(
+            scope == GitPathScope.system
+                ? l10n.tr(
+                    'changingTheSystemPathAffectsTheWholeComputerAndRequestsAdministratorPermissionCancellingElevationChangesNothing',
+                  )
+                : l10n.tr(
+                    'onlyTheCurrentUserPathIsChangedAndElevationIsNotRequiredTheAppOnlyAddsOrRemovesItsStableManagedRuntimePath',
+                  ),
+            style: const TextStyle(fontSize: 13, height: 1.5),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.tr('cancel2')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.tr(add ? 'confirmAdd' : 'confirmRemove')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    final result = add
+        ? await _gitPaths.add(scope)
+        : await _gitPaths.remove(scope);
+    if (!mounted) return;
+    final message = switch (result.action) {
+      GitPathAction.added => l10n.tr('updated', {'scope': scopeLabel}),
+      GitPathAction.removed => l10n.tr('updated', {'scope': scopeLabel}),
+      GitPathAction.alreadyPresent => l10n.tr('alreadyContainsPortablegit', {
+        'scope': scopeLabel,
+      }),
+      GitPathAction.notPresent => l10n.tr(
+        'doesNotContainTheManagedPortablegitPath',
+        {'scope': scopeLabel},
+      ),
+      GitPathAction.cancelled => l10n.tr('pathChangeCancelled'),
+      GitPathAction.failed => l10n.tr('pathChangeFailed', {
+        'error': result.error ?? '',
+      }),
+    };
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(message),
+          showCloseIcon: true,
+          backgroundColor: result.isSuccess ? null : colorsForFailure(context),
+        ),
+      );
+  }
+
+  Color colorsForFailure(BuildContext context) =>
+      Theme.of(context).colorScheme.error;
+
+  Widget _buildGitPage(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    final status = widget.controller.gitRuntimeStatus;
+    final available = status.isAvailable;
+    final sourceLabel = switch (status.source) {
+      GitRuntimeSource.system => l10n.tr('systemGit'),
+      GitRuntimeSource.bundled => l10n.tr('bundledPortablegit'),
+      null => l10n.tr('notDetected'),
+    };
+    return _SettingsPage(
+      title: l10n.tr('gitSettings'),
+      subtitle: l10n.tr(
+        'detectTheGitRuntimeVersionSourceAndExecutableLocation',
+      ),
+      children: [
+        _SettingsCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: (available ? colors.primary : colors.error)
+                          .withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(11),
+                    ),
+                    child: Icon(
+                      available
+                          ? Icons.check_circle_outline_rounded
+                          : Icons.error_outline_rounded,
+                      color: available ? colors.primary : colors.error,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.tr(
+                            available ? 'gitAvailable' : 'gitUnavailable',
+                          ),
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          status.isChecking || _checkingGit
+                              ? l10n.tr('checkingForGit')
+                              : available
+                              ? l10n.tr(
+                                  'repositoryAndRemoteOperationsAreAvailable',
+                                )
+                              : l10n.tr(
+                                  'noUsableGitWasDetectedInstallItAndCheckAgain',
+                                ),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  FilledButton.tonalIcon(
+                    onPressed: _checkingGit || status.isChecking
+                        ? null
+                        : _recheckGit,
+                    icon: _checkingGit || status.isChecking
+                        ? const SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh_rounded, size: 17),
+                    label: Text(l10n.tr('checkAgain')),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _GitDetailRow(
+                label: l10n.tr('gitVersion'),
+                value: status.version.isEmpty ? '—' : status.version,
+              ),
+              _GitDetailRow(label: l10n.tr('gitSource'), value: sourceLabel),
+              _GitDetailRow(
+                label: l10n.tr('gitExecutableLocation'),
+                value: status.executablePath.isEmpty
+                    ? '—'
+                    : status.executablePath,
+                selectable: true,
+              ),
+              _GitDetailRow(
+                label: l10n.tr('lastChecked'),
+                value: status.checkedAt == null
+                    ? l10n.tr('notCheckedYet')
+                    : status.checkedAt!.toLocal().toString(),
+              ),
+              if (!available) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(11),
+                  decoration: BoxDecoration(
+                    color: colors.error.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colors.error.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    l10n.tr(
+                      'gitIsRequiredToOpenOrModifyRepositoriesInstallGitForWindowsThenSelectCheckAgain',
+                    ),
+                    style: const TextStyle(fontSize: 11.5, height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: OutlinedButton.icon(
+                    onPressed: _downloadGit,
+                    icon: const Icon(Icons.download_rounded, size: 17),
+                    label: Text(l10n.tr('downloadGit')),
+                  ),
+                ),
+              ],
+              if (status.isBundled) ...[
+                const SizedBox(height: 16),
+                Divider(color: colors.outlineVariant),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.tr('addGitToPath'),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  l10n.tr(
+                    'chooseTheCurrentUserOrSystemEnvironmentOnlyTheManagedRuntimeGitCurrentCmdPathIsAddedAfterCreatingABackup',
+                  ),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.5,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.tonal(
+                      onPressed: () =>
+                          _changeGitPath(GitPathScope.user, add: true),
+                      child: Text(l10n.tr('addToUserPath')),
+                    ),
+                    OutlinedButton(
+                      onPressed: () =>
+                          _changeGitPath(GitPathScope.system, add: true),
+                      child: Text(l10n.tr('addToSystemPath')),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          _changeGitPath(GitPathScope.user, add: false),
+                      child: Text(l10n.tr('removeFromUserPath')),
+                    ),
+                    TextButton(
+                      onPressed: () =>
+                          _changeGitPath(GitPathScope.system, add: false),
+                      child: Text(l10n.tr('removeFromSystemPath')),
+                    ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildLanguagePage(BuildContext context) {
     final l10n = context.l10n;
     final systemLocale = WidgetsBinding.instance.platformDispatcher.locale;
     return _SettingsPage(
-      title: l10n.tr('语言设置'),
-      subtitle: l10n.tr('选择软件显示语言。默认跟随操作系统语言。'),
+      title: l10n.tr('language2'),
+      subtitle: l10n.tr(
+        'chooseTheInterfaceLanguageByDefaultItFollowsTheOperatingSystem',
+      ),
       children: [
         _SectionLabel(
-          title: l10n.tr('界面语言'),
-          caption: l10n.tr('语言更改会在保存设置后立即生效。'),
+          title: l10n.tr('interfaceLanguage'),
+          caption: l10n.tr(
+            'theLanguageChangeTakesEffectImmediatelyAfterSaving',
+          ),
         ),
         const SizedBox(height: 12),
         for (final preference in AppLanguagePreference.values) ...[
@@ -342,24 +665,26 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final systemFonts = _filteredSystemFonts;
     final resultCount = bundledFonts.length + systemFonts.length + 1;
     return _SettingsPage(
-      title: l10n.tr('字体'),
-      subtitle: l10n.tr('默认使用内置的 Noto Sans SC / 思源黑体，也可搜索系统字体或其他内置字体。'),
+      title: l10n.tr('font'),
+      subtitle: l10n.tr(
+        'byDefaultTheBundledNotoSansScFontIsUsedSearchBundledOrSystemFonts',
+      ),
       children: [
         _SettingsScrollHint(
-          title: l10n.tr('此页还有下方内容'),
-          message: l10n.tr('向下滚动可查看字体预览和字体大小设置。'),
+          title: l10n.tr('moreContentBelow'),
+          message: l10n.tr('scrollDownForFontPreviewAndFontSizeSettings'),
         ),
         const SizedBox(height: 14),
         TextField(
           controller: _fontSearchController,
           onChanged: (value) => setState(() => _fontQuery = value),
           decoration: InputDecoration(
-            hintText: l10n.tr('搜索字体名称或用途，例如 Inter、思源、中文'),
+            hintText: l10n.tr('searchFontNameOrPurposeEGInterOrNoto'),
             prefixIcon: const Icon(Icons.search_rounded, size: 19),
             suffixIcon: _fontQuery.isEmpty
                 ? null
                 : IconButton(
-                    tooltip: l10n.tr('清除搜索'),
+                    tooltip: l10n.tr('clearSearch'),
                     onPressed: () {
                       _fontSearchController.clear();
                       setState(() => _fontQuery = '');
@@ -372,7 +697,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         Row(
           children: [
             Text(
-              l10n.tr('找到 {count} 个选项', {'count': resultCount}),
+              l10n.tr('optionsFound', {'count': resultCount}),
               style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
             ),
             const Spacer(),
@@ -384,7 +709,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               )
             else
               Text(
-                l10n.tr('输入名称可快速筛选'),
+                l10n.tr('typeANameToFilter'),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
           ],
@@ -403,11 +728,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
             children: [
               _FontGroupHeader(
                 icon: Icons.inventory_2_outlined,
-                label: l10n.tr('软件内置 UI 字体'),
+                label: l10n.tr('bundledUiFonts'),
                 count: bundledFonts.length,
               ),
               if (bundledFonts.isEmpty)
-                _FontEmptyRow(label: l10n.tr('没有匹配的内置字体'))
+                _FontEmptyRow(label: l10n.tr('noBundledFontMatches'))
               else
                 for (final font in bundledFonts)
                   _BundledFontRow(
@@ -425,12 +750,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
               _FontGroupHeader(
                 icon: Icons.computer_rounded,
-                label: l10n.tr('系统自带'),
+                label: l10n.tr('systemFonts'),
                 count: systemFonts.length + 1,
               ),
               _SystemFontRow(
-                label: l10n.tr('系统默认（自动适配）'),
-                detail: l10n.tr('跟随当前操作系统，不固定字体族'),
+                label: l10n.tr('systemDefaultAutomatic'),
+                detail: l10n.tr('followTheOperatingSystemWithoutAFixedFamily'),
                 fontFamily: null,
                 selected: _draft.fontFamily.isEmpty,
                 onTap: () {
@@ -440,12 +765,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 },
               ),
               if (systemFonts.isEmpty)
-                _FontEmptyRow(label: l10n.tr('没有匹配的系统字体'))
+                _FontEmptyRow(label: l10n.tr('noSystemFontMatches'))
               else
                 for (final font in systemFonts)
                   _SystemFontRow(
                     label: font,
-                    detail: l10n.tr('系统已安装字体'),
+                    detail: l10n.tr('installedSystemFont'),
                     fontFamily: font,
                     selected: _draft.fontFamily == font,
                     onTap: () {
@@ -459,13 +784,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 10),
         Text(
-          l10n.tr('内置字体均来自 Google Fonts，使用 SIL Open Font License 并随程序分发。'),
+          l10n.tr('bundledFontsComeFromGoogleFontsUnderTheSilOpenFontLicense'),
           style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 18),
         _SectionLabel(
-          title: l10n.tr('字体预览'),
-          caption: l10n.tr('保存后会应用到菜单、资源面板、对话框和提交说明。'),
+          title: l10n.tr('fontPreview'),
+          caption: l10n.tr(
+            'theSavedFontAppliesToMenusExplorersDialogsAndCommitNotes',
+          ),
         ),
         const SizedBox(height: 10),
         _SettingsCard(
@@ -473,7 +800,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.tr('Git GUI Expand · 文件提交'),
+                l10n.tr('gitGuiExpandFileCommit'),
                 style: TextStyle(
                   fontFamily: _draft.fontFamily.isEmpty
                       ? null
@@ -484,7 +811,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
               const SizedBox(height: 7),
               Text(
-                l10n.tr('剪切、复制、重命名、推送与提交   0123456789'),
+                l10n.tr('cutCopyRenamePushAndCommit0123456789'),
                 style: TextStyle(
                   fontFamily: _draft.fontFamily.isEmpty
                       ? null
@@ -498,8 +825,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 22),
         _SectionLabel(
-          title: l10n.tr('字体大小'),
-          caption: l10n.tr('仅在安全范围内提供三档，避免出现过小或过大字号导致界面布局异常。'),
+          title: l10n.tr('fontSize'),
+          caption: l10n.tr(
+            'threeSafeSizesPreventLayoutsFromBecomingTooSmallOrLarge',
+          ),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -533,7 +862,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 8),
         Text(
-          l10n.tr('允许范围：{min}%–{max}%', {
+          l10n.tr('allowedRange', {
             'min': (AppSettings.minFontScale * 100).round(),
             'max': (AppSettings.maxFontScale * 100).round(),
           }),
@@ -547,12 +876,16 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     return _SettingsPage(
-      title: l10n.tr('外观设置'),
-      subtitle: l10n.tr('选择显示模式和配色方案；界面图标会跟随当前配色方案变化。'),
+      title: l10n.tr('appearanceSettings'),
+      subtitle: l10n.tr(
+        'chooseDisplayModeAndColorSchemeInterfaceIconsFollowTheSelectedColors',
+      ),
       children: [
         _SectionLabel(
-          title: l10n.tr('显示模式'),
-          caption: l10n.tr('跟随系统会根据设备当前的深色或浅色外观自动切换。'),
+          title: l10n.tr('displayMode'),
+          caption: l10n.tr(
+            'followSystemSwitchesWithTheDeviceLightOrDarkAppearance',
+          ),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -561,17 +894,17 @@ class _SettingsDialogState extends State<SettingsDialog> {
             segments: [
               ButtonSegment(
                 value: AppThemePreference.system,
-                label: Text(l10n.tr('跟随系统')),
+                label: Text(l10n.tr('followSystem')),
                 icon: const Icon(Icons.brightness_auto_rounded, size: 18),
               ),
               ButtonSegment(
                 value: AppThemePreference.light,
-                label: Text(l10n.tr('浅色')),
+                label: Text(l10n.tr('light')),
                 icon: const Icon(Icons.light_mode_outlined, size: 18),
               ),
               ButtonSegment(
                 value: AppThemePreference.dark,
-                label: Text(l10n.tr('深色')),
+                label: Text(l10n.tr('dark')),
                 icon: const Icon(Icons.dark_mode_outlined, size: 18),
               ),
             ],
@@ -590,7 +923,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             children: [
               _ThemeSwatch(
                 icon: Icons.light_mode_rounded,
-                label: l10n.tr('浅色'),
+                label: l10n.tr('light'),
                 background: Colors.white,
                 foreground: const Color(0xFF17211E),
                 border: const Color(0xFFDDE4E0),
@@ -598,7 +931,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(width: 12),
               _ThemeSwatch(
                 icon: Icons.dark_mode_rounded,
-                label: l10n.tr('深色'),
+                label: l10n.tr('dark'),
                 background: const Color(0xFF171E1B),
                 foreground: const Color(0xFFE8EFEA),
                 border: const Color(0xFF33413B),
@@ -606,7 +939,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(width: 16),
               Expanded(
                 child: Text(
-                  l10n.tr('当前选择：{theme}', {
+                  l10n.tr('currentSelection', {
                     'theme': _themeLabel(l10n, _draft.themePreference),
                   }),
                   style: TextStyle(
@@ -620,8 +953,10 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 22),
         _SectionLabel(
-          title: l10n.tr('配色方案'),
-          caption: l10n.tr('配色方案会应用到按钮、选择状态、边框、图标和强调文字。'),
+          title: l10n.tr('colorScheme'),
+          caption: l10n.tr(
+            'theColorSchemeAppliesToButtonsSelectedStatesBordersIconsAndEmphasizedText',
+          ),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -650,12 +985,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final l10n = context.l10n;
     final dataPath = const AppStorageService().dataDirectory.path;
     return _SettingsPage(
-      title: l10n.tr('单位设置'),
-      subtitle: l10n.tr('控制项目大小和每个文件大小的显示方式。'),
+      title: l10n.tr('units'),
+      subtitle: l10n.tr('controlHowProjectAndIndividualFileSizesAreDisplayed'),
       children: [
         _SectionLabel(
-          title: l10n.tr('容量单位制'),
-          caption: l10n.tr('二进制使用 1024 进位，十进制使用 1000 进位。'),
+          title: l10n.tr('sizeUnitSystem'),
+          caption: l10n.tr('binaryUses1024StepsDecimalUses1000'),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -664,12 +999,12 @@ class _SettingsDialogState extends State<SettingsDialog> {
             segments: [
               ButtonSegment(
                 value: SizeUnitSystem.binary,
-                label: Text(l10n.tr('IEC 二进制')),
+                label: Text(l10n.tr('iecBinary')),
                 icon: const Icon(Icons.memory_rounded, size: 17),
               ),
               ButtonSegment(
                 value: SizeUnitSystem.decimal,
-                label: Text(l10n.tr('SI 十进制')),
+                label: Text(l10n.tr('siDecimal')),
                 icon: const Icon(Icons.straighten_rounded, size: 17),
               ),
             ],
@@ -684,8 +1019,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 22),
         _SectionLabel(
-          title: l10n.tr('基础单位'),
-          caption: l10n.tr('Byte 显示 B、KiB 或 KB；bit 会先乘以 8。'),
+          title: l10n.tr('baseUnit'),
+          caption: l10n.tr('byteDisplaysBKibOrKbBitIsMultipliedBy8First'),
         ),
         const SizedBox(height: 10),
         SizedBox(
@@ -694,11 +1029,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
             segments: [
               ButtonSegment(
                 value: SizeBaseUnit.byte,
-                label: Text(l10n.tr('Byte（B）')),
+                label: Text(l10n.tr('byteB')),
               ),
               ButtonSegment(
                 value: SizeBaseUnit.bit,
-                label: Text(l10n.tr('bit（b）')),
+                label: Text(l10n.tr('bitB')),
               ),
             ],
             selected: {_draft.baseUnit},
@@ -724,7 +1059,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                   const SizedBox(width: 7),
                   Text(
-                    l10n.tr('单位预览'),
+                    l10n.tr('unitPreview'),
                     style: TextStyle(
                       fontSize: 11.5,
                       color: colors.primary,
@@ -739,15 +1074,15 @@ class _SettingsDialogState extends State<SettingsDialog> {
                 runSpacing: 10,
                 children: [
                   _PreviewValue(
-                    label: l10n.tr('小文件'),
+                    label: l10n.tr('smallFile'),
                     value: formatFileSize(1536, _draft),
                   ),
                   _PreviewValue(
-                    label: l10n.tr('中文件'),
+                    label: l10n.tr('mediumFile'),
                     value: formatFileSize(1572864, _draft),
                   ),
                   _PreviewValue(
-                    label: l10n.tr('大文件'),
+                    label: l10n.tr('largeFile'),
                     value: formatFileSize(1610612736, _draft),
                   ),
                 ],
@@ -765,7 +1100,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 14),
         Text(
-          l10n.tr('设置数据目录'),
+          l10n.tr('settingsDataDirectory'),
           style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
         ),
         const SizedBox(height: 3),
@@ -781,8 +1116,8 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
     return _SettingsPage(
-      title: l10n.tr('关于'),
-      subtitle: l10n.tr('Windows 优先的 Flutter Git 图形化文件工作区。'),
+      title: l10n.tr('about'),
+      subtitle: l10n.tr('aWindowsFirstFlutterGraphicalFileWorkspaceForGit'),
       children: [
         _SettingsCard(
           child: Column(
@@ -809,9 +1144,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          l10n.tr('版本 v{version}', {
-                            'version': AppInfo.version,
-                          }),
+                          l10n.tr('versionV', {'version': AppInfo.version}),
                           style: TextStyle(
                             fontSize: 12,
                             color: colors.primary,
@@ -820,7 +1153,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
                         ),
                         const SizedBox(height: 7),
                         Text(
-                          l10n.tr('通过 Git CLI 完成双栏浏览、移动、复制、删除、提交与推送。'),
+                          l10n.tr(
+                            'browseMoveCopyDeleteCommitAndPushThroughTheGitCli',
+                          ),
                           style: TextStyle(
                             fontSize: 12,
                             color: colors.onSurfaceVariant,
@@ -834,7 +1169,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                     onPressed: () =>
                         _externalLinks.openExternalUrl(AppInfo.repositoryUrl),
                     icon: const Icon(Icons.code_rounded, size: 16),
-                    label: Text(l10n.tr('打开仓库')),
+                    label: Text(l10n.tr('openRepository2')),
                   ),
                 ],
               ),
@@ -852,7 +1187,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               _ExecutableVersionRow(
                 name: 'GitGuiExpandLauncher',
                 version: (_executableVersions?.launcherVersion ?? '').isEmpty
-                    ? l10n.tr('未找到或无法读取版本')
+                    ? l10n.tr('versionNotFoundOrUnreadable')
                     : _executableVersions!.launcherVersion,
                 path: _executableVersions?.launcherPath ?? '',
               ),
@@ -865,7 +1200,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.tr('桌面快捷方式'),
+                l10n.tr('desktopShortcut'),
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -873,7 +1208,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
               ),
               const SizedBox(height: 5),
               Text(
-                l10n.tr('在当前用户桌面创建 Git GUI Expand 快捷方式，并通过稳定 Launcher 启动。'),
+                l10n.tr(
+                  'createAGitGuiExpandShortcutOnTheCurrentUserSDesktopThatStartsThroughTheStableLauncher',
+                ),
                 style: TextStyle(
                   fontSize: 11.5,
                   height: 1.5,
@@ -897,7 +1234,11 @@ class _SettingsDialogState extends State<SettingsDialog> {
                           )
                         : const Icon(Icons.add_to_drive_rounded, size: 17),
                     label: Text(
-                      l10n.tr(_creatingShortcut ? '正在创建快捷方式…' : '一键发送到桌面'),
+                      l10n.tr(
+                        _creatingShortcut
+                            ? 'creatingShortcut'
+                            : 'oneClickSendToDesktop',
+                      ),
                     ),
                   ),
                   OutlinedButton.icon(
@@ -906,7 +1247,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                       Icons.cleaning_services_outlined,
                       size: 17,
                     ),
-                    label: Text(l10n.tr('扫描旧版本与安装包')),
+                    label: Text(l10n.tr('scanOldVersionsAndInstallers')),
                   ),
                 ],
               ),
@@ -927,7 +1268,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    l10n.tr('致谢'),
+                    l10n.tr('acknowledgements'),
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -938,8 +1279,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
               const SizedBox(height: 10),
               Text(
                 l10n.tr(
-                  '感谢 DeepSeek 人工智能和 ChatGPT Codex，'
-                  '两者合力创建、编写、修改此项目。',
+                  'thanksToDeepseekAiAndChatgptCodexForCreatingAndImprovingThisProject',
                 ),
                 style: const TextStyle(fontSize: 11.5, height: 1.65),
               ),
@@ -959,7 +1299,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
         ),
         const SizedBox(height: 14),
         Text(
-          l10n.tr('本项目使用 MIT License 开源许可证。'),
+          l10n.tr('thisProjectIsLicensedUnderTheMitLicense'),
           style: TextStyle(
             fontSize: 11.5,
             height: 1.5,
@@ -972,9 +1312,9 @@ class _SettingsDialogState extends State<SettingsDialog> {
 
   String _themeLabel(AppLocalizations l10n, AppThemePreference preference) {
     final label = switch (preference) {
-      AppThemePreference.system => '跟随系统',
-      AppThemePreference.light => '浅色',
-      AppThemePreference.dark => '深色',
+      AppThemePreference.system => 'followSystem',
+      AppThemePreference.light => 'light',
+      AppThemePreference.dark => 'dark',
     };
     return l10n.tr(label);
   }
@@ -984,19 +1324,19 @@ class _SettingsDialogState extends State<SettingsDialog> {
     AppColorSchemePreference preference,
   ) {
     final label = switch (preference) {
-      AppColorSchemePreference.emerald => '经典绿',
-      AppColorSchemePreference.ocean => '海洋蓝',
-      AppColorSchemePreference.violet => '星夜紫',
-      AppColorSchemePreference.amber => '琥珀金',
-      AppColorSchemePreference.rose => '玫瑰红',
+      AppColorSchemePreference.emerald => 'classicGreen',
+      AppColorSchemePreference.ocean => 'oceanBlue',
+      AppColorSchemePreference.violet => 'starryViolet',
+      AppColorSchemePreference.amber => 'amberGold',
+      AppColorSchemePreference.rose => 'roseRed',
     };
     return l10n.tr(label);
   }
 
-  void _selectSection(_SettingsSection section) {
+  void _selectSection(SettingsSection section) {
     if (_section == section) return;
     setState(() => _section = section);
-    if (section == _SettingsSection.about && !_versionsRequested) {
+    if (section == SettingsSection.about && !_versionsRequested) {
       _versionsRequested = true;
       _loadExecutableVersions();
     }
@@ -1016,7 +1356,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     }
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.tr(outcome.message)),
+        content: Text(outcome.message.resolve(context.l10n)),
         backgroundColor: Theme.of(context).colorScheme.error,
       ),
     );
@@ -1030,7 +1370,7 @@ class _SettingsDialogState extends State<SettingsDialog> {
     final colors = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.tr(result.message)),
+        content: Text(result.message.resolve(context.l10n)),
         backgroundColor: result.isSuccess ? colors.primary : colors.error,
         closeIconColor: result.isSuccess ? colors.onPrimary : colors.onError,
         duration: const Duration(seconds: 5),
@@ -1169,7 +1509,7 @@ class _BundledFontRow extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              '内置',
+                              context.l10n.tr('bundledLabel'),
                               style: TextStyle(
                                 color: colors.primary,
                                 fontSize: 10,
@@ -1181,7 +1521,7 @@ class _BundledFontRow extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        context.l10n.tr(font.description),
+                        context.l10n.tr(_fontDescriptionKey(font.family)),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
@@ -1204,6 +1544,15 @@ class _BundledFontRow extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  String _fontDescriptionKey(String family) {
+    return switch (family) {
+      'Inter UI' => 'interUiDescription',
+      'Noto Sans SC' => 'notoSansScDescription',
+      'IBM Plex Sans' => 'ibmPlexSansDescription',
+      _ => 'fontDescription',
+    };
   }
 }
 
@@ -1542,12 +1891,16 @@ class _SettingsNavItem extends StatelessWidget {
                   color: selected ? colors.primary : colors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 10),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: selected ? colors.primary : colors.onSurface,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: selected ? colors.primary : colors.onSurface,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -1774,6 +2127,50 @@ class _AboutTag extends StatelessWidget {
           color: colors.primary,
           fontWeight: FontWeight.w600,
         ),
+      ),
+    );
+  }
+}
+
+class _GitDetailRow extends StatelessWidget {
+  const _GitDetailRow({
+    required this.label,
+    required this.value,
+    this.selectable = false,
+  });
+
+  final String label;
+  final String value;
+  final bool selectable;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final valueStyle = TextStyle(
+      fontSize: 12,
+      height: 1.45,
+      color: colors.onSurface,
+      fontWeight: FontWeight.w600,
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: selectable
+                ? SelectableText(value, style: valueStyle)
+                : Text(value, style: valueStyle),
+          ),
+        ],
       ),
     );
   }

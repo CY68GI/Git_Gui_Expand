@@ -4,24 +4,53 @@ class ChangelogEntry {
     required this.date,
     required this.title,
     required this.items,
+    this.titleKey = '',
+    this.itemKeys = const [],
   });
 
   final String version;
   final String date;
   final String title;
   final List<String> items;
+  final String titleKey;
+  final List<String> itemKeys;
 }
 
 const List<ChangelogEntry> builtInChangelog = [
   ChangelogEntry(
+    version: '0.10.0',
+    date: '2026-11-24',
+    title: '结构化运行消息、Markdown 指南与安全链接',
+    titleKey: 'changelog0100Title',
+    items: [
+      '操作结果、待执行计划和日志改用语义模板；日志新增稳定事件 ID、写入时语言和凭据遮蔽。',
+      '内置指南改为真正的 Markdown 渲染，支持标题、列表、表格、引用、代码块、图片和行内格式。',
+      '指南链接仅允许 HTTPS、内置指南和标题锚点，并提供键盘焦点、选择复制与安全响应式布局。',
+      '新增三语指南资源、源码防回归检查和完整的结构化消息测试覆盖。',
+    ],
+    itemKeys: [
+      'changelog0100ItemMessages',
+      'changelog0100ItemMarkdown',
+      'changelog0100ItemLinks',
+      'changelog0100ItemTests',
+    ],
+  ),
+  ChangelogEntry(
     version: '0.9.9',
     date: '2026-11-23',
     title: '分支同步、安全快进 Pull 与提交身份预检',
+    titleKey: 'changelog099Title',
     items: [
       '显示 upstream、ahead、behind 和工作区同步状态。',
       '新增当前 upstream 或全部远端 Fetch 计划，并逐项报告结果。',
       '新增仅快进 Pull，拒绝脏工作区、无 upstream 和分叉历史。',
       '提交前及执行前检查有效的 Git 作者和提交者身份。',
+    ],
+    itemKeys: [
+      'changelog099ItemSyncStatus',
+      'changelog099ItemFetchPlan',
+      'changelog099ItemFastForwardPull',
+      'changelog099ItemGitIdentity',
     ],
   ),
   ChangelogEntry(

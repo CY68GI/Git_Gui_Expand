@@ -22,7 +22,7 @@ Git GUI Expand 是一个以 Windows 为首要目标的 Flutter 桌面应用。�
 仓库中的文件浏览、批量移动、复制、重命名、暂存与提交集中到左右双栏界面中，
 所有文件和提交变更都通过本机 Git CLI 执行。
 
-当前版本：`0.9.9`
+当前版本：`0.10.0`
 
 远程仓库：<https://github.com/CY68GI/Git_Gui_Expand>
 Gitee 镜像：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -137,6 +137,22 @@ dart --version
 git --version
 ```
 
+## 下载选择
+
+请从 [GitHub Releases](https://github.com/CY68GI/Git_Gui_Expand/releases)
+或 [Gitee Releases](https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases) 下载。
+
+1. `Git_Gui_Expand-<tag>-windows-x64.zip`：推荐的标准包，需要自行从
+   <https://git-scm.com/download/win> 安装 Git。软件始终优先使用系统中有效的 Git。
+2. `Git_Gui_Expand-<tag>-windows-x64-PortableGit.zip`：包含固定版本
+   PortableGit，适合无法单独安装 Git 的电脑。
+3. `PortableGit-<版本>-64-bit-runtime.zip`：独立的 PortableGit 运行时更新包。
+
+推荐标准包，因为系统 Git、SSH 和凭据管理器可以按照用户原有方式维护和更新。
+PortableGit 包可在“设置 → Git”中选择把稳定的
+`runtime/git/current/cmd` 加入当前用户或系统 `PATH`。每次修改前都会备份，
+并且可以只移除软件管理的那一个条目。
+
 ## 运行与构建
 
 ```powershell
@@ -234,7 +250,7 @@ build\windows\x64\runner\Release\
   current-version.txt
   pending-version.txt          # 仅更新准备完成后出现
   versions/
-    0.9.9/                    # 当前唯一保留的版本
+    0.10.0/                   # 当前唯一保留的版本
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe
@@ -261,10 +277,13 @@ build\windows\x64\runner\Release\
 当前日志目录路径，并可直接打开该目录。
 
 更新页面可以选择 GitHub 或 Gitee 公开 Releases API；中国大陆网络建议使用 Gitee。
-Gitee Release 同时提供 ZIP 和 SHA-256 校验文件。发现新版本后可以点击“立即更新并重启”：
+新版 Release 不再上传单独的 `.sha256` 文件，更新器从 GitHub Release 资产元数据读取
+SHA-256。使用 Gitee 镜像下载时，按相同标签和相同资产名匹配 GitHub 摘要。
+无法取得可信摘要时会禁用自动安装，并继续提供“打开发布页”。
+发现新版本后可以点击“立即更新并重启”：
 
 1. 自动下载 Release 中的 Windows x64 ZIP；
-2. 使用所选 GitHub/Gitee Release 提供的 SHA-256 校验下载文件；
+2. 使用 GitHub 资产元数据中的 SHA-256 校验下载文件；
 3. 解压并验证 `versions/<版本>` 内的 EXE、Flutter 数据和 `version.json`；
 4. 将新版本目录移动到 `versions/<新版本>`；
 5. 写入 `pending-version.txt`，应用退出；
@@ -275,6 +294,10 @@ Gitee Release 同时提供 ZIP 和 SHA-256 校验文件。发现新版本后可�
 应用启动时也会主动执行上述清理。由于旧 Launcher 无法自行更新，发布包在版本
 目录中携带维护用 Launcher；当前应用退出后，维护助手会重试覆盖根目录
 `GitGuiExpandLauncher.exe`，确保后续启动使用新版 Launcher。
+
+PortableGit 会独立存放在 `runtime/git/versions/PortableGit-<版本>-64-bit`，
+`runtime/git/current.json` 记录当前和上一运行时。许可证、第三方声明和源码获取说明
+见 [PortableGit 说明](docs/PORTABLEGIT.md)。
 
 `v0.8.1` 起使用 Launcher 更新架构。`v0.8.0` 及更早版本的原 PowerShell 更新助手存在
 进程未启动问题，必须先手动安装一次 Launcher 版本。`v0.8.1` 和 `v0.8.2` 的哈希校验还会

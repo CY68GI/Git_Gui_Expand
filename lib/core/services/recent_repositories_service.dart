@@ -28,7 +28,11 @@ class RecentRepositoriesService {
       if (await isValidRepository(entry.path)) {
         valid.add(entry);
       } else {
-        logService.detail('history', '忽略已失效仓库记录：${entry.path}');
+        logService.detailEvent(
+          'history',
+          'history.invalid.ignored',
+          details: {'path': entry.path},
+        );
       }
     }
     final result = _deduplicateAndSort(valid)
@@ -37,7 +41,11 @@ class RecentRepositoriesService {
     if (result.length != stored.length) {
       await _write(result);
     }
-    logService.detail('history', '加载最近仓库记录：${result.length} 项');
+    logService.detailEvent(
+      'history',
+      'history.loaded',
+      details: {'count': '${result.length}'},
+    );
     return result;
   }
 
@@ -59,7 +67,11 @@ class RecentRepositoriesService {
     );
     final result = _deduplicateAndSort(entries).take(maxEntries).toList();
     await _write(result);
-    logService.info('history', '保存最近仓库：$normalized');
+    logService.infoEvent(
+      'history',
+      'history.saved',
+      details: {'path': normalized},
+    );
     return result;
   }
 
@@ -70,7 +82,11 @@ class RecentRepositoriesService {
         .take(maxEntries)
         .toList(growable: false);
     await _write(result);
-    logService.detail('history', '移除最近仓库记录：$repositoryPath');
+    logService.detailEvent(
+      'history',
+      'history.removed',
+      details: {'path': repositoryPath},
+    );
     return result;
   }
 
@@ -106,7 +122,11 @@ class RecentRepositoriesService {
       }
       return _deduplicateAndSort(entries);
     } catch (error) {
-      logService.warning('history', '读取最近仓库记录失败：$error');
+      logService.warningEvent(
+        'history',
+        'history.read.failed',
+        details: {'error': '$error'},
+      );
       return [];
     }
   }
@@ -120,7 +140,11 @@ class RecentRepositoriesService {
       });
       await _historyFile.writeAsString(payload, flush: true);
     } catch (error) {
-      logService.error('history', '保存最近仓库记录失败：$error');
+      logService.errorEvent(
+        'history',
+        'history.save.failed',
+        details: {'error': '$error'},
+      );
       rethrow;
     }
   }

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import '../localization/localized_message.dart';
+import '../localization/runtime_messages.dart';
 import 'app_log_service.dart';
 import 'app_storage_service.dart';
 
@@ -13,7 +15,7 @@ class DesktopShortcutResult {
       shortcutPath = null;
 
   final bool isSuccess;
-  final String message;
+  final LocalizedMessage message;
   final String? shortcutPath;
 }
 
@@ -32,7 +34,9 @@ class DesktopShortcutService {
 
   Future<DesktopShortcutResult> create() async {
     if (!Platform.isWindows) {
-      return const DesktopShortcutResult.failure('创建桌面快捷方式目前仅支持 Windows。');
+      return DesktopShortcutResult.failure(
+        RuntimeMessages.messageFor('desktopShortcutWindowsOnly'),
+      );
     }
 
     final launcher = storage.launcherFile;
@@ -40,7 +44,13 @@ class DesktopShortcutService {
         ? launcher
         : File(Platform.resolvedExecutable);
     if (!await target.exists()) {
-      return DesktopShortcutResult.failure('找不到可创建快捷方式的程序：${target.path}');
+      return DesktopShortcutResult.failure(
+        RuntimeMessages.operationFailed(
+          target.path,
+          eventId: 'shortcut.target.missing',
+          target: target.path,
+        ),
+      );
     }
 
     final result = await Process.run(
@@ -87,15 +97,31 @@ Write-Output $shortcutPath
     );
     if (result.exitCode != 0) {
       final error = (result.stderr as String).trim();
-      _log.error('shortcut', '创建桌面快捷方式失败：$error');
+      _log.errorEvent(
+        'shortcut',
+        'shortcut.create.failed',
+        details: {'error': error},
+      );
       return DesktopShortcutResult.failure(
-        error.isEmpty ? '创建桌面快捷方式失败。' : error,
+        RuntimeMessages.operationFailed(
+          error.isEmpty ? 'Shortcut creation failed' : error,
+          eventId: 'shortcut.create.failed',
+        ),
       );
     }
     final shortcutPath = (result.stdout as String).trim();
-    _log.info('shortcut', '已创建桌面快捷方式：$shortcutPath');
+    _log.infoEvent(
+      'shortcut',
+      'shortcut.create.succeeded',
+      details: {'path': shortcutPath},
+    );
     return DesktopShortcutResult.success(
-      '已创建桌面快捷方式：$shortcutPath',
+      RuntimeMessages.messageFor(
+        'desktopShortcutCreated',
+        parameters: {'path': shortcutPath},
+        eventId: 'shortcut.create.succeeded',
+        technicalDetails: {'path': shortcutPath},
+      ),
       shortcutPath,
     );
   }

@@ -4,8 +4,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 
 import '../constants/app_info.dart';
+import '../localization/localized_message.dart';
+import '../localization/runtime_messages.dart';
 import 'app_log_service.dart';
 import 'app_storage_service.dart';
+import 'git_runtime_installation_service.dart';
+import 'git_runtime_service.dart';
 import 'update_service.dart';
 
 class UpdateInstallProgress {
@@ -16,7 +20,7 @@ class UpdateInstallProgress {
   });
 
   final String stage;
-  final String message;
+  final LocalizedMessage message;
   final double? percent;
 }
 
@@ -25,64 +29,49 @@ class UpdateInstallResult {
   const UpdateInstallResult.failure(this.message) : success = false;
 
   final bool success;
-  final String message;
+  final LocalizedMessage message;
 }
 
 class UpdateInstallerService {
   UpdateInstallerService({
     this.storage = const AppStorageService(),
     AppLogService? logService,
-  }) : logService = logService ?? AppLogService.instance;
+    GitRuntimeManager? runtimeManager,
+    GitRuntimeInstallationService? runtimeInstallationService,
+  }) : logService = logService ?? AppLogService.instance,
+       runtimeManager = runtimeManager ?? GitRuntimeManager.instance,
+       _runtimeInstallationService =
+           runtimeInstallationService ??
+           GitRuntimeInstallationService(storage: storage);
 
   final AppStorageService storage;
   final AppLogService logService;
+  final GitRuntimeManager runtimeManager;
+  final GitRuntimeInstallationService _runtimeInstallationService;
 
   Future<UpdateInstallResult> install(
     UpdateCheckResult release, {
     required void Function(UpdateInstallProgress progress) onProgress,
   }) async {
-    if (!Platform.isWindows) {
-      return const UpdateInstallResult.failure('当前自动更新仅支持 Windows。');
+    final validationError = _validateRelease(release);
+    if (validationError != null) {
+      return UpdateInstallResult.failure(validationError);
     }
-    if (release.status != UpdateCheckStatus.updateAvailable) {
-      return const UpdateInstallResult.failure('当前没有可安装的新版本。');
-    }
-    if (release.downloadUrl.isEmpty ||
-        !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(release.sha256)) {
-      return const UpdateInstallResult.failure(
-        '更新资产缺少下载地址或有效 SHA-256，已取消自动更新。',
-      );
-    }
-    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(release.latestVersion)) {
-      return const UpdateInstallResult.failure('更新版本号包含非法字符。');
-    }
-
     final version = release.latestVersion;
     final updatesRoot = Directory(
       '${storage.dataDirectory.path}${Platform.pathSeparator}updates',
     );
-    final versionsRoot = storage.versionsDirectory;
     final archive = File(
       '${updatesRoot.path}${Platform.pathSeparator}'
       'Git_Gui_Expand-v$version.zip',
     );
-    final staging = Directory(
-      '${updatesRoot.path}${Platform.pathSeparator}stage-v$version',
-    );
-    final target = Directory(
-      '${versionsRoot.path}${Platform.pathSeparator}$version',
-    );
-
     try {
       await updatesRoot.create(recursive: true);
-      await versionsRoot.create(recursive: true);
-      await _deleteDirectoryIfExists(staging);
       await _deleteFileIfExists(archive);
-
       onProgress(
-        const UpdateInstallProgress(
+        UpdateInstallProgress(
           stage: 'download',
-          message: '正在连接 Release 下载更新…',
+          message: RuntimeMessages.messageFor('updateProgressConnecting'),
           percent: 0,
         ),
       );
@@ -93,17 +82,112 @@ class UpdateInstallerService {
           onProgress(
             UpdateInstallProgress(
               stage: 'download',
-              message: '正在下载 ${release.assetName}…',
+              message: RuntimeMessages.messageFor(
+                'updateProgressDownloading',
+                parameters: {'asset': release.assetName},
+              ),
               percent: percent,
             ),
           );
         },
       );
+      return await _installPreparedArchive(
+        release,
+        archive,
+        onProgress: onProgress,
+      );
+    } catch (error) {
+      logService.errorEvent(
+        'update',
+        'update.install.failed',
+        details: {'error': '$error'},
+      );
+      return UpdateInstallResult.failure(
+        RuntimeMessages.operationFailed(
+          error,
+          eventId: 'update.install.failed',
+        ),
+      );
+    }
+  }
+
+  Future<UpdateInstallResult> installPreparedArchive(
+    UpdateCheckResult release,
+    File archive, {
+    required void Function(UpdateInstallProgress progress) onProgress,
+  }) async {
+    final validationError = _validateRelease(release);
+    if (validationError != null) {
+      return UpdateInstallResult.failure(validationError);
+    }
+    if (!await archive.exists()) {
+      return UpdateInstallResult.failure(
+        RuntimeMessages.messageFor('updatePackageMissing'),
+      );
+    }
+    try {
+      return await _installPreparedArchive(
+        release,
+        archive,
+        onProgress: onProgress,
+      );
+    } catch (error) {
+      logService.errorEvent(
+        'update',
+        'update.install.preparedArchive.failed',
+        details: {'error': '$error'},
+      );
+      return UpdateInstallResult.failure(
+        RuntimeMessages.operationFailed(
+          error,
+          eventId: 'update.install.preparedArchive.failed',
+        ),
+      );
+    }
+  }
+
+  LocalizedMessage? _validateRelease(UpdateCheckResult release) {
+    if (!Platform.isWindows) {
+      return RuntimeMessages.messageFor('updateWindowsOnly');
+    }
+    if (release.status != UpdateCheckStatus.updateAvailable) {
+      return RuntimeMessages.messageFor('updateNoNewVersion');
+    }
+    if (release.downloadUrl.isEmpty ||
+        !RegExp(r'^[a-fA-F0-9]{64}$').hasMatch(release.sha256)) {
+      return RuntimeMessages.messageFor('updateAssetInvalid');
+    }
+    if (!RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(release.latestVersion)) {
+      return RuntimeMessages.messageFor('updateVersionInvalid');
+    }
+    return null;
+  }
+
+  Future<UpdateInstallResult> _installPreparedArchive(
+    UpdateCheckResult release,
+    File archive, {
+    required void Function(UpdateInstallProgress progress) onProgress,
+  }) async {
+    final version = release.latestVersion;
+    final updatesRoot = Directory(
+      '${storage.dataDirectory.path}${Platform.pathSeparator}updates',
+    );
+    final versionsRoot = storage.versionsDirectory;
+    final staging = Directory(
+      '${updatesRoot.path}${Platform.pathSeparator}stage-v$version',
+    );
+    final target = Directory(
+      '${versionsRoot.path}${Platform.pathSeparator}$version',
+    );
+
+    try {
+      await versionsRoot.create(recursive: true);
+      await _deleteDirectoryIfExists(staging);
 
       onProgress(
-        const UpdateInstallProgress(
+        UpdateInstallProgress(
           stage: 'verify',
-          message: '正在校验更新包 SHA-256…',
+          message: RuntimeMessages.messageFor('updateProgressVerifying'),
         ),
       );
       final actualHash = await calculateSha256(archive.path);
@@ -111,15 +195,44 @@ class UpdateInstallerService {
         await _deleteFileIfExists(archive);
         throw const FormatException('更新包 SHA-256 校验失败');
       }
-      logService.info('update', '更新包 SHA-256 校验通过：$actualHash');
+      logService.infoEvent(
+        'update',
+        'update.package.sha256.verified',
+        details: {'sha256': actualHash},
+      );
 
       onProgress(
-        const UpdateInstallProgress(stage: 'extract', message: '正在解压到独立版本目录…'),
+        UpdateInstallProgress(
+          stage: 'extract',
+          message: RuntimeMessages.messageFor('updateProgressExtracting'),
+        ),
       );
       await staging.create(recursive: true);
       await _extract(archive.path, staging.path);
       final payload = await _resolvePayloadDirectory(staging, version);
       await _validatePayload(payload, version);
+      final packagedRuntime = await _readPackagedRuntime(staging);
+      if (packagedRuntime != null) {
+        onProgress(
+          UpdateInstallProgress(
+            stage: 'verify',
+            message: RuntimeMessages.messageFor(
+              'updateProgressVerifyingRuntime',
+            ),
+          ),
+        );
+        await runtimeManager.activateRuntime(
+          installationService: _runtimeInstallationService,
+          runtime: packagedRuntime,
+        );
+        logService.infoEvent(
+          'update',
+          'update.runtime.activated',
+          details: {'version': packagedRuntime.version},
+        );
+      } else {
+        await _validateInstalledRuntime();
+      }
 
       if (await target.exists()) {
         try {
@@ -131,23 +244,33 @@ class UpdateInstallerService {
       }
 
       if (await target.exists()) {
-        logService.info('update', '版本 $version 已存在，复用现有版本目录');
+        logService.infoEvent(
+          'update',
+          'update.version.reused',
+          details: {'version': version},
+        );
       } else {
         final nestedPayload = payload.path != staging.path;
         await payload.rename(target.path);
         if (nestedPayload && await staging.exists()) {
           await _deleteDirectoryIfExists(staging);
         }
-        logService.info('update', '新版本已准备到 ${target.path}');
+        logService.infoEvent(
+          'update',
+          'update.version.prepared',
+          details: {'version': version, 'path': target.path},
+        );
       }
       await _deleteFileIfExists(archive);
       await _deleteDirectoryIfExists(staging);
-      logService.detail('update', '已清理下载的更新包和临时解压目录');
+      logService.detailEvent('update', 'update.package.cleanup.completed');
 
       onProgress(
-        const UpdateInstallProgress(
+        UpdateInstallProgress(
           stage: 'prepare',
-          message: '正在通知 Launcher 切换版本…',
+          message: RuntimeMessages.messageFor(
+            'updateProgressNotifyingLauncher',
+          ),
           percent: 1,
         ),
       );
@@ -173,13 +296,97 @@ class UpdateInstallerService {
         );
       }
 
-      logService.info('update', '版本 $version 已就绪，等待应用退出后由 Launcher 重启');
+      logService.infoEvent(
+        'update',
+        'update.launcher.ready',
+        details: {'version': version},
+      );
       return UpdateInstallResult.success(
-        '新版本 v$version 已准备完成，应用退出后 Launcher 将自动切换并重启。',
+        RuntimeMessages.messageFor(
+          'updateInstallSuccess',
+          parameters: {'version': version},
+          eventId: 'update.install.succeeded',
+          technicalDetails: {'path': target.path},
+        ),
       );
     } catch (error) {
-      logService.error('update', 'Launcher 更新准备失败：$error');
-      return UpdateInstallResult.failure('更新准备失败：$error');
+      logService.errorEvent(
+        'update',
+        'update.launcher.prepare.failed',
+        details: {'error': '$error', 'version': version},
+      );
+      return UpdateInstallResult.failure(
+        RuntimeMessages.operationFailed(
+          error,
+          eventId: 'update.launcher.prepare.failed',
+          target: version,
+        ),
+      );
+    }
+  }
+
+  Future<ValidatedGitRuntime?> _readPackagedRuntime(Directory staging) async {
+    final runtimeRoot = Directory(
+      '${staging.path}${Platform.pathSeparator}runtime'
+      '${Platform.pathSeparator}git',
+    );
+    final pointer = File(
+      '${runtimeRoot.path}${Platform.pathSeparator}current.json',
+    );
+    if (!await pointer.exists()) return null;
+    final decoded = jsonDecode(await pointer.readAsString());
+    final activeVersion = decoded is Map<String, dynamic>
+        ? (decoded['activeVersion'] as String? ?? '').trim()
+        : '';
+    if (activeVersion.isEmpty ||
+        !RegExp(r'^[A-Za-z0-9._-]+$').hasMatch(activeVersion) ||
+        !activeVersion.contains('PortableGit')) {
+      throw const FileSystemException('更新包中的 PortableGit current.json 无效');
+    }
+    return _runtimeInstallationService.validate(
+      Directory(
+        '${runtimeRoot.path}${Platform.pathSeparator}versions'
+        '${Platform.pathSeparator}$activeVersion',
+      ),
+    );
+  }
+
+  Future<void> _validateInstalledRuntime() async {
+    final pointerStore = GitRuntimePointerStore(storage: storage);
+    final pointer = await pointerStore.read();
+    if (!pointer.hasActive) return;
+    try {
+      await _runtimeInstallationService.validate(
+        storage.gitRuntimeVersionDirectory(pointer.activeVersion),
+      );
+      logService.detailEvent(
+        'update',
+        'update.runtime.validated',
+        details: {'version': pointer.activeVersion},
+      );
+    } catch (activeError) {
+      if (!pointer.hasPrevious) {
+        logService.warningEvent(
+          'update',
+          'update.runtime.invalid.continue',
+          details: {'error': '$activeError'},
+        );
+        return;
+      }
+      try {
+        final restored = await _runtimeInstallationService.restorePrevious();
+        logService.warningEvent(
+          'update',
+          'update.runtime.restored',
+          details: {'version': restored.version},
+        );
+      } catch (restoreError) {
+        logService.warningEvent(
+          'update',
+          'update.runtime.restore.failed',
+          details: {'error': '$restoreError'},
+        );
+      }
     }
   }
 
@@ -289,9 +496,14 @@ class UpdateInstallerService {
       }
       await partial.rename(target.path);
       onProgress(1);
-      logService.detail(
+      logService.detailEvent(
         'update',
-        '下载完成：${target.path} bytes=$received expected=$expected',
+        'update.download.completed',
+        details: {
+          'path': target.path,
+          'received': '$received',
+          'expected': '$expected',
+        },
       );
     } catch (error) {
       await sink?.close();
@@ -303,25 +515,10 @@ class UpdateInstallerService {
   }
 
   Future<void> _extract(String archivePath, String destination) async {
+    await Directory(destination).create(recursive: true);
     final result = await Process.run(
-      'powershell.exe',
-      [
-        '-NoProfile',
-        '-NonInteractive',
-        '-ExecutionPolicy',
-        'Bypass',
-        '-Command',
-        r'''
-$ErrorActionPreference = 'Stop'
-Expand-Archive -LiteralPath $env:GIT_GUI_UPDATE_ZIP `
-  -DestinationPath $env:GIT_GUI_UPDATE_STAGE -Force
-''',
-      ],
-      environment: {
-        'GIT_GUI_UPDATE_ZIP': archivePath,
-        'GIT_GUI_UPDATE_STAGE': destination,
-      },
-      includeParentEnvironment: true,
+      'tar.exe',
+      ['-xf', archivePath, '-C', destination],
       runInShell: false,
       stdoutEncoding: utf8,
       stderrEncoding: utf8,

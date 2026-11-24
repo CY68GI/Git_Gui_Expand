@@ -9,6 +9,7 @@ import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
 import 'package:git_gui_expand/core/services/desktop_shortcut_service.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
+import 'package:git_gui_expand/core/services/git_runtime_installation_service.dart';
 import 'package:git_gui_expand/core/services/installation_maintenance_service.dart';
 import 'package:git_gui_expand/core/services/settings_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
@@ -53,8 +54,8 @@ void main() {
 
     await settingsService.save(settings);
     final loaded = await settingsService.load();
-    logger.info('test', '普通日志内容');
-    logger.detail('test', '详细日志内容');
+    logger.infoEvent('test', 'test.normal', details: {'note': '普通日志内容'});
+    logger.detailEvent('test', 'test.detail', details: {'note': '详细日志内容'});
     await logger.flush();
 
     final settingsPath = File(
@@ -67,9 +68,12 @@ void main() {
     expect(await settingsPath.exists(), isTrue);
     expect(loaded, settings);
     expect(logger.logsDirectoryPath, contains('userdata'));
-    expect(normalLog, contains('普通日志内容'));
-    expect(normalLog, isNot(contains('详细日志内容')));
+    expect(normalLog, contains('test.normal'));
+    expect(normalLog, isNot(contains('普通日志内容')));
+    expect(normalLog, isNot(contains('test.detail')));
+    expect(detailedLog, contains('test.normal'));
     expect(detailedLog, contains('普通日志内容'));
+    expect(detailedLog, contains('test.detail'));
     expect(detailedLog, contains('详细日志内容'));
     expect(
       AppSettings.fromJson({'fontScale': 10}).fontScale,
@@ -147,45 +151,27 @@ void main() {
       AppLocalizations.english,
     );
     expect(
-      const AppLocalizations(AppLocalizations.simplifiedChinese).tr('设置'),
+      const AppLocalizations(AppLocalizations.simplifiedChinese)
+          .tr('settings2'),
       '设置',
     );
     expect(
-      const AppLocalizations(AppLocalizations.english).tr('设置'),
+      const AppLocalizations(AppLocalizations.english).tr('settings2'),
       'Settings',
     );
     expect(
-      const AppLocalizations(AppLocalizations.traditionalChinese).tr('打开设置'),
-      '開啟設定',
+      const AppLocalizations(AppLocalizations.traditionalChinese)
+          .tr('openRepository'),
+      '開啟 Git 儲存庫',
     );
     expect(
-      const AppLocalizations(AppLocalizations.english).tr('移动 2 项到 docs'),
-      'Move 2 items to docs',
-    );
-    expect(
-      const AppLocalizations(AppLocalizations.english)
-          .tr('已加入执行计划：重命名 README.md。尚未执行任何 Git 变更。'),
-      'Added to the operation plan: Rename README.md. '
-      'No Git changes have run.',
+      const AppLocalizations(AppLocalizations.english).tr('fetchAllRemotes'),
+      'Fetch all remotes',
     );
     expect(
       const AppLocalizations(AppLocalizations.traditionalChinese)
-          .tr('删除 3 个项目'),
-      '刪除 3 個項目',
-    );
-    expect(
-      const AppLocalizations(AppLocalizations.english)
-          .tr('远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。'),
-      contains('Remote refs changed after confirmation'),
-    );
-    expect(
-      const AppLocalizations(AppLocalizations.traditionalChinese)
-          .tr('远端引用在确认后发生了变化，已拒绝清空。请刷新远端预览后重新确认。'),
-      contains('已拒絕清空'),
-    );
-    expect(
-      const AppLocalizations(AppLocalizations.english).tr('已按顺序执行全部 4 步操作。'),
-      'Executed all 4 steps in order.',
+          .tr('fetchAllRemotes'),
+      '取得全部遠端',
     );
     expect(
       AppLocalizations.languageOptionLabel(
@@ -268,14 +254,14 @@ void main() {
 
   test('new log entries use the selected interface language', () async {
     logger.setLocale(AppLocalizations.english);
-    logger.info('ui', '打开 Git 仓库');
+    logger.infoEvent('ui', 'ui.openRepository');
     logger.setLocale(AppLocalizations.traditionalChinese);
-    logger.info('ui', '设置已保存');
+    logger.infoEvent('ui', 'settings.saved');
     await logger.flush();
 
     final normalLog = await logger.readRecent(AppLogType.normal);
-    expect(normalLog, contains('Open Git repository'));
-    expect(normalLog, contains('設定已儲存'));
+    expect(normalLog, contains('Information event: ui.openRepository'));
+    expect(normalLog, contains('資訊事件：settings.saved'));
   });
 
   test(
@@ -303,7 +289,7 @@ void main() {
         '${Platform.pathSeparator}features${Platform.pathSeparator}project'
         '${Platform.pathSeparator}project_page.dart',
       ).readAsString();
-      expect(projectPage, contains("l10n.tr('项目目录')"));
+      expect(projectPage, contains("l10n.tr('projectFolder')"));
     },
   );
 
@@ -332,7 +318,13 @@ void main() {
       desktopDirectoryOverride: desktop.path,
     ).create();
 
-    expect(result.isSuccess, isTrue, reason: result.message);
+    expect(
+      result.isSuccess,
+      isTrue,
+      reason: result.message.resolve(
+        const AppLocalizations(AppLocalizations.english),
+      ),
+    );
     expect(result.shortcutPath, isNotNull);
     expect(await File(result.shortcutPath!).exists(), isTrue);
     expect(result.shortcutPath, endsWith('Git GUI Expand.lnk'));
@@ -361,7 +353,27 @@ void main() {
       );
       expect(readme, contains('git clone'));
       expect(readme, contains('git stash'));
+      expect(readme.indexOf('Git_Gui_Expand-<tag>-windows-x64.zip'), isNot(-1));
+      expect(
+        readme.indexOf('Git_Gui_Expand-<tag>-windows-x64.zip'),
+        lessThan(
+          readme.indexOf('Git_Gui_Expand-<tag>-windows-x64-PortableGit.zip'),
+        ),
+      );
+      expect(readme, contains('https://git-scm.com/download/win'));
+      expect(readme, contains('runtime/git/current/cmd'));
     }
+
+    final notices = await File(
+      '${Directory.current.path}${Platform.pathSeparator}docs'
+      '${Platform.pathSeparator}PORTABLEGIT.md',
+    ).readAsString();
+    expect(notices, contains('runtime/git/'));
+    expect(notices, contains('versions/'));
+    expect(notices, contains('GIT-COPYING.txt'));
+    expect(notices, contains('current.json'));
+    expect(notices, contains('userdata/git-path-backups'));
+    expect(notices, contains('tool/portablegit-runtime.lock.json'));
   });
 
   test(
@@ -430,6 +442,108 @@ void main() {
         isTrue,
       );
       expect((await service.scan()).items, isEmpty);
+    },
+  );
+
+  test(
+    'maintenance keeps active and previous PortableGit runtimes only',
+    () async {
+      final root = temporaryDirectory.path;
+      final runtimeVersions = storage.gitRuntimeVersionsDirectory;
+      for (final name in [
+        'PortableGit-active',
+        'PortableGit-previous',
+        'PortableGit-old',
+      ]) {
+        await Directory('${runtimeVersions.path}${Platform.pathSeparator}$name')
+            .create(recursive: true);
+      }
+      final pointerStore = GitRuntimePointerStore(storage: storage);
+      await pointerStore.write(
+        GitRuntimePointer(
+          activeVersion: 'PortableGit-active',
+          activePath: 'versions/PortableGit-active',
+          previousVersion: 'PortableGit-previous',
+          previousPath: 'versions/PortableGit-previous',
+          activatedAt: DateTime.utc(2026, 11, 23),
+        ),
+      );
+      final updates = Directory(
+        '$root${Platform.pathSeparator}userdata'
+        '${Platform.pathSeparator}updates',
+      );
+      await updates.create(recursive: true);
+      final gitStage = Directory(
+        '${updates.path}${Platform.pathSeparator}'
+        'git-stage-PortableGit-next',
+      );
+      await gitStage.create();
+      await File('${gitStage.path}${Platform.pathSeparator}payload.txt')
+          .writeAsString('staged');
+      final settings = await storage.ensureDataDirectory().then(
+        (directory) =>
+            File('${directory.path}${Platform.pathSeparator}settings.json'),
+      );
+      await settings.writeAsString('{}');
+      final repository = File('$root${Platform.pathSeparator}repository.txt');
+      await repository.writeAsString('keep');
+
+      final service = InstallationMaintenanceService(
+        storage: storage,
+        logService: logger,
+      );
+      final scan = await service.scan();
+
+      expect(
+        scan.items.any(
+          (item) =>
+              item.name == 'PortableGit-old' &&
+              item.kind == MaintenanceItemKind.obsoleteGitRuntime,
+        ),
+        isTrue,
+      );
+      expect(
+        scan.items.any(
+          (item) =>
+              item.name == 'git-stage-PortableGit-next' &&
+              item.kind == MaintenanceItemKind.gitRuntimeStaging,
+        ),
+        isTrue,
+      );
+      expect(
+        scan.items.any((item) => item.name == 'PortableGit-active'),
+        isFalse,
+      );
+      expect(
+        scan.items.any((item) => item.name == 'PortableGit-previous'),
+        isFalse,
+      );
+
+      final cleanup = await service.cleanup(scan);
+      expect(cleanup.failed, isEmpty);
+      expect(
+        await Directory(
+          '${runtimeVersions.path}${Platform.pathSeparator}'
+          'PortableGit-active',
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await Directory(
+          '${runtimeVersions.path}${Platform.pathSeparator}'
+          'PortableGit-previous',
+        ).exists(),
+        isTrue,
+      );
+      expect(
+        await Directory(
+          '${runtimeVersions.path}${Platform.pathSeparator}PortableGit-old',
+        ).exists(),
+        isFalse,
+      );
+      expect(await gitStage.exists(), isFalse);
+      expect(await settings.exists(), isTrue);
+      expect(await repository.exists(), isTrue);
     },
   );
 }

@@ -44,7 +44,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
     if (!mounted) return;
     setState(() => _clearing = false);
     if (!outcome.isSuccess) {
-      setState(() => _error = context.l10n.tr(outcome.message));
+      setState(() => _error = outcome.message.resolve(context.l10n));
       return;
     }
     Navigator.pop(context, outcome);
@@ -65,7 +65,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
         !hasPending;
     return AlertDialog(
       icon: Icon(Icons.warning_amber_rounded, color: colors.error, size: 30),
-      title: Text(l10n.tr('清除 Git 元数据')),
+      title: Text(l10n.tr('clearGitMetadata')),
       content: SizedBox(
         width: 650,
         child: Column(
@@ -73,7 +73,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             SelectableText(
-              l10n.tr('仓库：{path}', {
+              l10n.tr('repository', {
                 'path': widget.controller.repositoryPath ?? '',
               }),
               style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
@@ -90,7 +90,9 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    l10n.tr('此操作会删除仓库根目录中的 .git 文件夹。'),
+                    l10n.tr(
+                      'thisOperationDeletesTheGitFolderInTheRepositoryRoot',
+                    ),
                     style: TextStyle(
                       color: colors.error,
                       fontSize: 13,
@@ -100,19 +102,14 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                   const SizedBox(height: 8),
                   Text(
                     l10n.tr(
-                      '工作文件不会被删除，但以下 Git 内容会永久丢失：\n'
-                      '• 全部提交历史和 reflog\n'
-                      '• 本地分支、标签和当前分支状态\n'
-                      '• 暂存索引、Stash、未被工作文件保留的已提交内容\n'
-                      '• 引用、远端配置以及仓库级 Git 配置和 hooks',
+                      'workingFilesAreRetainedButTheFollowingGitDataWillBePermanentlyLostAllCommitHistoryAndReflogLocalBranchesTagsAndCurrentBranchStateStagedIndexStashesAndCommittedContentNotRetainedInWorkingFilesRefsRemoteConfigurationAndRepositoryLevelGitSettingsAndHooks',
                     ),
                     style: const TextStyle(fontSize: 12, height: 1.55),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     l10n.tr(
-                      '清理后该文件夹会变成普通目录，仍可用“打开空白文件夹”重新执行 git init。'
-                      '现在只加入清除计划；还需要在操作计划中输入 CLEAR GIT 并确认执行。',
+                      'afterCleanupTheFolderBecomesAnOrdinaryDirectoryThatCanBeInitializedAgainFromOpenEmptyFolderThisNowOnlyAddsAClearStepEnterClearGitInTheOperationPlanAndConfirmExecution',
                     ),
                     style: TextStyle(
                       fontSize: 11.5,
@@ -128,7 +125,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
               const Center(child: CircularProgressIndicator())
             else ...[
               Text(
-                l10n.tr('远端检查'),
+                l10n.tr('remoteCheck'),
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w700,
@@ -137,14 +134,18 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
               const SizedBox(height: 5),
               Text(
                 hasRemotes
-                    ? l10n.tr('检测到远端仓库，已禁止清除：{remotes}', {
-                        'remotes': inspection!.remotes
-                            .map((remote) => remote.name)
-                            .join('、'),
-                      })
+                    ? l10n.tr(
+                        'remoteRepositoriesWereDetectedSoClearingIsDisabled',
+                        {
+                          'remotes': inspection!.remotes
+                              .map((remote) => remote.name)
+                              .join('、'),
+                        },
+                      )
                     : inspection?.isSuccess == true
-                    ? l10n.tr('未检测到任何远端仓库。')
-                    : l10n.tr(inspection?.message ?? '无法检查仓库。'),
+                    ? l10n.tr('noRemoteRepositoryWasDetected')
+                    : inspection?.message.resolve(l10n) ??
+                          l10n.tr('unableToInspectRepository'),
                 style: TextStyle(
                   color: hasRemotes ? colors.error : colors.onSurfaceVariant,
                   fontSize: 11.5,
@@ -155,7 +156,9 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
             if (hasPending) ...[
               const SizedBox(height: 10),
               Text(
-                l10n.tr('当前有待执行操作计划，请先清空或执行后再清除 Git。'),
+                l10n.tr(
+                  'aPlanIsPendingClearOrExecuteItBeforeRemovingGitMetadata',
+                ),
                 style: TextStyle(color: colors.error, fontSize: 11.5),
               ),
             ],
@@ -172,7 +175,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
       actions: [
         TextButton(
           onPressed: _clearing ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('取消')),
+          child: Text(l10n.tr('cancel2')),
         ),
         FilledButton.icon(
           onPressed: canClear ? _clear : null,
@@ -183,7 +186,7 @@ class _GitMetadataClearDialogState extends State<GitMetadataClearDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.delete_forever_rounded, size: 18),
-          label: Text(l10n.tr('加入清除计划')),
+          label: Text(l10n.tr('addClearOperationToPlan')),
           style: FilledButton.styleFrom(backgroundColor: colors.error),
         ),
       ],

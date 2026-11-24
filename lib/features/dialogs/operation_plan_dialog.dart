@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_message.dart';
+import '../../core/localization/runtime_messages.dart';
 import '../../core/models/operation_plan.dart';
 import '../../core/models/operation_safety.dart';
 
@@ -17,11 +19,11 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
   final TextEditingController _confirmationController = TextEditingController();
   bool _dangerousConfirmed = false;
   bool _executing = false;
-  String? _validationMessage;
+  LocalizedMessage? _validationMessage;
   OperationPlanResult? _result;
   int _currentStep = 0;
   int _totalSteps = 0;
-  String? _currentTitle;
+  LocalizedMessage? _currentTitle;
 
   @override
   void dispose() {
@@ -82,7 +84,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _executing ? l10n.tr('正在逐步执行') : l10n.tr('待执行操作计划'),
+                          _executing
+                              ? l10n.tr('executingStepByStep')
+                              : l10n.tr('pendingOperationPlan'),
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -91,10 +95,11 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                         const SizedBox(height: 3),
                         Text(
                           operations.isEmpty
-                              ? l10n.tr('当前没有待执行步骤')
-                              : l10n.tr('共 {count} 步；确认前仓库不会发生任何改变', {
-                                  'count': operations.length,
-                                }),
+                              ? l10n.tr('noPendingSteps')
+                              : l10n.tr(
+                                  'stepsTheRepositoryIsUnchangedUntilConfirmation',
+                                  {'count': operations.length},
+                                ),
                           style: TextStyle(
                             fontSize: 12.5,
                             height: 1.35,
@@ -105,7 +110,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                     ),
                   ),
                   if (operations.isNotEmpty)
-                    _CountBadge(text: '${operations.length} 步'),
+                    _CountBadge(
+                      text: l10n.tr('stepsCount', {'count': operations.length}),
+                    ),
                 ],
               ),
             ),
@@ -125,7 +132,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                         if (_executing) ...[
                           _ProgressBanner(
                             step: _currentStep,
-                            title: _currentTitle ?? l10n.tr('准备执行'),
+                            title: _currentTitle,
                           ),
                           const SizedBox(height: 12),
                         ],
@@ -162,7 +169,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                         if (_validationMessage != null) ...[
                           const SizedBox(height: 10),
                           Text(
-                            _validationMessage!,
+                            _validationMessage!.resolve(l10n),
                             style: TextStyle(
                               fontSize: 12.5,
                               fontWeight: FontWeight.w600,
@@ -181,12 +188,12 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
           TextButton.icon(
             onPressed: _clearPlan,
             icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-            label: Text(l10n.tr('清空计划')),
+            label: Text(l10n.tr('clearPlan')),
           ),
         TextButton(
           onPressed: _executing ? null : () => Navigator.pop(context),
           child: Text(
-            _result?.isSuccess == true ? l10n.tr('完成') : l10n.tr('关闭'),
+            _result?.isSuccess == true ? l10n.tr('done') : l10n.tr('close'),
           ),
         ),
         if (operations.isNotEmpty)
@@ -202,7 +209,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
                     ),
                   )
                 : const Icon(Icons.play_arrow_rounded, size: 19),
-            label: Text(_executing ? l10n.tr('正在执行…') : l10n.tr('确认并逐步执行')),
+            label: Text(
+              _executing ? l10n.tr('executing') : l10n.tr('confirmAndExecute'),
+            ),
             style: FilledButton.styleFrom(
               backgroundColor: dangerous.isEmpty ? null : colors.error,
               foregroundColor: dangerous.isEmpty ? null : colors.onError,
@@ -232,7 +241,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
               ),
               const SizedBox(height: 14),
               Text(
-                result.isSuccess ? l10n.tr('执行完成') : l10n.tr('执行未全部完成'),
+                result.isSuccess
+                    ? l10n.tr('executionComplete')
+                    : l10n.tr('executionIncomplete'),
                 style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -240,7 +251,7 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
               ),
               const SizedBox(height: 8),
               SelectableText(
-                context.l10n.tr(result.message),
+                result.message.resolve(l10n),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 13,
@@ -262,12 +273,14 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
             Icon(Icons.playlist_add_rounded, size: 46, color: colors.outline),
             const SizedBox(height: 12),
             Text(
-              l10n.tr('没有待执行操作'),
+              l10n.tr('noPendingOperations'),
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
-              l10n.tr('先在文件区、提交区或远端管理中选择操作；所有操作会先进入这里。'),
+              l10n.tr(
+                'chooseActionsInTheExplorerCommitAreaOrRemoteManagerTheyAppearHereFirst',
+              ),
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
@@ -317,7 +330,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
     final hasDangerous = operations.any((operation) => operation.isDangerous);
     if (hasDangerous && !_dangerousConfirmed) {
       setState(() {
-        _validationMessage = context.l10n.tr('请先勾选“我已检查危险操作”。');
+        _validationMessage = RuntimeMessages.messageFor(
+          'selectTheDangerousOperationConfirmationFirst',
+        );
       });
       return;
     }
@@ -325,9 +340,9 @@ class _OperationPlanDialogState extends State<OperationPlanDialog> {
         _confirmationController.text.trim() !=
             strongOperation.strongConfirmationText) {
       setState(() {
-        _validationMessage = context.l10n.tr(
-          '请输入远端项目全称/分支“{confirmation}”进行二次确认。',
-          {'confirmation': strongOperation.strongConfirmationText},
+        _validationMessage = RuntimeMessages.messageFor(
+          'enterProjectBranchToConfirmAgain',
+          parameters: {'confirmation': strongOperation.strongConfirmationText},
         );
       });
       return;
@@ -416,7 +431,7 @@ class _OperationCard extends StatelessWidget {
                   children: [
                     Flexible(
                       child: Text(
-                        context.l10n.tr(operation.title),
+                        operation.title.resolve(context.l10n),
                         style: const TextStyle(
                           fontSize: 13.5,
                           fontWeight: FontWeight.w700,
@@ -432,7 +447,7 @@ class _OperationCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 5),
                 Text(
-                  context.l10n.tr(operation.description),
+                  operation.description.resolve(context.l10n),
                   style: TextStyle(
                     fontSize: 12.5,
                     height: 1.45,
@@ -444,7 +459,7 @@ class _OperationCard extends StatelessWidget {
           ),
           IconButton(
             onPressed: executing ? null : onRemove,
-            tooltip: context.l10n.tr('从计划移除'),
+            tooltip: context.l10n.tr('removeFromPlan'),
             icon: const Icon(Icons.remove_circle_outline_rounded, size: 19),
           ),
         ],
@@ -453,37 +468,37 @@ class _OperationCard extends StatelessWidget {
   }
 
   String _kindLabel(BuildContext context, PlannedOperationKind kind) {
-    final label = switch (kind) {
-      PlannedOperationKind.initializeRepository => '初始化仓库',
-      PlannedOperationKind.cloneRepository => '克隆仓库',
-      PlannedOperationKind.move => '移动',
-      PlannedOperationKind.copy => '复制',
-      PlannedOperationKind.rename => '重命名',
-      PlannedOperationKind.delete => '删除',
-      PlannedOperationKind.clearGitMetadata => '清除 Git 元数据',
-      PlannedOperationKind.stageAll => '暂存',
-      PlannedOperationKind.unstageAll => '取消暂存',
-      PlannedOperationKind.commit => '提交',
-      PlannedOperationKind.fetchCurrentRemote => '获取 upstream',
-      PlannedOperationKind.fetchAllRemotes => '获取全部远端',
-      PlannedOperationKind.pullFastForward => '安全快进 Pull',
-      PlannedOperationKind.pushCurrentBranch => '推送',
-      PlannedOperationKind.pushRemote => '推送',
-      PlannedOperationKind.pushAllRemotes => '全部推送',
-      PlannedOperationKind.addRemote => '添加远端',
-      PlannedOperationKind.updateRemote => '修改远端',
-      PlannedOperationKind.removeRemoteConfig => '移除配置',
-      PlannedOperationKind.clearRemote => '清空远端',
-      PlannedOperationKind.createBranch => '创建分支',
-      PlannedOperationKind.switchBranch => '切换分支',
-      PlannedOperationKind.renameBranch => '重命名分支',
-      PlannedOperationKind.deleteBranch => '删除分支',
-      PlannedOperationKind.createStash => '创建 Stash',
-      PlannedOperationKind.applyStash => '应用 Stash',
-      PlannedOperationKind.popStash => '弹出 Stash',
-      PlannedOperationKind.dropStash => '删除 Stash',
+    final key = switch (kind) {
+      PlannedOperationKind.initializeRepository => 'planKindInitialize',
+      PlannedOperationKind.cloneRepository => 'planKindClone',
+      PlannedOperationKind.move => 'planKindMove',
+      PlannedOperationKind.copy => 'planKindCopy',
+      PlannedOperationKind.rename => 'planKindRename',
+      PlannedOperationKind.delete => 'planKindDelete',
+      PlannedOperationKind.clearGitMetadata => 'planKindClearGitMetadata',
+      PlannedOperationKind.stageAll => 'planKindStageAll',
+      PlannedOperationKind.unstageAll => 'planKindUnstageAll',
+      PlannedOperationKind.commit => 'planKindCommit',
+      PlannedOperationKind.fetchCurrentRemote => 'planKindFetchCurrent',
+      PlannedOperationKind.fetchAllRemotes => 'planKindFetchAll',
+      PlannedOperationKind.pullFastForward => 'planKindPull',
+      PlannedOperationKind.pushCurrentBranch => 'planKindPush',
+      PlannedOperationKind.pushRemote => 'planKindPush',
+      PlannedOperationKind.pushAllRemotes => 'planKindPushAll',
+      PlannedOperationKind.addRemote => 'planKindAddRemote',
+      PlannedOperationKind.updateRemote => 'planKindUpdateRemote',
+      PlannedOperationKind.removeRemoteConfig => 'planKindRemoveRemote',
+      PlannedOperationKind.clearRemote => 'planKindClearRemote',
+      PlannedOperationKind.createBranch => 'planKindCreateBranch',
+      PlannedOperationKind.switchBranch => 'planKindSwitchBranch',
+      PlannedOperationKind.renameBranch => 'planKindRenameBranch',
+      PlannedOperationKind.deleteBranch => 'planKindDeleteBranch',
+      PlannedOperationKind.createStash => 'planKindCreateStash',
+      PlannedOperationKind.applyStash => 'planKindApplyStash',
+      PlannedOperationKind.popStash => 'planKindPopStash',
+      PlannedOperationKind.dropStash => 'planKindDropStash',
     };
-    return context.l10n.tr(label);
+    return context.l10n.tr(key);
   }
 }
 
@@ -525,7 +540,7 @@ class _DangerConfirmation extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  l10n.tr('危险操作确认'),
+                  l10n.tr('confirmDangerousOperations'),
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
@@ -538,8 +553,7 @@ class _DangerConfirmation extends StatelessWidget {
           const SizedBox(height: 7),
           Text(
             l10n.tr(
-              '此计划包含 {count} 个危险步骤。文件删除无法通过本软件撤销；'
-              '清空远端会替换全部分支历史，只保留一个空提交并删除其它分支和标签。',
+              'thisPlanIncludesDangerousStepsFileDeletionCannotBeUndoneHereRemoteResetKeepsOnlyOneEmptyCommit',
               {'count': operations.length},
             ),
             style: TextStyle(
@@ -554,7 +568,7 @@ class _DangerConfirmation extends StatelessWidget {
               controller: confirmationController,
               enabled: enabled,
               decoration: InputDecoration(
-                labelText: l10n.tr('输入项目全称/分支“{confirmation}”以确认', {
+                labelText: l10n.tr('enterProjectBranchToConfirm', {
                   'confirmation': confirmationText,
                 }),
                 hintText: confirmationText,
@@ -572,7 +586,7 @@ class _DangerConfirmation extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
-                l10n.tr('我已检查上述操作，确认后立即按顺序执行'),
+                l10n.tr('iReviewedTheseOperationsAndWantToExecuteThemInOrder'),
                 style: const TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w600,
@@ -590,7 +604,7 @@ class _ProgressBanner extends StatelessWidget {
   const _ProgressBanner({required this.step, required this.title});
 
   final int step;
-  final String title;
+  final LocalizedMessage? title;
 
   @override
   Widget build(BuildContext context) {
@@ -611,9 +625,11 @@ class _ProgressBanner extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              context.l10n.tr('第 {step} 步：{title}', {
+              context.l10n.tr('step', {
                 'step': step,
-                'title': context.l10n.tr(title),
+                'title':
+                    title?.resolve(context.l10n) ??
+                    context.l10n.tr('preparingToExecute'),
               }),
               style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
             ),
@@ -646,7 +662,7 @@ class _ResultBanner extends StatelessWidget {
         children: [
           if (result.validation?.isSuccess == false) ...[
             Text(
-              context.l10n.tr('执行前状态已变化'),
+              context.l10n.tr('stateChangedBeforeExecution'),
               style: TextStyle(
                 color: color,
                 fontSize: 13,
@@ -656,7 +672,7 @@ class _ResultBanner extends StatelessWidget {
             const SizedBox(height: 5),
           ],
           SelectableText(
-            context.l10n.tr(result.message),
+            result.message.resolve(context.l10n),
             style: TextStyle(
               fontSize: 12.5,
               height: 1.45,
@@ -671,7 +687,7 @@ class _ResultBanner extends StatelessWidget {
             OutlinedButton.icon(
               onPressed: onRecover,
               icon: const Icon(Icons.refresh_rounded, size: 17),
-              label: Text(context.l10n.tr('刷新仓库并重建计划')),
+              label: Text(context.l10n.tr('refreshRepositoryAndRebuildPlan')),
             ),
           ],
         ],
@@ -701,7 +717,7 @@ class _SafetyDriftDetails extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            l10n.tr('状态变化详情'),
+            l10n.tr('stateChangeDetails'),
             style: TextStyle(
               color: colors.error,
               fontSize: 12,
@@ -724,23 +740,23 @@ class _SafetyDriftDetails extends StatelessWidget {
   }
 
   String _driftLabel(BuildContext context, OperationDriftKind kind) {
-    final label = switch (kind) {
-      OperationDriftKind.repositoryRoot => '仓库根目录',
-      OperationDriftKind.branch => '分支',
-      OperationDriftKind.head => 'HEAD',
-      OperationDriftKind.status => '工作区状态',
-      OperationDriftKind.remotes => '远端配置',
-      OperationDriftKind.pathType => '路径类型',
-      OperationDriftKind.destinationParent => '父目录',
-      OperationDriftKind.destinationExists => '目标是否存在',
-      OperationDriftKind.destinationEmpty => '目标是否为空',
-      OperationDriftKind.gitMetadata => 'Git 元数据',
-      OperationDriftKind.source => '来源',
-      OperationDriftKind.remoteName => '远端名称',
-      OperationDriftKind.remoteTargetBranch => '目标分支',
-      OperationDriftKind.remoteRefs => '远端引用',
+    final key = switch (kind) {
+      OperationDriftKind.repositoryRoot => 'driftRepositoryRoot',
+      OperationDriftKind.branch => 'driftBranch',
+      OperationDriftKind.head => 'driftHead',
+      OperationDriftKind.status => 'driftStatus',
+      OperationDriftKind.remotes => 'driftRemotes',
+      OperationDriftKind.pathType => 'driftPathType',
+      OperationDriftKind.destinationParent => 'driftDestinationParent',
+      OperationDriftKind.destinationExists => 'driftDestinationExists',
+      OperationDriftKind.destinationEmpty => 'driftDestinationEmpty',
+      OperationDriftKind.gitMetadata => 'driftGitMetadata',
+      OperationDriftKind.source => 'driftSource',
+      OperationDriftKind.remoteName => 'driftRemoteName',
+      OperationDriftKind.remoteTargetBranch => 'driftRemoteTargetBranch',
+      OperationDriftKind.remoteRefs => 'driftRemoteRefs',
     };
-    return context.l10n.tr(label);
+    return context.l10n.tr(key);
   }
 }
 

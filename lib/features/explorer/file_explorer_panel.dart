@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/runtime_messages.dart';
 import '../../core/models/app_models.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/folder_picker_service.dart';
@@ -48,8 +49,8 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final label = widget.side == ExplorerSide.left
-        ? context.l10n.tr('左侧资源')
-        : context.l10n.tr('右侧资源');
+        ? context.l10n.tr('leftExplorer')
+        : context.l10n.tr('rightExplorer');
     final selectedCount = widget.state.selectedPaths.length;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GestureDetector(
@@ -139,7 +140,7 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    context.l10n.tr('粘贴目标'),
+                    context.l10n.tr('pasteTarget'),
                     style: TextStyle(
                       fontSize: 10.5,
                       color: colors.primary,
@@ -150,19 +151,19 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
               const Spacer(),
               _HeaderIconButton(
                 icon: Icons.arrow_upward_rounded,
-                tooltip: context.l10n.tr('上一级'),
+                tooltip: context.l10n.tr('parentFolder'),
                 onPressed: widget.state.relativePath.isEmpty
                     ? null
                     : () => widget.controller.goUp(widget.side),
               ),
               _HeaderIconButton(
                 icon: Icons.refresh_rounded,
-                tooltip: context.l10n.tr('刷新'),
+                tooltip: context.l10n.tr('refresh'),
                 onPressed: widget.controller.refresh,
               ),
               _HeaderIconButton(
                 icon: Icons.deselect_rounded,
-                tooltip: context.l10n.tr('清除选择'),
+                tooltip: context.l10n.tr('clearSelection'),
                 onPressed: selectedCount == 0
                     ? null
                     : () => widget.controller.clearSelection(widget.side),
@@ -240,9 +241,9 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
             ),
           ),
           const SizedBox(width: 5),
-          Expanded(child: _ColumnLabel(context.l10n.tr('名称'))),
-          SizedBox(width: 100, child: _ColumnLabel(context.l10n.tr('大小'))),
-          SizedBox(width: 64, child: _ColumnLabel(context.l10n.tr('状态'))),
+          Expanded(child: _ColumnLabel(context.l10n.tr('name'))),
+          SizedBox(width: 100, child: _ColumnLabel(context.l10n.tr('size'))),
+          SizedBox(width: 64, child: _ColumnLabel(context.l10n.tr('status'))),
         ],
       ),
     );
@@ -261,15 +262,17 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
     if (widget.state.error != null) {
       return _ExplorerMessage(
         icon: Icons.error_outline_rounded,
-        title: context.l10n.tr('无法读取目录'),
+        title: context.l10n.tr('unableToReadFolder'),
         message: widget.state.error!,
       );
     }
     if (widget.state.entries.isEmpty) {
       return _ExplorerMessage(
         icon: Icons.folder_off_outlined,
-        title: context.l10n.tr('这里没有文件'),
-        message: context.l10n.tr('切换目录或刷新以查看仓库内容。'),
+        title: context.l10n.tr('noFilesHere'),
+        message: context.l10n.tr(
+          'openAnotherFolderOrRefreshToViewRepositoryContents',
+        ),
       );
     }
 
@@ -332,7 +335,7 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.folder_open_rounded, size: 19),
-            title: Text(context.l10n.tr('用文件资源打开')),
+            title: Text(context.l10n.tr('showInFileExplorer')),
           ),
         ),
         PopupMenuItem(
@@ -341,7 +344,7 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.open_in_new_rounded, size: 19),
-            title: Text(context.l10n.tr('用默认打开方式打开')),
+            title: Text(context.l10n.tr('openWithDefaultApp')),
           ),
         ),
       ],
@@ -362,12 +365,16 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
       if (mounted) {
         widget.showOutcome(
           OperationOutcome.failure(
-            context.l10n.tr('无法打开文件：{error}', {
-              'error': error.toString().replaceFirst(
-                'FileSystemException: ',
-                '',
-              ),
-            }),
+            RuntimeMessages.messageFor(
+              'unableToOpenFile',
+              parameters: {
+                'error': error.toString().replaceFirst(
+                  'FileSystemException: ',
+                  '',
+                ),
+              },
+              eventId: 'explorer.file.open.failed',
+            ),
           ),
         );
       }
@@ -385,16 +392,14 @@ class _FileExplorerPanelState extends State<FileExplorerPanel> {
       child: Row(
         children: [
           Text(
-            context.l10n.tr('{count} 项', {
-              'count': widget.state.entries.length,
-            }),
+            context.l10n.tr('items', {'count': widget.state.entries.length}),
             style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
           ),
           const Spacer(),
           Text(
             selectedCount == 0
-                ? context.l10n.tr('双击文件夹进入')
-                : context.l10n.tr('已选 {count} 项', {'count': selectedCount}),
+                ? context.l10n.tr('doubleClickAFolderToOpen')
+                : context.l10n.tr('selected', {'count': selectedCount}),
             style: TextStyle(
               fontSize: 11.5,
               color: selectedCount == 0
@@ -518,7 +523,7 @@ class _ExplorerRowState extends State<_ExplorerRow> {
                 width: 100,
                 child: Text(
                   isDirectory || entry.size == null
-                      ? context.l10n.tr('文件夹')
+                      ? context.l10n.tr('folder')
                       : formatFileSize(entry.size!, widget.settings),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

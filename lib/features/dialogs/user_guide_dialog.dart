@@ -1,26 +1,109 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/localization/app_localizations.dart';
+import '../../core/markdown/guide_document.dart';
+import '../../core/markdown/guide_link.dart';
+import '../../core/services/external_link_service.dart';
+import 'widgets/markdown_guide_view.dart';
 
-class UserGuideDialog extends StatelessWidget {
-  const UserGuideDialog({super.key});
+class UserGuideDialog extends StatefulWidget {
+  const UserGuideDialog({super.key, this.documentLoader, this.externalLinks});
 
-  static const String defaultAssetPath = 'docs/USER_GUIDE.md';
+  static const String defaultAssetPath = GuideAssets.english;
+
+  final GuideDocumentLoader? documentLoader;
+  final ExternalLinkService? externalLinks;
 
   static String assetPathFor(String languageCode) {
-    return switch (languageCode) {
-      'zh' => 'docs/USER_GUIDE.zh-CN.md',
-      'zh_Hant' => 'docs/USER_GUIDE.zh-TW.md',
-      _ => defaultAssetPath,
-    };
+    return GuideAssets.forLanguageCode(languageCode);
+  }
+
+  @override
+  State<UserGuideDialog> createState() => _UserGuideDialogState();
+}
+
+class _UserGuideDialogState extends State<UserGuideDialog> {
+  late final GuideDocumentLoader _loader =
+      widget.documentLoader ??
+      GuideDocumentLoader(readText: rootBundle.loadString);
+  late final ExternalLinkService _externalLinks =
+      widget.externalLinks ?? ExternalLinkService();
+
+  String? _assetPath;
+  String? _localeLanguageCode;
+  Future<GuideDocument>? _document;
+  String? _pendingAnchor;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final languageCode = context.l10n.languageCode;
+    if (_assetPath == null || _localeLanguageCode != languageCode) {
+      _localeLanguageCode = languageCode;
+      _selectAsset(UserGuideDialog.assetPathFor(languageCode), notify: false);
+    }
+  }
+
+  void _selectAsset(String assetPath, {String? fragment, bool notify = true}) {
+    void apply() {
+      _assetPath = assetPath;
+      _pendingAnchor = fragment;
+      _document = _loader.load(assetPath);
+    }
+
+    if (notify && mounted) {
+      setState(apply);
+    } else {
+      apply();
+    }
+  }
+
+  void _retry() {
+    final path = _assetPath;
+    if (path == null) return;
+    _loader.invalidate(path);
+    setState(() {
+      _document = _loader.load(path);
+    });
+  }
+
+  Future<void> _handleLink(GuideLinkTarget target) async {
+    switch (target.kind) {
+      case GuideLinkKind.guide:
+        final path = target.assetPath;
+        if (path != null) {
+          _selectAsset(path, fragment: target.fragment);
+        }
+      case GuideLinkKind.external:
+        final uri = target.uri;
+        if (uri == null) return;
+        try {
+          await _externalLinks.openExternalUrl(uri.toString());
+        } catch (error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                context.l10n.tr('unableToOpenGuideLink', {'error': '$error'}),
+              ),
+            ),
+          );
+        }
+      case GuideLinkKind.anchor:
+      case GuideLinkKind.unsafe:
+        return;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final l10n = context.l10n;
-    final assetPath = assetPathFor(l10n.languageCode);
+    final assetPath =
+        _assetPath ?? UserGuideDialog.assetPathFor(l10n.languageCode);
     final screen = MediaQuery.sizeOf(context);
     return Dialog(
       insetPadding: const EdgeInsets.all(24),
@@ -59,7 +142,8 @@ class UserGuideDialog extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.tr('Git GUI Expand 使用指南'),
+                          '${l10n.tr('gitGuiExpandUserGuide')} · '
+                          '${_guideLanguageLabel(l10n, assetPath)}',
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -67,7 +151,9 @@ class UserGuideDialog extends StatelessWidget {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          l10n.tr('重点：所有 Git 修改先进入执行计划，确认后才运行'),
+                          l10n.tr(
+                            'importantGitChangesArePlannedFirstAndRunOnlyAfterConfirmation',
+                          ),
                           style: const TextStyle(fontSize: 12.5),
                         ),
                       ],
@@ -75,39 +161,55 @@ class UserGuideDialog extends StatelessWidget {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    tooltip: l10n.tr('关闭使用指南'),
+                    tooltip: l10n.tr('closeUserGuide'),
                     icon: const Icon(Icons.close_rounded),
                   ),
                 ],
               ),
             ),
             Expanded(
-              child: FutureBuilder<String>(
-                future: rootBundle.loadString(assetPath),
+              child: FutureBuilder<GuideDocument>(
+                future: _document,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
                     return const Center(
                       child: CircularProgressIndicator(strokeWidth: 2.2),
                     );
                   }
-                  if (snapshot.hasError) {
+                  if (snapshot.hasError || snapshot.data == null) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(30),
-                        child: SelectableText(
-                          l10n.tr('无法读取使用指南：{error}', {
-                            'error': snapshot.error,
-                          }),
-                          style: TextStyle(fontSize: 13, color: colors.error),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SelectableText(
+                              l10n.tr('unableToReadUserGuide', {
+                                'error': snapshot.error ?? 'empty document',
+                              }),
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 13,
+                                height: 1.5,
+                                color: colors.error,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            FilledButton.tonalIcon(
+                              onPressed: _retry,
+                              icon: const Icon(Icons.refresh_rounded, size: 17),
+                              label: Text(l10n.tr('refresh')),
+                            ),
+                          ],
                         ),
                       ),
                     );
                   }
-                  return SelectionArea(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(28, 22, 28, 30),
-                      child: _GuideContent(text: snapshot.data ?? ''),
-                    ),
+                  return MarkdownGuideView(
+                    key: ValueKey(snapshot.data!.sourcePath),
+                    document: snapshot.data!,
+                    initialAnchor: _pendingAnchor,
+                    onOpenLink: (target) => unawaited(_handleLink(target)),
                   );
                 },
               ),
@@ -122,9 +224,10 @@ class UserGuideDialog extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      l10n.tr('可在本窗口中选中并复制文字。完整指南保存在 {path}。', {
-                        'path': assetPath,
-                      }),
+                      l10n.tr(
+                        'textCanBeSelectedAndCopiedHereTheFullGuideIsIn',
+                        {'path': assetPath},
+                      ),
                       style: TextStyle(
                         fontSize: 11.5,
                         color: colors.onSurfaceVariant,
@@ -134,7 +237,7 @@ class UserGuideDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   FilledButton(
                     onPressed: () => Navigator.pop(context),
-                    child: Text(l10n.tr('我知道了')),
+                    child: Text(l10n.tr('gotIt')),
                   ),
                 ],
               ),
@@ -144,161 +247,12 @@ class UserGuideDialog extends StatelessWidget {
       ),
     );
   }
-}
 
-class _GuideContent extends StatelessWidget {
-  const _GuideContent({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final lines = text.replaceAll('\r\n', '\n').split('\n');
-    var inCodeBlock = false;
-    final widgets = <Widget>[];
-    for (final rawLine in lines) {
-      if (rawLine.trimLeft().startsWith('```')) {
-        inCodeBlock = !inCodeBlock;
-        continue;
-      }
-      if (inCodeBlock) {
-        widgets.add(
-          _GuideLine(
-            text: rawLine,
-            style: TextStyle(
-              fontFamily: 'Consolas',
-              fontSize: 12,
-              height: 1.45,
-              color: colors.onSurface,
-            ),
-            background: colors.surfaceContainerLow,
-          ),
-        );
-      } else {
-        widgets.add(_buildLine(context, rawLine));
-      }
-    }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: widgets,
-    );
-  }
-
-  Widget _buildLine(BuildContext context, String rawLine) {
-    final colors = Theme.of(context).colorScheme;
-    final line = rawLine.trimRight();
-    if (line.isEmpty) return const SizedBox(height: 8);
-    if (line.startsWith('# ')) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 14),
-        child: Text(
-          line.substring(2),
-          style: const TextStyle(
-            fontSize: 25,
-            height: 1.2,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      );
-    }
-    if (line.startsWith('## ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 14, bottom: 8),
-        child: Text(
-          line.substring(3),
-          style: const TextStyle(
-            fontSize: 18,
-            height: 1.3,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      );
-    }
-    if (line.startsWith('### ')) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 10, bottom: 5),
-        child: Text(
-          line.substring(4),
-          style: const TextStyle(
-            fontSize: 15,
-            height: 1.35,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-      );
-    }
-    if (line.startsWith('- ')) {
-      return Padding(
-        padding: const EdgeInsets.only(left: 10, bottom: 4),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.only(top: 8, right: 8),
-              child: Container(
-                width: 5,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: colors.primary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Text(
-                line.substring(2),
-                style: const TextStyle(fontSize: 13, height: 1.6),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-    if (RegExp(r'^\d+\.\s').hasMatch(line)) {
-      return Padding(
-        padding: const EdgeInsets.only(left: 6, bottom: 5),
-        child: Text(
-          line,
-          style: const TextStyle(
-            fontSize: 13,
-            height: 1.6,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        line.replaceAll('`', ''),
-        style: const TextStyle(fontSize: 13, height: 1.65),
-      ),
-    );
-  }
-}
-
-class _GuideLine extends StatelessWidget {
-  const _GuideLine({
-    required this.text,
-    required this.style,
-    required this.background,
-  });
-
-  final String text;
-  final TextStyle style;
-  final Color background;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 2),
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(text, style: style),
-    );
+  String _guideLanguageLabel(AppLocalizations l10n, String assetPath) {
+    return switch (GuideAssets.languageForAsset(assetPath)) {
+      'zh' => l10n.tr('guideLanguageSimplifiedChinese'),
+      'zh_Hant' => l10n.tr('guideLanguageTraditionalChinese'),
+      _ => l10n.tr('guideLanguageEnglish'),
+    };
   }
 }

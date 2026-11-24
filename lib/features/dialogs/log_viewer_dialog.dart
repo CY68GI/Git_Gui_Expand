@@ -77,7 +77,7 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            l10n.tr('软件操作日志'),
+                            l10n.tr('applicationLogs'),
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.w700,
@@ -100,14 +100,14 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                     ),
                     IconButton(
                       onPressed: _refresh,
-                      tooltip: l10n.tr('刷新日志'),
+                      tooltip: l10n.tr('refreshLogs'),
                       icon: const Icon(Icons.refresh_rounded, size: 19),
                     ),
                     const SizedBox(width: 4),
                     OutlinedButton.icon(
                       onPressed: _openFolder,
                       icon: const Icon(Icons.folder_open_rounded, size: 16),
-                      label: Text(l10n.tr('打开目录')),
+                      label: Text(l10n.tr('openFolder')),
                     ),
                   ],
                 ),
@@ -118,11 +118,11 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                   tabs: [
                     Tab(
                       icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                      text: l10n.tr('普通日志'),
+                      text: l10n.tr('normalLog'),
                     ),
                     Tab(
                       icon: const Icon(Icons.manage_search_rounded, size: 18),
-                      text: l10n.tr('详细日志'),
+                      text: l10n.tr('detailedLog'),
                     ),
                   ],
                 ),
@@ -142,13 +142,13 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
                         _LogPane(
                           text: data?.normal ?? '',
                           emptyMessage: l10n.tr(
-                            '还没有普通日志。执行打开仓库、文件操作或提交后会记录关键事件。',
+                            'noNormalLogYetOpeningARepositoryAndGitActionsCreateKeyEvents',
                           ),
                         ),
                         _LogPane(
                           text: data?.detailed ?? '',
                           emptyMessage: l10n.tr(
-                            '还没有详细日志。详细日志会记录选择、导航和每一条 Git 命令。',
+                            'noDetailedLogYetSelectionNavigationAndEveryGitCommandAreRecordedHere',
                           ),
                         ),
                       ],
@@ -162,7 +162,7 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.tr('关闭')),
+            child: Text(l10n.tr('close')),
           ),
         ],
       ),
@@ -170,7 +170,7 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
   }
 
   void _refresh() {
-    _log.detail('logs', '用户刷新日志查看器');
+    _log.detailEvent('logs', 'logs.viewer.refreshed');
     setState(_load);
   }
 
@@ -181,7 +181,9 @@ class _LogViewerDialogState extends State<LogViewerDialog> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(context.l10n.tr('无法打开日志目录：{error}', {'error': error})),
+          content: Text(
+            context.l10n.tr('unableToOpenLogsFolder', {'error': error}),
+          ),
         ),
       );
     }

@@ -2,6 +2,9 @@
 
 Languages: English | [简体中文](USER_GUIDE.zh-CN.md) | [繁體中文](USER_GUIDE.zh-TW.md)
 
+> The guide is rendered as formatted Markdown. Links are interactive, text is
+> selectable, and wide code or tables scroll instead of clipping.
+
 ## 1. Plan before execution
 
 Git GUI Expand does not immediately move, rename, delete, commit, push, or clear
@@ -24,6 +27,8 @@ same check runs before each later step against the state produced by earlier
 steps. If an external tool changed that state, nothing in the affected step
 runs. Review the displayed drift details, then use **Refresh repository and
 rebuild plan**.
+
+![Pending operation plan](images/operation-plan.png)
 
 ## 2. Opening a repository
 
@@ -278,6 +283,31 @@ Logs are stored in `userdata/logs` beneath the software directory.
 - Do not use remote history clearing as a normal cleanup command.
 - Check protected-branch settings before clearing remote history.
 - Keep Git credentials and the software directory under your control.
+
+## 13. Guide formatting and safe links
+
+This section demonstrates the supported rendering path. **Bold text**,
+*italic text*, ~~strikethrough~~, `inline code`, and escaped Markdown such as
+\*literal asterisks\* remain readable and selectable.
+
+> Guide links are limited to HTTPS addresses, bundled guide documents, and
+> heading anchors in the current document.
+
+| Element | Rendered behavior |
+| --- | --- |
+| Links | Keyboard-focusable and opened through an approved action |
+| Code | Preserved whitespace with horizontal scrolling |
+| Tables | Width-safe scrolling on narrow windows |
+
+[Open the project repository](https://github.com/CY68GI/Git_Gui_Expand) or
+[read the Simplified Chinese guide](USER_GUIDE.zh-CN.md). Use
+[Back to the commit workspace](#4-commit-workspace) for an internal heading link.
+
+```powershell
+git status
+git add -A
+git commit -m "Documentation example"
+```
 
 ## Acknowledgements
 

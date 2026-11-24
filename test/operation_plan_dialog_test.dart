@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:git_gui_expand/core/localization/runtime_messages.dart';
 import 'package:git_gui_expand/core/models/operation_plan.dart';
 import 'package:git_gui_expand/core/models/operation_safety.dart';
 import 'package:git_gui_expand/features/dialogs/operation_plan_dialog.dart';
+
+import 'support/localized_message_fixture.dart';
 
 void main() {
   testWidgets('operation plan presenter can cancel without executing', (
@@ -13,7 +16,7 @@ void main() {
 
     await tester.tap(find.text('Open plan'));
     await tester.pumpAndSettle();
-    expect(find.text('Demo operation'), findsOneWidget);
+    expect(find.text('暂存全部更改'), findsOneWidget);
 
     await tester.tap(find.text('关闭'));
     await tester.pumpAndSettle();
@@ -41,7 +44,7 @@ void main() {
       [operation],
       nextResult: OperationPlanResult(
         isSuccess: false,
-        message: '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。',
+        message: RuntimeMessages.messageFor('planStateChanged'),
         completed: 0,
         total: 1,
         remaining: [operation],
@@ -112,7 +115,7 @@ class _FakePlanHost implements OperationPlanHost {
   OperationOutcome clearPendingOperations() {
     final count = pendingOperations.length;
     pendingOperations = const [];
-    return OperationOutcome.success('Cleared $count');
+    return OperationOutcome.success(fixtureMessage('Cleared $count'));
   }
 
   @override
@@ -131,7 +134,7 @@ class _FakePlanHost implements OperationPlanHost {
     pendingOperations = const [];
     return OperationPlanResult(
       isSuccess: true,
-      message: 'Executed $total',
+      message: fixtureMessage('Executed $total'),
       completed: total,
       total: total,
       remaining: const [],
@@ -143,7 +146,7 @@ class _FakePlanHost implements OperationPlanHost {
     pendingOperations = pendingOperations
         .where((operation) => operation.id != id)
         .toList(growable: false);
-    return const OperationOutcome.success('Removed');
+    return OperationOutcome.success(fixtureMessage('Removed'));
   }
 
   @override
@@ -156,8 +159,8 @@ PlannedRepositoryOperation _operation() {
   return PlannedRepositoryOperation(
     id: 'demo',
     kind: PlannedOperationKind.stageAll,
-    title: 'Demo operation',
-    description: 'No repository is required to present this plan.',
-    run: () async => const OperationOutcome.success('Done'),
+    title: RuntimeMessages.messageFor('planTitleStageAll'),
+    description: RuntimeMessages.messageFor('planDescriptionStageAll'),
+    run: () async => OperationOutcome.success(fixtureMessage('Done')),
   );
 }

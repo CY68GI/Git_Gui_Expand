@@ -25,7 +25,11 @@ class FolderPickerService {
     if (!Platform.isWindows) {
       throw UnsupportedError('当前版本仅支持 Windows 文件夹选择。');
     }
-    _log.detail('dialog', '打开 Windows“打开”对话框，初始目录=${initialDirectory ?? '无'}');
+    _log.detailEvent(
+      'dialog',
+      'dialog.folderPicker.opened',
+      details: {'initialDirectory': initialDirectory ?? ''},
+    );
 
     final dataDirectory = await storage.ensureDataDirectory();
     final resultFile = File(
@@ -73,11 +77,15 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         );
       }
       if (!await resultFile.exists()) {
-        _log.detail('dialog', '文件夹选择器已取消');
+        _log.detailEvent('dialog', 'dialog.folderPicker.cancelled');
         return null;
       }
       final path = (await resultFile.readAsString()).trim();
-      _log.detail('dialog', '“打开”对话框返回：$path');
+      _log.detailEvent(
+        'dialog',
+        'dialog.folderPicker.completed',
+        details: {'path': path},
+      );
       return path.isEmpty ? null : path;
     } finally {
       if (await resultFile.exists()) {
@@ -91,7 +99,11 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
     if (!await Directory(directory).exists()) {
       throw FileSystemException('项目目录不存在', directory);
     }
-    _log.info('system', '打开项目目录：$directory');
+    _log.infoEvent(
+      'system',
+      'system.projectDirectory.open',
+      details: {'path': directory},
+    );
     if (Platform.isWindows) {
       await Process.start(
         'explorer.exe',
@@ -127,7 +139,7 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
     if (!await File(file).exists()) {
       throw FileSystemException('文件不存在', file);
     }
-    _log.detail('system', '在文件资源管理器中定位文件：$file');
+    _log.detailEvent('system', 'system.file.reveal', details: {'path': file});
     if (Platform.isWindows) {
       await Process.start(
         'explorer.exe',
@@ -164,7 +176,11 @@ if (\$dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
     if (!await File(file).exists()) {
       throw FileSystemException('文件不存在', file);
     }
-    _log.info('system', '使用默认打开方式打开文件：$file');
+    _log.infoEvent(
+      'system',
+      'system.file.openDefault',
+      details: {'path': file},
+    );
     if (Platform.isWindows) {
       final result = await Process.run(
         'powershell.exe',

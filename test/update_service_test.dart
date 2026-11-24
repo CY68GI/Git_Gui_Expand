@@ -4,7 +4,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/core/services/app_log_service.dart';
 import 'package:git_gui_expand/core/services/app_storage_service.dart';
 import 'package:git_gui_expand/core/services/update_installer_service.dart';
+import 'package:git_gui_expand/core/localization/runtime_messages.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
+
+import 'support/localized_message_fixture.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -48,6 +51,37 @@ void main() {
     expect(asset.size, 123);
   });
 
+  test('prefers the standard package when both package types exist', () {
+    final assets = [
+      {
+        'name': 'Git_Gui_Expand-v0.10.0-windows-x64-PortableGit.zip',
+        'browser_download_url': 'https://github.com/CY68GI/Git_Gui_Expand/releases/download/v0.10.0/portable.zip',
+        'digest': 'sha256:${_repeat('a')}',
+        'size': 200,
+      },
+      {
+        'name': 'Git_Gui_Expand-v0.10.0-windows-x64.zip',
+        'browser_download_url': 'https://github.com/CY68GI/Git_Gui_Expand/releases/download/v0.10.0/standard.zip',
+        'digest': 'sha256:${_repeat('b')}',
+        'size': 100,
+      },
+    ];
+
+    final selected = service.selectWindowsAsset(assets);
+    final standardDigest = service.extractSha256ForAsset(
+      assets,
+      'Git_Gui_Expand-v0.10.0-windows-x64.zip',
+    );
+    final portableDigest = service.extractSha256ForAsset(
+      assets,
+      'Git_Gui_Expand-v0.10.0-windows-x64-PortableGit.zip',
+    );
+
+    expect(selected?.name, 'Git_Gui_Expand-v0.10.0-windows-x64.zip');
+    expect(standardDigest, _repeat('b'));
+    expect(portableDigest, _repeat('a'));
+  });
+
   test('selects a Gitee Windows release asset and checksum text', () {
     final hash = _repeat('e');
     final asset = service.selectWindowsAsset([
@@ -86,6 +120,29 @@ void main() {
     ]);
     expect(asset?.sha256, isEmpty);
   });
+
+  test(
+    'refuses automatic installation when no trusted digest exists',
+    () async {
+      final installer = UpdateInstallerService(
+        storage: AppStorageService(
+          softwareDirectoryOverride: temporaryDirectory.path,
+        ),
+      );
+      final release = UpdateCheckResult(
+        status: UpdateCheckStatus.updateAvailable,
+        message: RuntimeMessages.messageFor('updateAvailableGithub'),
+        latestVersion: '1.0.0',
+        assetName: 'Git_Gui_Expand-v1.0.0-windows-x64.zip',
+        downloadUrl: 'https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases/download/v1.0.0/package.zip',
+      );
+
+      final result = await installer.install(release, onProgress: (_) {});
+
+      expect(result.success, isFalse);
+      expect(fixtureText(result.message), contains('valid SHA-256'));
+    },
+  );
 
   test('extracts SHA-256 from release asset HTML as API fallback', () {
     final hash = _repeat('d');
@@ -155,7 +212,7 @@ void main() {
     expect(launcherSource, contains('Removed downloaded update artifact'));
     expect(launcherSource, contains('TryBuildFlatLaunchPlan'));
     expect(launcherSource, contains('0xEF'));
-    expect(installerSource, contains('已清理下载的更新包和临时解压目录'));
+    expect(installerSource, contains('update.package.cleanup.completed'));
     expect(installerSource, contains('await _deleteFileIfExists(archive)'));
     expect(
       installerSource,
@@ -224,6 +281,15 @@ void main() {
     expect(notes, contains('v0.4.0 到 v0.5.0 之間的更新'));
     expect(notes, contains('- feat: add verified automatic updates'));
     expect(notes, isNot(contains('## 0.2.1')));
+    expect(
+      notes.indexOf('Git_Gui_Expand-v0.5.0-windows-x64.zip'),
+      lessThan(
+        notes.indexOf('Git_Gui_Expand-v0.5.0-windows-x64-PortableGit.zip'),
+      ),
+    );
+    expect(notes, contains('PortableGit-2.56.1-64-bit-runtime.zip'));
+    expect(notes, contains('No separate'));
+    expect(notes, isNot(contains('.zip.sha256')));
   });
 
   test('Gitee upload script parses successfully', () async {

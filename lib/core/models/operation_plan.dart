@@ -1,3 +1,4 @@
+import '../localization/localized_message.dart';
 import 'operation_safety.dart';
 
 class OperationOutcome {
@@ -5,7 +6,7 @@ class OperationOutcome {
   const OperationOutcome.failure(this.message) : isSuccess = false;
 
   final bool isSuccess;
-  final String message;
+  final LocalizedMessage message;
 }
 
 enum PlannedOperationKind {
@@ -55,8 +56,8 @@ class PlannedRepositoryOperation {
 
   final String id;
   final PlannedOperationKind kind;
-  final String title;
-  final String description;
+  final LocalizedMessage title;
+  final LocalizedMessage description;
   final bool isDangerous;
   final bool isExclusive;
   final String? strongConfirmationText;
@@ -69,8 +70,8 @@ class PlannedRepositoryOperation {
 
   PlannedRepositoryOperation copyWith({
     String? id,
-    String? title,
-    String? description,
+    LocalizedMessage? title,
+    LocalizedMessage? description,
     bool? isDangerous,
     bool? isExclusive,
     String? strongConfirmationText,
@@ -103,7 +104,7 @@ class OperationPlanProgress {
 
   final int step;
   final int total;
-  final String title;
+  final LocalizedMessage title;
 }
 
 class OperationPlanResult {
@@ -117,7 +118,7 @@ class OperationPlanResult {
   });
 
   final bool isSuccess;
-  final String message;
+  final LocalizedMessage message;
   final int completed;
   final int total;
   final List<PlannedRepositoryOperation> remaining;

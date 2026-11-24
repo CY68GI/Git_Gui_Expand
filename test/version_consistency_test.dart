@@ -17,13 +17,13 @@ void main() {
     final changelog = await File('$root${Platform.pathSeparator}CHANGELOG.md')
         .readAsString();
 
-    expect(AppInfo.version, '0.9.9');
-    expect(pubspec, contains('version: 0.9.9+22'));
-    expect(launcher, contains('FILEVERSION 0,9,9,22'));
-    expect(launcher, contains('PRODUCTVERSION 0,9,9,22'));
-    expect(launcher, contains('VALUE "FileVersion", "0.9.9.22"'));
-    expect(launcher, contains('VALUE "ProductVersion", "0.9.9.22"'));
-    expect(changelog, contains('## 0.9.9 - 2026-11-23'));
+    expect(AppInfo.version, '0.10.0');
+    expect(pubspec, contains('version: 0.10.0+23'));
+    expect(launcher, contains('FILEVERSION 0,10,0,23'));
+    expect(launcher, contains('PRODUCTVERSION 0,10,0,23'));
+    expect(launcher, contains('VALUE "FileVersion", "0.10.0.23"'));
+    expect(launcher, contains('VALUE "ProductVersion", "0.10.0.23"'));
+    expect(changelog, contains('## 0.10.0 - 2026-11-24'));
     expect(builtInChangelog.first.version, AppInfo.version);
   });
 }

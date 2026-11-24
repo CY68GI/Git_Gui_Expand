@@ -8,6 +8,7 @@ import 'core/services/app_log_service.dart';
 import 'core/services/app_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/project/project_page.dart';
+import 'l10n/app_l10n.dart';
 
 class GitGuiExpandApp extends StatefulWidget {
   const GitGuiExpandApp({
@@ -43,9 +44,13 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
     );
     WidgetsBinding.instance.addObserver(this);
     const storage = AppStorageService();
-    AppLogService.instance.info(
+    AppLogService.instance.infoEvent(
       'app',
-      'Git GUI Expand v${AppInfo.version} 启动；软件目录=${storage.softwareDirectory}',
+      'application.startup',
+      details: {
+        'version': AppInfo.version,
+        'softwareDirectory': storage.softwareDirectory,
+      },
     );
   }
 
@@ -59,9 +64,10 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
   void didChangePlatformBrightness() {
     final brightness =
         WidgetsBinding.instance.platformDispatcher.platformBrightness;
-    AppLogService.instance.detail(
+    AppLogService.instance.detailEvent(
       'theme',
-      '设备外观变化：${brightness.name}；当前模式=$_themeMode',
+      'application.brightness.changed',
+      details: {'brightness': brightness.name, 'mode': '$_themeMode'},
     );
     if (_themeMode == ThemeMode.system) {
       setState(() {});
@@ -104,7 +110,7 @@ class _GitGuiExpandAppState extends State<GitGuiExpandApp>
       },
       supportedLocales: AppLocalizations.supportedLocales,
       localizationsDelegates: const [
-        AppLocalizations.delegate,
+        AppL10n.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

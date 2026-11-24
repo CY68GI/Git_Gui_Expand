@@ -22,7 +22,7 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 檔案工作區操作已初始化的 Git 儲存庫。檔案與版本控制變更都交由本機 Git CLI
 執行，軟體提供可視化操作，不會自行取代 Git。
 
-目前版本：`0.9.9`
+目前版本：`0.10.0`
 
 - GitHub：<https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee：<https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -111,6 +111,22 @@ Git GUI Expand 是一套以 Windows 為優先的 Flutter 桌面應用程式，�
 
 Linux 與 macOS 目錄目前僅作預留，尚未建置或驗證。
 
+## 下載選擇
+
+請從 [GitHub Releases](https://github.com/CY68GI/Git_Gui_Expand/releases)
+或 [Gitee Releases](https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases) 下載。
+
+1. `Git_Gui_Expand-<tag>-windows-x64.zip`：建議使用的標準套件，需要自行從
+   <https://git-scm.com/download/win> 安裝 Git。軟體一律優先使用系統中有效的 Git。
+2. `Git_Gui_Expand-<tag>-windows-x64-PortableGit.zip`：包含固定版本
+   PortableGit，適合無法另外安裝 Git 的電腦。
+3. `PortableGit-<版本>-64-bit-runtime.zip`：獨立的 PortableGit 執行環境更新套件。
+
+建議使用標準套件，讓系統 Git、SSH 與認證管理員依原本方式維護。
+PortableGit 套件可在「設定 → Git」中將穩定的
+`runtime/git/current/cmd` 加入目前使用者或系統 `PATH`。每次修改前都會備份，
+而且只會移除軟體管理的那個項目。
+
 ## 建置與測試
 
 ```powershell
@@ -129,7 +145,7 @@ build\windows\x64\runner\Release\
 建立發布 ZIP：
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.9
+.\tool\package_windows_release.ps1 -Tag v0.10.0
 ```
 
 ## 發布目錄結構
@@ -139,7 +155,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.9/
+    0.10.0/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe
@@ -171,7 +187,9 @@ atomic push 加逐引用 `--force-with-lease` 執行，還必須準確輸入
 ## 自動更新與版本保留
 
 更新頁面可選擇 GitHub 或 Gitee Release；中國大陸網路建議使用 Gitee。
-Gitee Release 同時提供 ZIP 和 SHA-256 校驗檔案。
+新版 Release 不再上傳個別 `.sha256` 檔案，更新器會從 GitHub Release
+資產中繼資料讀取 SHA-256。使用 Gitee 鏡像下載時，會按相同標籤和相同資產名稱
+比對 GitHub 摘要。無法取得可信摘要時會停用自動安裝，並保留「開啟發布頁」。
 
 Launcher 會下載並驗證 Windows x64 ZIP，解壓縮到獨立版本目錄，應用程式結束後
 切換版本。新版本未通過啟動檢查時會自動回滾。
@@ -182,6 +200,10 @@ Launcher 會下載並驗證 Windows x64 ZIP，解壓縮到獨立版本目錄，�
 應用程式啟動時也會主動執行清理。由於舊 Launcher 無法自行更新，發布包會在版本
 目錄攜帶維護用 Launcher；目前應用程式結束後，維護助手會重試覆蓋根目錄
 `GitGuiExpandLauncher.exe`，確保後續啟動使用新版 Launcher。
+
+PortableGit 會獨立保存在 `runtime/git/versions/PortableGit-<版本>-64-bit`，
+`runtime/git/current.json` 記錄目前與上一個執行環境。授權、第三方聲明與原始碼取得
+說明請見 [PortableGit 說明](docs/PORTABLEGIT.md)。
 
 ## 文件
 

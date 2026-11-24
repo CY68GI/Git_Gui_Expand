@@ -31,7 +31,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
             children: [
               Icon(Icons.sync_rounded, color: colors.primary),
               const SizedBox(width: 9),
-              Expanded(child: Text(l10n.tr('分支同步'))),
+              Expanded(child: Text(l10n.tr('branchSynchronization'))),
               IconButton(
                 onPressed: controller.isBusy || _busy
                     ? null
@@ -39,7 +39,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
                         await controller.refresh();
                         if (mounted) setState(() {});
                       },
-                tooltip: l10n.tr('刷新同步状态'),
+                tooltip: l10n.tr('refreshSynchronizationState'),
                 icon: const Icon(Icons.refresh_rounded, size: 18),
               ),
             ],
@@ -72,7 +72,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
                           ? null
                           : () => _run(() => controller.fetchCurrentUpstream()),
                       icon: const Icon(Icons.download_rounded, size: 17),
-                      label: Text(l10n.tr('获取当前 upstream')),
+                      label: Text(l10n.tr('fetchCurrentUpstream')),
                     ),
                     OutlinedButton.icon(
                       key: const Key('repository-sync-fetch-all'),
@@ -83,7 +83,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
                           ? null
                           : () => _run(controller.fetchAllRemotes),
                       icon: const Icon(Icons.cloud_download_outlined, size: 17),
-                      label: Text(l10n.tr('获取全部远端')),
+                      label: Text(l10n.tr('fetchAllRemotes')),
                     ),
                     FilledButton.icon(
                       key: const Key('repository-sync-pull'),
@@ -92,15 +92,14 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
                           ? null
                           : () => _run(controller.pullCurrentBranchFastForward),
                       icon: const Icon(Icons.merge_type_rounded, size: 17),
-                      label: Text(l10n.tr('安全快进 Pull')),
+                      label: Text(l10n.tr('safeFastForwardPull')),
                     ),
                   ],
                 ),
                 const SizedBox(height: 14),
                 Text(
                   l10n.tr(
-                    'Pull 会先 Fetch 并重新检查 ahead/behind，只允许快进，'
-                    '不会自动创建 Merge 提交；工作区或索引不干净时禁止 Pull。',
+                    'pullFetchesAndRechecksAheadBehindAllowsFastForwardOnlyNeverCreatesAMergeCommitAndIsDisabledForADirtyWorktreeOrIndex',
                   ),
                   style: TextStyle(
                     fontSize: 12,
@@ -116,7 +115,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
               onPressed: controller.isBusy || _busy
                   ? null
                   : () => Navigator.pop(context),
-              child: Text(l10n.tr('关闭')),
+              child: Text(l10n.tr('close')),
             ),
           ],
         );
@@ -133,7 +132,7 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
     final colors = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(context.l10n.tr(outcome.message)),
+        content: Text(outcome.message.resolve(context.l10n)),
         backgroundColor: outcome.isSuccess ? colors.primary : colors.error,
         closeIconColor: outcome.isSuccess ? colors.onPrimary : colors.onError,
         showCloseIcon: true,
@@ -150,31 +149,36 @@ class _RepositorySyncDialogState extends State<RepositorySyncDialog> {
   String? _guidance(BranchSyncState? state) {
     final l10n = context.l10n;
     if (state == null) {
-      return l10n.tr('无法读取分支同步状态。请刷新后重试。');
+      return l10n.tr(
+        'unableToReadBranchSynchronizationStateRefreshAndTryAgain',
+      );
     }
     if (state.isDetached) {
-      return l10n.tr('当前处于 detached HEAD，不能 Fetch 当前 upstream 或 Pull。');
+      return l10n.tr('detachedHeadCannotFetchCurrentUpstreamOrPullABranch');
     }
     if (state.isUnborn) {
-      return l10n.tr('当前分支尚无提交，不能 Pull。');
+      return l10n.tr('theCurrentBranchHasNoCommitAndCannotBePulled');
     }
     if (!state.hasUpstream) {
-      return l10n.tr('当前分支没有 upstream。可获取全部远端，但 Pull 前需要配置跟踪分支。');
+      return l10n.tr(
+        'theCurrentBranchHasNoUpstreamFetchAllIsAvailableButPullRequiresTracking',
+      );
     }
     if (!state.worktreeClean) {
-      return l10n.tr('工作区或索引不干净。请先提交或 Stash 更改，再执行安全 Pull。');
+      return l10n.tr(
+        'theWorktreeOrIndexIsDirtyCommitOrStashChangesBeforeSafePull',
+      );
     }
     if (state.relation == BranchSyncRelation.diverged) {
       return l10n.tr(
-        '本地分支与 upstream 已分叉。软件不会自动 Merge 或 Rebase，'
-        '请先使用外部 Git 处理分叉。',
+        'localAndUpstreamHistoriesHaveDivergedTheAppWillNotMergeOrRebaseAutomaticallyResolveTheDivergenceInExternalGitFirst',
       );
     }
     if (state.relation == BranchSyncRelation.ahead) {
-      return l10n.tr('本地分支有未推送提交，当前不需要 Pull。');
+      return l10n.tr('theLocalBranchHasUnpushedCommitsAndDoesNotNeedPull');
     }
     if (state.relation == BranchSyncRelation.upToDate) {
-      return l10n.tr('当前分支已经与 upstream 同步。');
+      return l10n.tr('theCurrentBranchIsSynchronizedWithUpstream');
     }
     return null;
   }
@@ -206,7 +210,7 @@ class _SyncStatusCard extends StatelessWidget {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 10),
-                Text(l10n.tr('正在读取同步状态…')),
+                Text(l10n.tr('readingSynchronizationState')),
               ],
             )
           : Column(
@@ -216,11 +220,11 @@ class _SyncStatusCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _StatusValue(
-                        label: l10n.tr('当前分支'),
+                        label: l10n.tr('currentBranch'),
                         value: sync.isDetached
-                            ? l10n.tr('detached HEAD')
+                            ? l10n.tr('detachedHead')
                             : sync.branch.isEmpty
-                            ? l10n.tr('尚无可提交分支')
+                            ? l10n.tr('noCommittedBranchYet')
                             : sync.branch,
                       ),
                     ),
@@ -229,7 +233,7 @@ class _SyncStatusCard extends StatelessWidget {
                         label: l10n.tr('upstream'),
                         value: sync.hasUpstream
                             ? sync.upstreamRef
-                            : l10n.tr('未配置'),
+                            : l10n.tr('notConfigured'),
                       ),
                     ),
                   ],
@@ -239,14 +243,14 @@ class _SyncStatusCard extends StatelessWidget {
                   children: [
                     _CountTile(
                       icon: Icons.arrow_upward_rounded,
-                      label: l10n.tr('待推送'),
+                      label: l10n.tr('ahead'),
                       value: '${sync.ahead}',
                       color: colors.tertiary,
                     ),
                     const SizedBox(width: 10),
                     _CountTile(
                       icon: Icons.arrow_downward_rounded,
-                      label: l10n.tr('待拉取'),
+                      label: l10n.tr('behind'),
                       value: '${sync.behind}',
                       color: colors.primary,
                     ),
@@ -255,10 +259,10 @@ class _SyncStatusCard extends StatelessWidget {
                       icon: sync.worktreeClean
                           ? Icons.check_circle_outline_rounded
                           : Icons.warning_amber_rounded,
-                      label: l10n.tr('工作区'),
+                      label: l10n.tr('worktree'),
                       value: sync.worktreeClean
-                          ? l10n.tr('干净')
-                          : l10n.tr('有更改'),
+                          ? l10n.tr('clean')
+                          : l10n.tr('changed'),
                       color: sync.worktreeClean ? colors.primary : colors.error,
                     ),
                   ],

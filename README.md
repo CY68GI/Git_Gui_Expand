@@ -23,7 +23,7 @@ an existing Git repository through a dual-pane file workspace. File and history
 changes run through the local Git CLI; the application is a visual layer over
 Git rather than a replacement implementation.
 
-Current version: `0.9.9`
+Current version: `0.10.0`
 
 - GitHub: <https://github.com/CY68GI/Git_Gui_Expand>
 - Gitee: <https://gitee.com/CY68EWZRY/Git_Gui_Expand>
@@ -142,8 +142,29 @@ build\windows\x64\runner\Release\
 Create the distributable ZIP with:
 
 ```powershell
-.\tool\package_windows_release.ps1 -Tag v0.9.9
+.\tool\package_windows_release.ps1 -Tag v0.10.0
 ```
+
+## Downloads
+
+Download releases from [GitHub Releases](https://github.com/CY68GI/Git_Gui_Expand/releases)
+or [Gitee Releases](https://gitee.com/CY68EWZRY/Git_Gui_Expand/releases).
+
+1. `Git_Gui_Expand-<tag>-windows-x64.zip` is the recommended standard package.
+   Install Git for Windows from <https://git-scm.com/download/win>; the app
+   always prefers a valid system Git.
+2. `Git_Gui_Expand-<tag>-windows-x64-PortableGit.zip` includes the pinned
+   PortableGit runtime and is intended for computers where Git cannot be
+   installed separately.
+3. `PortableGit-<version>-64-bit-runtime.zip` is the independent runtime update
+   package.
+
+The standard package is recommended because it lets Windows and the user keep
+Git, SSH, and credential-manager updates under their normal maintenance.
+The PortableGit package can optionally add its stable
+`runtime/git/current/cmd` directory to the current-user or system `PATH` from
+Settings → Git. It backs up PATH before every change and can remove only the
+managed entry.
 
 ## Release layout
 
@@ -152,7 +173,7 @@ Git GUI Expand/
   GitGuiExpandLauncher.exe
   current-version.txt
   versions/
-    0.9.9/
+    0.10.0/
       maintenance/
         GitGuiExpandLauncher.exe
       git_gui_expand.exe
@@ -197,8 +218,11 @@ per-ref leases so changed known refs abort before target replacement.
 ## Updates
 
 The update page supports both GitHub and Gitee as release sources. Choose Gitee
-for networks in mainland China. Gitee releases include the ZIP and a companion
-SHA-256 file.
+for networks in mainland China. New releases do not publish separate `.sha256`
+assets; the updater reads SHA-256 from the GitHub release asset metadata. When
+the package bytes are downloaded from the Gitee mirror, the same GitHub tag and
+asset name provide the expected digest. If no trusted digest is available,
+automatic installation is disabled and the release page remains available.
 
 The Launcher downloads and verifies a Windows x64 ZIP, extracts the new version
 to `versions/<version>`, and switches versions after the running application
@@ -225,6 +249,7 @@ provided in English, Simplified Chinese, and Traditional Chinese.
 - [简体中文使用指南](docs/USER_GUIDE.zh-CN.md)
 - [繁體中文使用指南](docs/USER_GUIDE.zh-TW.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [PortableGit notices](docs/PORTABLEGIT.md)
 - [Interaction design](docs/UX.md)
 
 ## Acknowledgements

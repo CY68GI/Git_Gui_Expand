@@ -5,12 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:git_gui_expand/app.dart';
 import 'package:git_gui_expand/core/constants/app_info.dart';
 import 'package:git_gui_expand/core/localization/app_localizations.dart';
+import 'package:git_gui_expand/core/localization/runtime_messages.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/recent_repository.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/models/settings_models.dart';
 import 'package:git_gui_expand/core/services/font_catalog_service.dart';
 import 'package:git_gui_expand/core/services/executable_version_service.dart';
+import 'package:git_gui_expand/core/services/git_runtime_service.dart';
 import 'package:git_gui_expand/core/services/installation_maintenance_service.dart';
 import 'package:git_gui_expand/core/services/update_service.dart';
 import 'package:git_gui_expand/core/theme/app_theme.dart';
@@ -26,7 +28,11 @@ import 'package:git_gui_expand/features/dialogs/user_guide_dialog.dart';
 import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 import 'package:git_gui_expand/features/start/start_view.dart';
+
+import 'support/localized_message_fixture.dart';
+
 import 'package:git_gui_expand/features/project/widgets/app_outcome_snack_bar.dart';
+import 'package:git_gui_expand/l10n/app_l10n.dart';
 
 void main() {
   testWidgets('start screen presents repository opening workflow', (
@@ -155,7 +161,7 @@ void main() {
         locale: AppLocalizations.english,
         supportedLocales: AppLocalizations.supportedLocales,
         localizationsDelegates: const [
-          AppLocalizations.delegate,
+          AppL10n.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
@@ -166,7 +172,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(
-      find.text('Branch sync, safe fast-forward pull, and commit identity checks'),
+      find.text('Structured runtime messages, Markdown guides, and safe links'),
       findsOneWidget,
     );
     expect(find.text('v0.9.6'), findsNothing);
@@ -214,6 +220,7 @@ void main() {
     expect(find.byType(Scrollbar), findsWidgets);
     expect(find.text('外观设置'), findsOneWidget);
     expect(find.text('单位设置'), findsOneWidget);
+    expect(find.text('Git'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField), '思源');
     await tester.pump();
@@ -256,9 +263,130 @@ void main() {
     );
     expect(find.text('一键发送到桌面'), findsOneWidget);
     expect(find.text('扫描旧版本与安装包'), findsOneWidget);
-    expect(find.text('0.9.9+22'), findsOneWidget);
-    expect(find.text('0.9.9.22'), findsOneWidget);
+    expect(find.text('0.10.0+23'), findsOneWidget);
+    expect(find.text('0.10.0.23'), findsOneWidget);
     expect(find.text('本项目使用 MIT License 开源许可证。'), findsOneWidget);
+  });
+
+  testWidgets(
+    'Settings Git page shows system, bundled and unavailable states',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(1100, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final checkedAt = DateTime.utc(2026, 11, 23, 8, 30);
+
+      Future<void> pumpStatus(GitRuntimeStatus status) async {
+        final controller = RepositoryController(
+          runtimeManager: GitRuntimeManager(initialStatus: status),
+        );
+        addTearDown(controller.dispose);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SettingsDialog(
+                controller: controller,
+                fontCatalogService: _FakeFontCatalogService(),
+                initialSection: SettingsSection.git,
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+      }
+
+      await pumpStatus(
+        GitRuntimeStatus.available(
+          source: GitRuntimeSource.system,
+          executablePath: r'C:\Program Files\Git\cmd\git.exe',
+          version: '2.56.1.windows.1',
+          checkedAt: checkedAt,
+        ),
+      );
+      expect(find.text('Git 可用'), findsOneWidget);
+      expect(find.text('系统 Git'), findsOneWidget);
+      expect(find.text('2.56.1.windows.1'), findsOneWidget);
+      expect(find.text(r'C:\Program Files\Git\cmd\git.exe'), findsOneWidget);
+      expect(find.text('加入用户 PATH'), findsNothing);
+
+      await pumpStatus(
+        GitRuntimeStatus.available(
+          source: GitRuntimeSource.bundled,
+          executablePath: r'C:\Software\runtime\git\current\cmd\git.exe',
+          version: '2.50.0',
+          checkedAt: checkedAt,
+        ),
+      );
+      expect(find.text('内置 PortableGit'), findsOneWidget);
+      expect(find.text('2.50.0'), findsOneWidget);
+      expect(find.text('加入用户 PATH'), findsOneWidget);
+      expect(find.text('加入系统 PATH'), findsOneWidget);
+      expect(find.text('从用户 PATH 移除'), findsOneWidget);
+      expect(find.text('从系统 PATH 移除'), findsOneWidget);
+
+      await pumpStatus(
+        GitRuntimeStatus.unavailable(
+          checkedAt: checkedAt,
+          error: 'No Git executable was found.',
+        ),
+      );
+      expect(find.text('Git 不可用'), findsOneWidget);
+      expect(find.text('下载 Git'), findsOneWidget);
+      expect(find.text('重新检测'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('Git status page stays readable in all supported languages', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(1100, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final status = GitRuntimeStatus.unavailable(
+      checkedAt: DateTime.utc(2026, 11, 23),
+      error: 'No Git executable was found.',
+    );
+
+    for (final locale in AppLocalizations.supportedLocales) {
+      final controller = RepositoryController(
+        runtimeManager: GitRuntimeManager(initialStatus: status),
+      );
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppL10n.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: Scaffold(
+            body: SettingsDialog(
+              controller: controller,
+              fontCatalogService: _FakeFontCatalogService(),
+              initialSection: SettingsSection.git,
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      final pageException = tester.takeException();
+      if (pageException is FlutterError) {
+        debugPrint(pageException.toStringDeep());
+      }
+      expect(pageException, isNull, reason: 'locale=${locale.toString()}');
+      final expectedAction = locale.languageCode == 'en'
+          ? 'Check again'
+          : locale.scriptCode == 'Hant'
+          ? '重新偵測'
+          : '重新检测';
+      expect(find.text(expectedAction), findsWidgets);
+    }
   });
 
   testWidgets('remote manager displays multiple repository platforms', (
@@ -312,19 +440,37 @@ void main() {
       PlannedRepositoryOperation(
         id: 'delete-1',
         kind: PlannedOperationKind.delete,
-        title: '删除 2 个项目',
-        description: '将永久删除 docs/readme.md、src/main.dart。',
+        title: RuntimeMessages.messageFor(
+          'planTitleDelete',
+          parameters: {'count': 2},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionDelete',
+          parameters: {'count': 2, 'paths': 'docs/readme.md | src/main.dart'},
+        ),
         isDangerous: true,
-        run: () async => const OperationOutcome.success('deleted'),
+        run: () async => OperationOutcome.success(fixtureMessage('deleted')),
       ),
       PlannedRepositoryOperation(
         id: 'clear-1',
         kind: PlannedOperationKind.clearRemote,
-        title: '清空远端 origin',
-        description: '将删除 3 个分支和 2 个标签。',
+        title: RuntimeMessages.messageFor(
+          'planTitleClearRemote',
+          parameters: {'remote': 'origin'},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionClearRemote',
+          parameters: {
+            'project': 'Git_Gui_Expand',
+            'branch': 'main',
+            'branches': 3,
+            'tags': 2,
+            'message': '仓库已清除',
+          },
+        ),
         isDangerous: true,
         strongConfirmationText: 'CY68GI/Git_Gui_Expand/main',
-        run: () async => const OperationOutcome.success('cleared'),
+        run: () async => OperationOutcome.success(fixtureMessage('cleared')),
       ),
     ];
 
@@ -339,7 +485,7 @@ void main() {
     expect(find.text('确认前仓库不会发生任何改变'), findsNothing);
     expect(find.textContaining('确认前仓库不会发生任何改变'), findsOneWidget);
     expect(find.text('删除 2 个项目'), findsOneWidget);
-    expect(find.text('清空远端 origin'), findsOneWidget);
+    expect(find.text('清空远端历史 origin'), findsOneWidget);
     expect(find.text('危险操作确认'), findsOneWidget);
     expect(find.textContaining('CY68GI/Git_Gui_Expand/main'), findsNWidgets(2));
   });
@@ -360,7 +506,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Git GUI Expand 使用指南'), findsNWidgets(2));
+    expect(find.text('Git GUI Expand 使用指南'), findsOneWidget);
     expect(find.textContaining('所有操作先进入计划'), findsOneWidget);
     expect(find.textContaining('清空远端仓库'), findsWidgets);
   });
@@ -378,7 +524,12 @@ void main() {
               child: FilledButton(
                 onPressed: () => showAppOutcomeSnackBar(
                   context,
-                  const OperationOutcome.success('提交成功'),
+                  OperationOutcome.success(
+                    RuntimeMessages.messageFor(
+                      'commitSucceeded',
+                      eventId: 'test.commit.succeeded',
+                    ),
+                  ),
                 ),
                 child: const Text('显示结果'),
               ),
@@ -392,7 +543,7 @@ void main() {
     await tester.pump();
 
     final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-    final message = tester.widget<Text>(find.text('提交成功'));
+    final message = tester.widget<Text>(find.text('提交已创建。'));
     expect(snackBar.duration, const Duration(seconds: 5));
     expect(snackBar.showCloseIcon, isTrue);
     expect(snackBar.backgroundColor, theme.colorScheme.primary);
@@ -539,9 +690,9 @@ class _FakeUpdateService extends UpdateService {
   Future<UpdateCheckResult> checkForUpdates({
     UpdateSource source = UpdateSource.github,
   }) async {
-    return const UpdateCheckResult(
+    return UpdateCheckResult(
       status: UpdateCheckStatus.updateAvailable,
-      message: '测试更新',
+      message: RuntimeMessages.messageFor('updateAvailableGithub'),
       latestVersion: '0.5.1',
       releaseUrl:
           'https://github.com/CY68GI/Git_Gui_Expand/releases/tag/v0.5.1',
@@ -591,9 +742,9 @@ class _FakeExecutableVersionService extends ExecutableVersionService {
   @override
   Future<ExecutableVersionInfo> load() async {
     return const ExecutableVersionInfo(
-      applicationVersion: '0.9.9+22',
-      launcherVersion: '0.9.9.22',
-      applicationPath: 'C:\\Software\\versions\\0.9.9\\git_gui_expand.exe',
+      applicationVersion: '0.10.0+23',
+      launcherVersion: '0.10.0.23',
+      applicationPath: 'C:\\Software\\versions\\0.10.0\\git_gui_expand.exe',
       launcherPath: 'C:\\Software\\GitGuiExpandLauncher.exe',
     );
   }

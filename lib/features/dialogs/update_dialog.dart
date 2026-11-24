@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_info.dart';
 import '../../core/constants/changelog.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/localized_message.dart';
+import '../../core/localization/runtime_messages.dart';
 import '../../core/services/app_log_service.dart';
 import '../../core/services/update_installer_service.dart';
 import '../../core/services/update_service.dart';
@@ -35,7 +37,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
   bool _isInstalling = false;
   bool _installFailed = false;
   double? _installPercent;
-  String? _installMessage;
+  LocalizedMessage? _installMessage;
   UpdateSource _source = UpdateSource.github;
 
   @override
@@ -102,15 +104,15 @@ class _UpdateDialogState extends State<UpdateDialog> {
                           children: [
                             Text(
                               _isInstalling
-                                  ? l10n.tr('正在自动更新')
+                                  ? l10n.tr('updatingAutomatically')
                                   : _isChecking
-                                  ? l10n.tr('正在检查更新')
-                                  : l10n.tr('更新与发布日志'),
+                                  ? l10n.tr('checkingForUpdates')
+                                  : l10n.tr('updatesAndReleaseNotes'),
                               style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              '${AppInfo.englishName} · ${l10n.tr('当前 v{version}', {'version': AppInfo.version})}',
+                              '${AppInfo.englishName} · ${l10n.tr('currentV', {'version': AppInfo.version})}',
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.onSurfaceVariant,
@@ -134,10 +136,10 @@ class _UpdateDialogState extends State<UpdateDialog> {
                             : const Icon(Icons.refresh_rounded, size: 16),
                         label: Text(
                           _isInstalling
-                              ? l10n.tr('更新中')
+                              ? l10n.tr('updating')
                               : _isChecking
-                              ? l10n.tr('检查中')
-                              : l10n.tr('检查更新'),
+                              ? l10n.tr('checking')
+                              : l10n.tr('checkForUpdates'),
                         ),
                       ),
                     ],
@@ -152,7 +154,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                         children: [
                           Expanded(
                             child: Text(
-                              l10n.tr('更新源'),
+                              l10n.tr('updateSource'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: colors.onSurfaceVariant,
@@ -164,12 +166,12 @@ class _UpdateDialogState extends State<UpdateDialog> {
                             segments: [
                               ButtonSegment(
                                 value: UpdateSource.github,
-                                label: Text(l10n.tr('GitHub')),
+                                label: Text(l10n.tr('github')),
                                 icon: const Icon(Icons.code_rounded, size: 16),
                               ),
                               ButtonSegment(
                                 value: UpdateSource.gitee,
-                                label: Text(l10n.tr('Gitee')),
+                                label: Text(l10n.tr('gitee')),
                                 icon: const Icon(
                                   Icons.cloud_outlined,
                                   size: 16,
@@ -193,8 +195,12 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       const SizedBox(height: 6),
                       Text(
                         _source == UpdateSource.gitee
-                            ? l10n.tr('Gitee 更新源适合中国大陆网络环境。')
-                            : l10n.tr('GitHub 更新源通常获取国际发布版本。'),
+                            ? l10n.tr(
+                                'theGiteeSourceIsSuitedToMainlandChinaNetworks',
+                              )
+                            : l10n.tr(
+                                'githubUsuallyProvidesTheInternationalReleaseBuild',
+                              ),
                         style: TextStyle(
                           fontSize: 11.5,
                           color: colors.onSurfaceVariant,
@@ -211,7 +217,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       ],
                       _SectionTitle(
                         icon: Icons.auto_awesome_rounded,
-                        title: l10n.tr('当前版本亮点'),
+                        title: l10n.tr('currentReleaseHighlights'),
                       ),
                       const SizedBox(height: 9),
                       ...currentEntries.map(_buildChangelogCard),
@@ -219,7 +225,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                         const SizedBox(height: 18),
                         _SectionTitle(
                           icon: Icons.receipt_long_outlined,
-                          title: l10n.tr('线上发布说明'),
+                          title: l10n.tr('onlineReleaseNotes'),
                         ),
                         const SizedBox(height: 9),
                         Container(
@@ -241,10 +247,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       const SizedBox(height: 14),
                       Text(
                         l10n.tr(
-                          '自动更新会从 GitHub 下载 Windows x64 ZIP 并校验 SHA-256，'
-                          '解压到 versions/<版本>。应用退出后由 GitGuiExpandLauncher '
-                          '切换版本并自动重启；新版本启动失败时会回滚。'
-                          '根目录 userdata 和正在运行的版本不会被覆盖。',
+                          'automaticUpdatesDownloadTheWindowsX64ZipFromGithubVerifySha256AndExtractItIntoVersionsVersionTheLauncherSwitchesVersionsAfterExitAndRollsBackIfStartupFailsUserdataIsPreserved',
                         ),
                         style: TextStyle(
                           fontSize: 12,
@@ -270,7 +273,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                       : AppInfo.repositoryUrl,
                 ),
           icon: const Icon(Icons.code_rounded, size: 16),
-          label: Text(l10n.tr('打开仓库')),
+          label: Text(l10n.tr('openRepository2')),
         ),
         if (_result?.releaseUrl.isNotEmpty == true)
           TextButton.icon(
@@ -278,7 +281,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
                 ? null
                 : () => _service.openExternalUrl(_result!.releaseUrl),
             icon: const Icon(Icons.open_in_new_rounded, size: 16),
-            label: Text(l10n.tr('打开发布页')),
+            label: Text(l10n.tr('openReleasePage')),
           ),
         if (_result?.status == UpdateCheckStatus.updateAvailable)
           FilledButton.icon(
@@ -293,11 +296,15 @@ class _UpdateDialogState extends State<UpdateDialog> {
                     ),
                   )
                 : const Icon(Icons.rocket_launch_outlined, size: 17),
-            label: Text(_isInstalling ? l10n.tr('正在安装…') : l10n.tr('立即更新并重启')),
+            label: Text(
+              _isInstalling
+                  ? l10n.tr('installing')
+                  : l10n.tr('updateAndRestartNow'),
+            ),
           ),
         TextButton(
           onPressed: _isInstalling ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('关闭')),
+          child: Text(l10n.tr('close')),
         ),
       ],
     );
@@ -308,20 +315,22 @@ class _UpdateDialogState extends State<UpdateDialog> {
     final l10n = context.l10n;
     final (title, message, icon, color) = switch (result.status) {
       UpdateCheckStatus.updateAvailable => (
-        l10n.tr('发现新版本 v{version}', {'version': result.latestVersion}),
-        result.releaseName.isEmpty ? result.message : result.releaseName,
+        l10n.tr('versionVIsAvailable', {'version': result.latestVersion}),
+        result.releaseName.isEmpty
+            ? result.message.resolve(l10n)
+            : result.releaseName,
         Icons.new_releases_rounded,
         colors.primary,
       ),
       UpdateCheckStatus.upToDate => (
-        l10n.tr('已经是最新版本'),
-        result.message,
+        l10n.tr('youAreUpToDate'),
+        result.message.resolve(l10n),
         Icons.check_circle_outline_rounded,
         colors.primary,
       ),
       UpdateCheckStatus.unavailable => (
-        l10n.tr('暂时无法获取线上版本'),
-        result.message,
+        l10n.tr('unableToRetrieveTheOnlineVersion'),
+        result.message.resolve(l10n),
         Icons.cloud_off_outlined,
         colors.tertiary,
       ),
@@ -393,7 +402,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  _installMessage ?? l10n.tr('正在准备更新…'),
+                  _installMessage?.resolve(l10n) ?? l10n.tr('preparingUpdate'),
                   style: TextStyle(
                     fontSize: 11.5,
                     color: color,
@@ -455,7 +464,9 @@ class _UpdateDialogState extends State<UpdateDialog> {
           ),
           const SizedBox(height: 5),
           Text(
-            context.l10n.tr(entry.title),
+            entry.titleKey.isEmpty
+                ? entry.title
+                : context.l10n.tr(entry.titleKey),
             style: TextStyle(
               fontSize: 12,
               height: 1.4,
@@ -464,8 +475,8 @@ class _UpdateDialogState extends State<UpdateDialog> {
             ),
           ),
           const SizedBox(height: 8),
-          ...entry.items.map(
-            (item) => Padding(
+          ...entry.items.indexed.map(
+            (indexedItem) => Padding(
               padding: const EdgeInsets.only(bottom: 5),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,7 +492,9 @@ class _UpdateDialogState extends State<UpdateDialog> {
                   ),
                   Expanded(
                     child: Text(
-                      context.l10n.tr(item),
+                      indexedItem.$1 < entry.itemKeys.length
+                          ? context.l10n.tr(entry.itemKeys[indexedItem.$1])
+                          : indexedItem.$2,
                       style: const TextStyle(fontSize: 12, height: 1.5),
                     ),
                   ),
@@ -516,7 +529,7 @@ class _UpdateDialogState extends State<UpdateDialog> {
       _isInstalling = true;
       _installFailed = false;
       _installPercent = 0;
-      _installMessage = '正在准备自动更新…';
+      _installMessage = RuntimeMessages.messageFor('updateProgressPreparing');
     });
     final outcome = await _installer.install(
       release,

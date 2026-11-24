@@ -66,7 +66,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (!outcome.isSuccess) {
-      _showMessage(context.l10n.tr(outcome.message), isError: true);
+      _showMessage(outcome.message.resolve(context.l10n), isError: true);
       return;
     }
     await showDialog<void>(
@@ -101,10 +101,10 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
         children: [
           Icon(Icons.inventory_2_outlined, color: colors.primary),
           const SizedBox(width: 9),
-          Expanded(child: Text(l10n.tr('Stash 管理'))),
+          Expanded(child: Text(l10n.tr('stashManagement'))),
           IconButton(
             onPressed: _loading || _busy ? null : _loadStashes,
-            tooltip: l10n.tr('刷新 Stash'),
+            tooltip: l10n.tr('refreshStashes'),
             icon: const Icon(Icons.refresh_rounded, size: 18),
           ),
         ],
@@ -119,8 +119,8 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
               controller: _messageController,
               enabled: !_busy,
               decoration: InputDecoration(
-                labelText: l10n.tr('Stash 说明（可选）'),
-                hintText: l10n.tr('例如 临时保存未完成修改'),
+                labelText: l10n.tr('stashMessageOptional'),
+                hintText: l10n.tr('forExampleTemporarilySaveUnfinishedChanges'),
               ),
             ),
             const SizedBox(height: 8),
@@ -134,7 +134,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
               contentPadding: EdgeInsets.zero,
               controlAffinity: ListTileControlAffinity.leading,
               title: Text(
-                l10n.tr('同时保存未跟踪文件（git stash --include-untracked）'),
+                l10n.tr('alsoSaveUntrackedFilesGitStashIncludeUntracked'),
                 style: const TextStyle(fontSize: 11.5),
               ),
             ),
@@ -150,7 +150,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
                         ),
                       ),
                 icon: const Icon(Icons.add_box_outlined, size: 17),
-                label: Text(l10n.tr('创建 Stash')),
+                label: Text(l10n.tr('createStash')),
               ),
             ),
             const SizedBox(height: 14),
@@ -171,7 +171,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
                     ? Padding(
                         padding: const EdgeInsets.all(20),
                         child: Text(
-                          l10n.tr('当前仓库没有 Stash。'),
+                          l10n.tr('theRepositoryHasNoStashes'),
                           textAlign: TextAlign.center,
                         ),
                       )
@@ -221,7 +221,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
                           () => widget.controller.applyStash(selected.selector),
                         ),
                   icon: const Icon(Icons.merge_type_rounded, size: 17),
-                  label: Text(l10n.tr('应用 Stash')),
+                  label: Text(l10n.tr('applyStash')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy || selected == null
@@ -230,7 +230,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
                           () => widget.controller.popStash(selected.selector),
                         ),
                   icon: const Icon(Icons.unarchive_outlined, size: 17),
-                  label: Text(l10n.tr('弹出 Stash')),
+                  label: Text(l10n.tr('popStash')),
                 ),
                 OutlinedButton.icon(
                   onPressed: _busy || selected == null
@@ -239,7 +239,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
                           () => widget.controller.dropStash(selected.selector),
                         ),
                   icon: const Icon(Icons.delete_outline_rounded, size: 17),
-                  label: Text(l10n.tr('删除 Stash')),
+                  label: Text(l10n.tr('deleteStash')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: colors.error,
                   ),
@@ -252,7 +252,7 @@ class _StashManagementDialogState extends State<StashManagementDialog> {
       actions: [
         TextButton(
           onPressed: _busy ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('关闭')),
+          child: Text(l10n.tr('close')),
         ),
       ],
     );

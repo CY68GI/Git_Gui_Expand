@@ -1,0 +1,1634 @@
+{
+  "@@locale": "en",
+  "appName": "Git GUI Expand",
+  "openRepository": "Open Git repository",
+  "settings": "Settings",
+  "cancel": "Cancel",
+  "saveSettings": "Save settings",
+  "aPlanIsPendingClearOrExecuteItBeforeRemovingGitMetadata": "A plan is pending. Clear or execute it before removing Git metadata.",
+  "aWindowsFirstFlutterGraphicalFileWorkspaceForGit": "A Windows-first Flutter graphical file workspace for Git.",
+  "about": "About",
+  "aboutInformationDoesNotChangeSettings": "About information does not change settings.",
+  "acknowledgements": "Acknowledgements",
+  "addClearOperationToPlan": "Add clear operation to plan",
+  "addClearToPlan": "Add clear to plan",
+  "addCloneToPlan": "Add clone to plan",
+  "addCommitToPlan": "Add commit to plan",
+  "addDeletionOfItemsToThePlan": "Add deletion of {count} items to the plan",
+  "@addDeletionOfItemsToThePlan": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "addDeletionToPlan": "Add deletion to plan",
+  "addGitToPath": "Add Git to PATH",
+  "addPushAllPlan": "Add push-all plan",
+  "addPushAllToThePlan": "Add push-all to the plan",
+  "addPushOfToThePlan": "Add push of {branch} to the plan",
+  "@addPushOfToThePlan": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "addPushToPlan": "Add push to plan",
+  "addPushToToThePlan": "Add push to {remote} to the plan",
+  "@addPushToToThePlan": {
+    "placeholders": {
+      "remote": {
+        "type": "String"
+      }
+    }
+  },
+  "addRemote": "Add remote",
+  "addRemovalOfRemoteToThePlan": "Add removal of remote {remote} to the plan",
+  "@addRemovalOfRemoteToThePlan": {
+    "placeholders": {
+      "remote": {
+        "type": "String"
+      }
+    }
+  },
+  "addRemovalToPlan": "Add removal to plan",
+  "addToAddPlan": "Add to add plan",
+  "addToPlan": "Add to plan",
+  "addToSystemPath": "Add to system PATH",
+  "addToUpdatePlan": "Add to update plan",
+  "addToUserPath": "Add to user PATH",
+  "addressDestinationFolderCancelCreatesNothingConfirmingThePlanRechecksTheDestinationAndRunsGitClone": "Address: {url}\nDestination folder: {path}\nCancel creates nothing. Confirming the plan rechecks the destination and runs git clone.",
+  "@addressDestinationFolderCancelCreatesNothingConfirmingThePlanRechecksTheDestinationAndRunsGitClone": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "afterCleanupTheFolderBecomesAnOrdinaryDirectoryThatCanBeInitializedAgainFromOpenEmptyFolderThisNowOnlyAddsAClearStepEnterClearGitInTheOperationPlanAndConfirmExecution": "After cleanup the folder becomes an ordinary directory that can be initialized again from Open empty folder. This now only adds a clear step; enter CLEAR GIT in the operation plan and confirm execution.",
+  "ahead": "Ahead",
+  "allowedRange": "Allowed range: {min}%–{max}%",
+  "@allowedRange": {
+    "placeholders": {
+      "max": {
+        "type": "String"
+      },
+      "min": {
+        "type": "String"
+      }
+    }
+  },
+  "alreadyContainsPortablegit": "{scope} already contains PortableGit",
+  "@alreadyContainsPortablegit": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "alsoSaveUntrackedFilesGitStashIncludeUntracked": "Also save untracked files (git stash --include-untracked)",
+  "andMore": "and {count} more",
+  "@andMore": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "appearanceSettings": "Appearance settings",
+  "applicationLogs": "Application logs",
+  "applyStash": "Apply Stash",
+  "automaticUpdatesDownloadTheWindowsX64ZipFromGithubVerifySha256AndExtractItIntoVersionsVersionTheLauncherSwitchesVersionsAfterExitAndRollsBackIfStartupFailsUserdataIsPreserved": "Automatic updates download the Windows x64 ZIP from GitHub, verify SHA-256 and extract it into versions/<version>. The Launcher switches versions after exit and rolls back if startup fails. userdata is preserved.",
+  "back": "Back",
+  "baseUnit": "Base unit",
+  "behind": "Behind",
+  "binaryUses1024StepsDecimalUses1000": "Binary uses 1024 steps; decimal uses 1000.",
+  "bitB": "bit (b)",
+  "branchManagement": "Branch management",
+  "branchSynchronization": "Branch synchronization",
+  "browseIndependentlyAndMoveAcrossPanes": "Browse independently and move across panes",
+  "browseMoveCopyDeleteCommitAndPushThroughTheGitCli": "Browse, move, copy, delete, commit and push through the Git CLI.",
+  "browseOneRepositoryInTwoPanesSelectCutPasteAndRenameEveryChangeRunsThroughGit": "Browse one repository in two panes. Select, cut, paste and rename. Every change runs through Git.",
+  "bundledFontsComeFromGoogleFontsUnderTheSilOpenFontLicense": "Bundled fonts come from Google Fonts under the SIL Open Font License.",
+  "bundledPortablegit": "Bundled PortableGit",
+  "bundledUiFonts": "Bundled UI fonts",
+  "byDefaultTheBundledNotoSansScFontIsUsedSearchBundledOrSystemFonts": "By default the bundled Noto Sans SC font is used. Search bundled or system fonts.",
+  "byteB": "Byte (B)",
+  "byteDisplaysBKibOrKbBitIsMultipliedBy8First": "Byte displays B, KiB or KB; bit is multiplied by 8 first.",
+  "cancel2": "Cancel",
+  "cancelEditing": "Cancel editing",
+  "changed": "Changed",
+  "changes": "{count} changes",
+  "@changes": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "changesApplyAfterSaving": "Changes apply after saving.",
+  "changingTheSystemPathAffectsTheWholeComputerAndRequestsAdministratorPermissionCancellingElevationChangesNothing": "Changing the system PATH affects the whole computer and requests administrator permission. Cancelling elevation changes nothing.",
+  "checkAgain": "Check again",
+  "checkForUpdates": "Check for updates",
+  "checking": "Checking",
+  "checking2": "Checking…",
+  "checkingForGit": "Checking for Git…",
+  "checkingForUpdates": "Checking for updates",
+  "chooseActionsInTheExplorerCommitAreaOrRemoteManagerTheyAppearHereFirst": "Choose actions in the explorer, commit area or remote manager. They appear here first.",
+  "chooseCloneParentFolder": "Choose clone parent folder",
+  "chooseDisplayModeAndColorSchemeInterfaceIconsFollowTheSelectedColors": "Choose display mode and color scheme; interface icons follow the selected colors.",
+  "chooseFolder": "Choose folder",
+  "chooseTheCurrentUserOrSystemEnvironmentOnlyTheManagedRuntimeGitCurrentCmdPathIsAddedAfterCreatingABackup": "Choose the current user or system environment. Only the managed runtime/git/current/cmd path is added, after creating a backup.",
+  "chooseTheInterfaceLanguageByDefaultItFollowsTheOperatingSystem": "Choose the interface language. By default it follows the operating system.",
+  "clean": "Clean",
+  "cleanAll": "Clean all",
+  "clearAllRemoteBranchesAndTagsDangerous": "Clear all remote branches and tags (dangerous)",
+  "clearGitMetadata": "Clear Git metadata",
+  "clearPlan": "Clear plan",
+  "clearRemoteHistoryFor": "Clear remote history for {remote}?",
+  "@clearRemoteHistoryFor": {
+    "placeholders": {
+      "remote": {
+        "type": "String"
+      }
+    }
+  },
+  "clearSearch": "Clear search",
+  "clearSelection": "Clear selection",
+  "cloneGitRepository": "Clone Git repository",
+  "cloneIntoParentFolder": "Clone into parent folder",
+  "close": "Close",
+  "closeUserGuide": "Close user guide",
+  "closingTheRepository": "closing the repository",
+  "colorScheme": "Color scheme",
+  "commitMessage": "Commit message",
+  "commitWorkspace": "Commit workspace",
+  "commitsAreDeferredConfirmThePlanBeforeGitAddAAndGitCommitRun": "Commits are deferred. Confirm the plan before git add -A and git commit run.",
+  "confirmAndExecute": "Confirm and execute",
+  "confirmDangerousOperations": "Confirm dangerous operations",
+  "controlHowProjectAndIndividualFileSizesAreDisplayed": "Control how project and individual file sizes are displayed.",
+  "copy": "Copy",
+  "createAGitGuiExpandShortcutOnTheCurrentUserSDesktopThatStartsThroughTheStableLauncher": "Create a Git GUI Expand shortcut on the current user's desktop that starts through the stable Launcher.",
+  "createBranch": "Create branch",
+  "createStash": "Create Stash",
+  "current": "Current",
+  "currentBranch": "Current branch",
+  "currentBranch2": "Current branch: {branch}",
+  "@currentBranch2": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "currentReleaseHighlights": "Current release highlights",
+  "currentSelection": "Current selection: {theme}",
+  "@currentSelection": {
+    "placeholders": {
+      "theme": {
+        "type": "String"
+      }
+    }
+  },
+  "currentV": "Current v{version}",
+  "@currentV": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "currentVersionOnlyOldVersionsInstallersAndLegacyFlatApplicationFilesAreRemovedUserdataIsRetained": "Current version: {version}. Only old versions, installers, and legacy flat application files are removed; userdata is retained.",
+  "@currentVersionOnlyOldVersionsInstallersAndLegacyFlatApplicationFilesAreRemovedUserdataIsRetained": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "cut": "Cut",
+  "cutCopyRenamePushAndCommit0123456789": "Cut, copy, rename, push and commit   0123456789",
+  "dark": "Dark",
+  "delete": "Delete",
+  "deleteBranch": "Delete branch",
+  "deleteStash": "Delete Stash",
+  "desktopShortcut": "Desktop shortcut",
+  "destinationFolder": "Destination folder: {path}",
+  "@destinationFolder": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "destinationFolderAfterConfirmationRunGitInitInTheDestinationAndOpenTheRepository": "Destination folder: {path}\nAfter confirmation, run git init in the destination and open the repository.",
+  "@destinationFolderAfterConfirmationRunGitInitInTheDestinationAndOpenTheRepository": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "detached": "detached",
+  "detachedHead": "detached HEAD",
+  "detachedHeadCannotFetchCurrentUpstreamOrPullABranch": "Detached HEAD cannot fetch current upstream or pull a branch.",
+  "detailedLog": "Detailed log",
+  "detectTheGitRuntimeVersionSourceAndExecutableLocation": "Detect the Git runtime, version, source, and executable location.",
+  "detectionDetails": "Detection details: {error}",
+  "@detectionDetails": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "discardPlanAndContinue": "Discard plan and continue",
+  "discardThePendingOperationPlan": "Discard the pending operation plan?",
+  "displayMode": "Display mode",
+  "doesNotContainTheManagedPortablegitPath": "{scope} does not contain the managed PortableGit path",
+  "@doesNotContainTheManagedPortablegitPath": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "doesNotExist": "Does not exist",
+  "done": "Done",
+  "doubleClickAFolderClickAPaneToChooseThePasteTarget": "Double-click a folder; click a pane to choose the paste target",
+  "doubleClickAFolderToOpen": "Double-click a folder to open",
+  "downloadGit": "Download Git",
+  "dualPaneOperations": "Dual-pane operations",
+  "editRemote": "Edit remote",
+  "editUrl": "Edit URL",
+  "enterACloneUrlParentFolderAndProjectName": "Enter a clone URL, parent folder, and project name.",
+  "enterACommitMessage": "Enter a commit message…",
+  "enterProjectBranchToConfirm": "Enter project/branch \"{confirmation}\" to confirm",
+  "@enterProjectBranchToConfirm": {
+    "placeholders": {
+      "confirmation": {
+        "type": "String"
+      }
+    }
+  },
+  "enterProjectBranchToConfirmAgain": "Enter project/branch \"{confirmation}\" to confirm again.",
+  "@enterProjectBranchToConfirmAgain": {
+    "placeholders": {
+      "confirmation": {
+        "type": "String"
+      }
+    }
+  },
+  "executing": "Executing…",
+  "executingStepByStep": "Executing step by step",
+  "executionComplete": "Execution complete",
+  "executionIncomplete": "Execution incomplete",
+  "fetchAllRemotes": "Fetch all remotes",
+  "fetchCurrentUpstream": "Fetch current upstream",
+  "fileChangesArePendingInTheOperationPlan": "File changes are pending in the operation plan",
+  "files": "Files",
+  "filesAreNotDeletedYetConfirmTheOperationPlanBeforeGitRmOrGitCleanRuns": "Files are not deleted yet. Confirm the operation plan before git rm or git clean runs.",
+  "folder": "Folder",
+  "followSystem": "Follow system",
+  "followSystemSwitchesWithTheDeviceLightOrDarkAppearance": "Follow system switches with the device light or dark appearance.",
+  "followTheOperatingSystemWithoutAFixedFamily": "Follow the operating system without a fixed family",
+  "font": "Font",
+  "fontPreview": "Font preview",
+  "fontSize": "Font size",
+  "forExampleFeatureLogin": "For example: feature/login",
+  "forExampleOriginGiteeOrGitlab": "For example origin, gitee or gitlab",
+  "forExampleTemporarilySaveUnfinishedChanges": "For example: temporarily save unfinished changes",
+  "forceGitBranchDWhenDeletingAnUnmergedBranch": "Force git branch -D when deleting an unmerged branch",
+  "foundItemsAndCanBeFreed": "Found {count} items and {size} can be freed.",
+  "@foundItemsAndCanBeFreed": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "git": "Git",
+  "gitExecutableLocation": "Git executable location",
+  "gitGuiExpandFileCommit": "Git GUI Expand · File commit",
+  "gitGuiExpandUserGuide": "Git GUI Expand User Guide",
+  "gitIsRequiredToOpenOrModifyRepositoriesInstallGitForWindowsThenSelectCheckAgain": "Git is required to open or modify repositories. Install Git for Windows, then select Check again.",
+  "gitIsUnavailableRepositoryActionsAreDisabled": "Git is unavailable. Repository actions are disabled.",
+  "gitMetadata": "Git metadata",
+  "gitMvIndexCommit": "git mv · index · commit",
+  "gitNotDetected": "Git not detected",
+  "gitRepositories": "{count} Git repositories",
+  "@gitRepositories": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "gitRepository": "Git repository",
+  "gitRepositoryCloned": "Git repository cloned",
+  "gitRepositoryInitialized": "Git repository initialized",
+  "gitSettings": "Git settings",
+  "gitSource": "Git source",
+  "gitVersion": "Git version",
+  "gitee": "Gitee",
+  "github": "GitHub",
+  "githubUsuallyProvidesTheInternationalReleaseBuild": "GitHub usually provides the international release build.",
+  "gotIt": "Got it",
+  "guide": "Guide",
+  "httpsOrGitHostOwnerRepoGit": "https://... or git@host:owner/repo.git",
+  "iReviewedTheseOperationsAndWantToExecuteThemInOrder": "I reviewed these operations and want to execute them in order",
+  "iecBinary": "IEC binary",
+  "iecSiOptionalBits": "IEC / SI, optional bits",
+  "importantGitChangesArePlannedFirstAndRunOnlyAfterConfirmation": "Important: Git changes are planned first and run only after confirmation",
+  "initializeGitRepository": "Initialize Git repository",
+  "installedSystemFont": "Installed system font",
+  "installing": "Installing…",
+  "interfaceLanguage": "Interface language",
+  "items": "{count} items",
+  "@items": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "language": "Language",
+  "language2": "Language",
+  "largeFile": "Large file",
+  "lastChecked": "Last checked",
+  "leftExplorer": "Left explorer",
+  "light": "Light",
+  "localAndUpstreamHistoriesHaveDivergedTheAppWillNotMergeOrRebaseAutomaticallyResolveTheDivergenceInExternalGitFirst": "Local and upstream histories have diverged. The app will not merge or rebase automatically; resolve the divergence in external Git first.",
+  "logs": "Logs",
+  "mediumFile": "Medium file",
+  "moreContentBelow": "More content below",
+  "name": "Name",
+  "nativeGitChanges": "Native Git changes",
+  "newBranchNameOrRenamedBranchName": "New branch name or renamed branch name",
+  "newName": "New name",
+  "noBranch": "No branch",
+  "noBundledFontMatches": "No bundled font matches",
+  "noCommittedBranchYet": "No committed branch yet",
+  "noDetailedLogYetSelectionNavigationAndEveryGitCommandAreRecordedHere": "No detailed log yet. Selection, navigation and every Git command are recorded here.",
+  "noFilesHere": "No files here",
+  "noNormalLogYetOpeningARepositoryAndGitActionsCreateKeyEvents": "No normal log yet. Opening a repository and Git actions create key events.",
+  "noOldVersionsOrInstallersWereFoundTheDirectoryIsAlreadyClean": "No old versions or installers were found; the directory is already clean.",
+  "noPendingOperations": "No pending operations",
+  "noPendingSteps": "No pending steps",
+  "noProjectIsOpen": "No project is open.",
+  "noRemoteRepositoryWasDetected": "No remote repository was detected.",
+  "noRemotesConfiguredAddGithubGiteeGitlabOrAnotherGitRemote": "No remotes configured. Add GitHub, Gitee, GitLab or another Git remote.",
+  "noSystemFontMatches": "No system font matches",
+  "noUpstream": "No upstream",
+  "noUsableGitWasDetectedInstallItAndCheckAgain": "No usable Git was detected. Install it and check again.",
+  "none": "None",
+  "normalLog": "Normal log",
+  "notCheckedYet": "Not checked yet",
+  "notConfigured": "Not configured",
+  "notDetected": "Not detected",
+  "nothingIsPushedYetThePlanPushesTo": "Nothing is pushed yet. The plan pushes {branch} to {platform}.\n{url}",
+  "@nothingIsPushedYetThePlanPushesTo": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      },
+      "platform": {
+        "type": "String"
+      },
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "nothingIsPushedYetThePlanWillRunGitPushAndConfigureUpstreamWhenNeeded": "Nothing is pushed yet. The plan will run git push and configure upstream when needed.",
+  "oldVersionAndInstallerCleanup": "Old version and installer cleanup",
+  "onlineReleaseNotes": "Online release notes",
+  "onlyTheCurrentUserPathIsChangedAndElevationIsNotRequiredTheAppOnlyAddsOrRemovesItsStableManagedRuntimePath": "Only the current user PATH is changed and elevation is not required. The app only adds or removes its stable managed runtime path.",
+  "onlyTheLocalGitRemoteConfigurationIsRemoved": "Only the local Git remote configuration is removed.",
+  "onlyVerifiedRepositoryRootsAreSaved": "Only verified repository roots are saved",
+  "open": "Open",
+  "openAnExistingRepositoryInitializeAnEmptyFolderOrCloneARemoteRepository": "Open an existing repository, initialize an empty folder, or clone a remote repository",
+  "openAnotherFolderOrRefreshToViewRepositoryContents": "Open another folder or refresh to view repository contents.",
+  "openEmptyFolder": "Open empty folder",
+  "openFolder": "Open folder",
+  "openGitRepository": "Open Git repository",
+  "openReleasePage": "Open release page",
+  "openRepository2": "Open repository",
+  "openWithDefaultApp": "Open with default app",
+  "openingAnotherRepository": "opening another repository",
+  "openingRepository": "Opening repository…",
+  "optionsFound": "{count} options found",
+  "@optionsFound": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "parentFolder": "Parent folder",
+  "paste": "Paste",
+  "pasteTarget": "Paste target",
+  "pasteToLeft": "Paste to left",
+  "pasteToRight": "Paste to right",
+  "pathChangeCancelled": "PATH change cancelled",
+  "pathChangeFailed": "PATH change failed: {error}",
+  "@pathChangeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pending": "{count} pending",
+  "@pending": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "pending2": "Pending",
+  "pendingOperationPlan": "Pending operation plan",
+  "plannedStepsHaveNotRunWillDiscardThemNoRepositoryChangesWillOccur": "{count} planned steps have not run. {action} will discard them; no repository changes will occur.",
+  "@plannedStepsHaveNotRunWillDiscardThemNoRepositoryChangesWillOccur": {
+    "placeholders": {
+      "action": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "popStash": "Pop Stash",
+  "preciseSizeView": "Precise size view",
+  "preparingToExecute": "Preparing to execute",
+  "preparingUpdate": "Preparing update…",
+  "projectFolder": "Project folder",
+  "projectFolderName": "Project folder name",
+  "projectSize": "Project size",
+  "projectTargetBranchTargetCommitEmptyCommitMessagePlanConfirmation": "Project: {project}\nTarget branch: {branch}\nTarget commit: {target}\nEmpty commit message: {message}\nPlan confirmation: {confirmation}",
+  "@projectTargetBranchTargetCommitEmptyCommitMessagePlanConfirmation": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      },
+      "confirmation": {
+        "type": "String"
+      },
+      "message": {
+        "type": "String"
+      },
+      "project": {
+        "type": "String"
+      },
+      "target": {
+        "type": "String"
+      }
+    }
+  },
+  "pullFetchesAndRechecksAheadBehindAllowsFastForwardOnlyNeverCreatesAMergeCommitAndIsDisabledForADirtyWorktreeOrIndex": "Pull fetches and rechecks ahead/behind, allows fast-forward only, never creates a merge commit, and is disabled for a dirty worktree or index.",
+  "push": "Push",
+  "pushAll": "Push all",
+  "pushCurrentBranchCtrlShiftU": "Push current branch (Ctrl+Shift+U)",
+  "readingBranchesAndTagsFrom": "Reading branches and tags from {remote}…",
+  "@readingBranchesAndTagsFrom": {
+    "placeholders": {
+      "remote": {
+        "type": "String"
+      }
+    }
+  },
+  "readingSynchronizationState": "Reading synchronization state…",
+  "recentlyOpened": "Recently opened",
+  "refresh": "Refresh",
+  "refreshBranches": "Refresh branches",
+  "refreshLogs": "Refresh logs",
+  "refreshRemotes": "Refresh remotes",
+  "refreshRepositoryAndRebuildPlan": "Refresh repository and rebuild plan",
+  "refreshRepositoryCtrlR": "Refresh repository (Ctrl+R)",
+  "refreshStashes": "Refresh Stashes",
+  "refreshSynchronizationState": "Refresh synchronization state",
+  "remoteCheck": "Remote check",
+  "remoteName": "Remote name",
+  "remoteRefList": "Remote ref list",
+  "remoteRepositoriesWereDetectedSoClearingIsDisabled": "Remote repositories were detected, so clearing is disabled: {remotes}",
+  "@remoteRepositoriesWereDetectedSoClearingIsDisabled": {
+    "placeholders": {
+      "remotes": {
+        "type": "String"
+      }
+    }
+  },
+  "remoteRepositoryUrl": "Remote repository URL",
+  "remoteUrl": "Remote URL",
+  "remotes": "Remotes {count}",
+  "@remotes": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "remotes2": "Remotes",
+  "removeFromHistory": "Remove from history",
+  "removeFromPlan": "Remove from plan",
+  "removeFromSystemPath": "Remove from system PATH",
+  "removeFromUserPath": "Remove from user PATH",
+  "removeLocalRemoteConfiguration": "Remove local remote configuration",
+  "removedItemsAndFreed": "Removed {count} items and freed {size}.",
+  "@removedItemsAndFreed": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      },
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "removedItemsCouldNotBeDeletedCheckTheDetailedLog": "Removed {removed} items; {failed} could not be deleted. Check the detailed log.",
+  "@removedItemsCouldNotBeDeletedCheckTheDetailedLog": {
+    "placeholders": {
+      "failed": {
+        "type": "String"
+      },
+      "removed": {
+        "type": "String"
+      }
+    }
+  },
+  "rename": "Rename",
+  "renameBranch": "Rename branch",
+  "repository": "Repository: {path}",
+  "@repository": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "repositoryAndRemoteOperationsAreAvailable": "Repository and remote operations are available",
+  "repositoryViewRefreshed": "Repository view refreshed",
+  "reviewRemoveOrExecutePendingOperations": "Review, remove or execute pending operations",
+  "rightExplorer": "Right explorer",
+  "safeFastForwardPull": "Safe fast-forward pull",
+  "saveSettings2": "Save settings",
+  "scanAgain": "Scan again",
+  "scanOldVersionsAndInstallers": "Scan old versions and installers",
+  "scrollDownForFontPreviewAndFontSizeSettings": "Scroll down for font preview and font-size settings.",
+  "searchFontNameOrPurposeEGInterOrNoto": "Search font name or purpose, e.g. Inter or Noto",
+  "selectAnItemToRename": "Select an item to rename.",
+  "selectExactlyOneItemToRename": "Select exactly one item to rename.",
+  "selectFilesToCutOrCopy": "Select files to cut or copy",
+  "selectItemsToDelete": "Select items to delete.",
+  "selectTheDangerousOperationConfirmationFirst": "Select the dangerous-operation confirmation first.",
+  "selected": "{count} selected",
+  "@selected": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "selected2": "{count} selected",
+  "@selected2": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "settings2": "Settings",
+  "settingsDataDirectory": "Settings data directory",
+  "showInFileExplorer": "Show in File Explorer",
+  "siDecimal": "SI decimal",
+  "size": "Size",
+  "sizeUnitSystem": "Size unit system",
+  "smallFile": "Small file",
+  "stageAll": "Stage all",
+  "staged": "{count} staged",
+  "@staged": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "stash": "Stash",
+  "stashManagement": "Stash management",
+  "stashMessageOptional": "Stash message (optional)",
+  "stateChangeDetails": "State change details",
+  "stateChangedBeforeExecution": "State changed before execution",
+  "status": "Status",
+  "step": "Step {step}: {title}",
+  "@step": {
+    "placeholders": {
+      "step": {
+        "type": "String"
+      },
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "stepsTheRepositoryIsUnchangedUntilConfirmation": "{count} steps; the repository is unchanged until confirmation",
+  "@stepsTheRepositoryIsUnchangedUntilConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "supportsGithubGiteeGitlabBitbucketAndStandardGitRemotesChangesArePlannedFirst": "Supports GitHub, Gitee, GitLab, Bitbucket and standard Git remotes. Changes are planned first.",
+  "switchBranch": "Switch branch",
+  "sync": "Sync",
+  "systemDefaultAutomatic": "System default (automatic)",
+  "systemFonts": "System fonts",
+  "systemGit": "System Git",
+  "textCanBeSelectedAndCopiedHereTheFullGuideIsIn": "Text can be selected and copied here. The full guide is in {path}.",
+  "@textCanBeSelectedAndCopiedHereTheFullGuideIsIn": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "thanksToDeepseekAiAndChatgptCodexForCreatingAndImprovingThisProject": "Thanks to DeepSeek AI and ChatGPT Codex for creating and improving this project.",
+  "theCloneDestinationFolderIsNotEmpty": "The clone destination folder is not empty.",
+  "theCloneDestinationParentFolderDoesNotExist": "The clone destination parent folder does not exist.",
+  "theColorSchemeAppliesToButtonsSelectedStatesBordersIconsAndEmphasizedText": "The color scheme applies to buttons, selected states, borders, icons, and emphasized text.",
+  "theCurrentBranchHasNoCommitAndCannotBePulled": "The current branch has no commit and cannot be pulled.",
+  "theCurrentBranchHasNoUpstreamFetchAllIsAvailableButPullRequiresTracking": "The current branch has no upstream. Fetch-all is available, but Pull requires tracking.",
+  "theCurrentBranchIsSynchronizedWithUpstream": "The current branch is synchronized with upstream.",
+  "theDetailedReasonHasBeenWrittenToTheApplicationLog": "The detailed reason has been written to the application log.",
+  "theGiteeSourceIsSuitedToMainlandChinaNetworks": "The Gitee source is suited to mainland China networks.",
+  "theInitializationTargetMustExistAndMustNotAlreadyContainGitMetadata": "The initialization target must exist and must not already contain Git metadata.",
+  "theLanguageChangeTakesEffectImmediatelyAfterSaving": "The language change takes effect immediately after saving.",
+  "theLocalBranchHasUnpushedCommitsAndDoesNotNeedPull": "The local branch has unpushed commits and does not need Pull.",
+  "theNextStepOnlyCreatesAClonePreviewCancelCreatesNothingConfirmingThePlanRechecksTheDestinationAndRunsGitClone": "The next step only creates a clone preview. Cancel creates nothing; confirming the plan rechecks the destination and runs git clone.",
+  "thePlanPushesTo": "The plan pushes {branch} to:\n{remotes}",
+  "@thePlanPushesTo": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      },
+      "remotes": {
+        "type": "String"
+      }
+    }
+  },
+  "theRemoteHasNoBranchesOrTagsTheFirstEmptyCommitWillBeCreated": "The remote has no branches or tags. The first empty commit will be created.",
+  "theRepositoryHasNoStashes": "The repository has no Stashes.",
+  "theSavedFontAppliesToMenusExplorersDialogsAndCommitNotes": "The saved font applies to menus, explorers, dialogs and commit notes.",
+  "theWorktreeOrIndexIsDirtyCommitOrStashChangesBeforeSafePull": "The worktree or index is dirty. Commit or stash changes before safe Pull.",
+  "thereAreNoLocalBranchesToDisplay": "There are no local branches to display.",
+  "thisActionIsAddedToThePlanGitMvRunsOnlyAfterConfirmation": "This action is added to the plan. git mv runs only after confirmation.",
+  "thisDangerousActionCannotBeUndoneTheRemoteIsBackedUpIsReplacedWithAnEmptyRootCommitOtherRefsAreDeletedAndTheLocalBranchIndexAreSynchronizedWithoutDeletingFiles": "This dangerous action cannot be undone. The remote is backed up, {branch} is replaced with an empty root commit, other refs are deleted, and the local branch/index are synchronized without deleting files.",
+  "@thisDangerousActionCannotBeUndoneTheRemoteIsBackedUpIsReplacedWithAnEmptyRootCommitOtherRefsAreDeletedAndTheLocalBranchIndexAreSynchronizedWithoutDeletingFiles": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "thisOperationDeletesTheGitFolderInTheRepositoryRoot": "This operation deletes the .git folder in the repository root.",
+  "thisPlanIncludesDangerousStepsFileDeletionCannotBeUndoneHereRemoteResetKeepsOnlyOneEmptyCommit": "This plan includes {count} dangerous steps. File deletion cannot be undone here; remote reset keeps only one empty commit.",
+  "@thisPlanIncludesDangerousStepsFileDeletionCannotBeUndoneHereRemoteResetKeepsOnlyOneEmptyCommit": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "thisProjectIsLicensedUnderTheMitLicense": "This project is licensed under the MIT License.",
+  "threeSafeSizesPreventLayoutsFromBecomingTooSmallOrLarge": "Three safe sizes prevent layouts from becoming too small or large.",
+  "today": "Today {time}",
+  "@today": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "turnGitFileOperationsIntoAnIntuitiveWorkspace": "Turn Git file operations\ninto an intuitive workspace.",
+  "typeANameToFilter": "Type a name to filter",
+  "unableToOpenFile": "Unable to open file: {error}",
+  "@unableToOpenFile": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unableToOpenLogsFolder": "Unable to open logs folder: {error}",
+  "@unableToOpenLogsFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unableToOpenProjectFolder": "Unable to open project folder: {error}",
+  "@unableToOpenProjectFolder": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unableToOpenTheGitDownloadPage": "Unable to open the Git download page: {error}",
+  "@unableToOpenTheGitDownloadPage": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unableToReadBranchSynchronizationStateRefreshAndTryAgain": "Unable to read branch synchronization state. Refresh and try again.",
+  "unableToReadFolder": "Unable to read folder",
+  "unableToReadUserGuide": "Unable to read user guide: {error}",
+  "@unableToReadUserGuide": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "unableToRetrieveTheOnlineVersion": "Unable to retrieve the online version",
+  "unitPreview": "Unit preview",
+  "units": "Units",
+  "unstage": "Unstage",
+  "updateAndRestartNow": "Update and restart now",
+  "updateSource": "Update source",
+  "updated": "Updated {scope}",
+  "@updated": {
+    "placeholders": {
+      "scope": {
+        "type": "String"
+      }
+    }
+  },
+  "updates": "Updates",
+  "updatesAndReleaseNotes": "Updates and release notes",
+  "updating": "Updating",
+  "updatingAutomatically": "Updating automatically",
+  "upstream": "upstream",
+  "usuallyProtectsTheDefaultBranchRemoveProtectionTemporarilyIfForceUpdateOrDeletionIsRejected": "{platform} usually protects the default branch. Remove protection temporarily if force update or deletion is rejected.",
+  "@usuallyProtectsTheDefaultBranchRemoveProtectionTemporarilyIfForceUpdateOrDeletionIsRejected": {
+    "placeholders": {
+      "platform": {
+        "type": "String"
+      }
+    }
+  },
+  "versionNotFoundOrUnreadable": "Version not found or unreadable",
+  "versionV": "Version v{version}",
+  "@versionV": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "versionVIsAvailable": "Version v{version} is available",
+  "@versionVIsAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "viewAndManageAllRemotes": "View and manage all remotes",
+  "viewBranchSynchronization": "View branch synchronization",
+  "viewLogs": "View logs",
+  "workingFilesAreRetainedButTheFollowingGitDataWillBePermanentlyLostAllCommitHistoryAndReflogLocalBranchesTagsAndCurrentBranchStateStagedIndexStashesAndCommittedContentNotRetainedInWorkingFilesRefsRemoteConfigurationAndRepositoryLevelGitSettingsAndHooks": "Working files are retained, but the following Git data will be permanently lost:\n• All commit history and reflog\n• Local branches, tags, and current branch state\n• Staged index, Stashes, and committed content not retained in working files\n• Refs, remote configuration, and repository-level Git settings and hooks",
+  "workingTreeClean": "Working tree clean",
+  "worktree": "Worktree",
+  "youAreUpToDate": "You are up to date",
+  "followSystemLabel": "Follow system",
+  "followSystemDescription": "Use the language selected in the operating system.",
+  "languageEnglishOptionLabel": "English",
+  "languageEnglishDescription": "Use English for the application interface.",
+  "languageSimplifiedChineseOptionLabel": "简体中文",
+  "languageSimplifiedChineseDescription": "使用简体中文显示软件界面。",
+  "languageTraditionalChineseOptionLabel": "繁體中文",
+  "languageTraditionalChineseDescription": "使用繁體中文顯示軟體介面。",
+  "userPath": "User PATH",
+  "systemPath": "System PATH",
+  "addPortableGitTo": "Add PortableGit to {scope}",
+  "@addPortableGitTo": {
+    "placeholders": {
+      "scope": {"type": "String"}
+    }
+  },
+  "removePortableGitFrom": "Remove PortableGit from {scope}",
+  "@removePortableGitFrom": {
+    "placeholders": {
+      "scope": {"type": "String"}
+    }
+  },
+  "confirmAdd": "Add",
+  "confirmRemove": "Remove",
+  "gitAvailable": "Git available",
+  "gitUnavailable": "Git unavailable",
+  "creatingShortcut": "Creating shortcut…",
+  "oneClickSendToDesktop": "Send to desktop",
+  "bundledLabel": "Bundled",
+  "iec1024BaseBit": "IEC · base 1024 · bit",
+  "si1000BaseBit": "SI · base 1000 · bit",
+  "iec1024BaseByte": "IEC · base 1024 · Byte",
+  "si1000BaseByte": "SI · base 1000 · Byte",
+  "classicGreen": "Classic green",
+  "oceanBlue": "Ocean blue",
+  "starryViolet": "Starry violet",
+  "amberGold": "Amber gold",
+  "roseRed": "Rose red",
+  "interUiDescription": "An open-source sans-serif designed for digital interfaces and dense text.",
+  "notoSansScDescription": "A modern interface font covering Simplified Chinese with stable mixed-script forms.",
+  "ibmPlexSansDescription": "Designed for product interfaces and business information with strong numeral readability.",
+  "fontDescription": "Bundled interface font",
+  "operationCompleted": "Operation completed.",
+  "operationCompletedFor": "Operation completed: {target}.",
+  "@operationCompletedFor": {
+    "placeholders": {
+      "target": {"type": "String"}
+    }
+  },
+  "operationCompletedForItems": "Operation completed for {count} item(s).",
+  "@operationCompletedForItems": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "operationFailed": "Operation failed: {error}",
+  "@operationFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "operationFailedFor": "Operation failed for {target}: {error}",
+  "@operationFailedFor": {
+    "placeholders": {
+      "error": {"type": "String"},
+      "target": {"type": "String"}
+    }
+  },
+  "logInfo": "Information event: {eventId}",
+  "@logInfo": {
+    "placeholders": {
+      "eventId": {"type": "String"}
+    }
+  },
+  "logDetail": "Detailed event: {eventId}",
+  "@logDetail": {
+    "placeholders": {
+      "eventId": {"type": "String"}
+    }
+  },
+  "logWarning": "Warning event: {eventId}",
+  "@logWarning": {
+    "placeholders": {
+      "eventId": {"type": "String"}
+    }
+  },
+  "logError": "Error event: {eventId}",
+  "@logError": {
+    "placeholders": {
+      "eventId": {"type": "String"}
+    }
+  },
+  "logsTruncated": "… Showing only recent log entries …",
+  "logReadFailed": "Failed to read logs: {error}",
+  "@logReadFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "noRepositoryOpen": "No repository is open.",
+  "operationInProgress": "Another operation is still running.",
+  "emptyOperationPlan": "The operation plan is empty.",
+  "gitUnavailableHelp": "Git is unavailable. Install Git or check again in Settings.",
+  "selectItemsFirst": "Select files or folders first.",
+  "clipboardEmpty": "The clipboard is empty.",
+  "clipboardCleared": "Clipboard cleared.",
+  "clipboardPendingCut": "{count} item(s) pending move",
+  "@clipboardPendingCut": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "clipboardPendingCopy": "{count} item(s) pending copy",
+  "@clipboardPendingCopy": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "operationPlanBusyEdit": "The plan is running and cannot be edited.",
+  "operationPlanBusyClear": "The plan is running and cannot be cleared.",
+  "planOperationMissing": "The planned operation no longer exists.",
+  "planOperationRemoved": "The operation was removed from the plan.",
+  "planCleared": "Cleared {count} planned step(s).",
+  "@planCleared": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planStrongConfirmationRequired": "Enter {confirmation} exactly to confirm this dangerous operation.",
+  "@planStrongConfirmationRequired": {
+    "placeholders": {
+      "confirmation": {"type": "String"}
+    }
+  },
+  "planDangerousAcknowledgmentRequired": "Select the dangerous-operation acknowledgement before executing.",
+  "planStateChanged": "The repository changed after confirmation. Refresh and rebuild the plan.",
+  "planStepStateChanged": "The repository changed before step {step}. Execution stopped; refresh and rebuild the plan.",
+  "@planStepStateChanged": {
+    "placeholders": {
+      "step": {"type": "String"}
+    }
+  },
+  "planStepFailed": "Step {step} failed: {error}. Later steps did not run and the failed step remains in the plan.",
+  "@planStepFailed": {
+    "placeholders": {
+      "error": {"type": "String"},
+      "step": {"type": "String"}
+    }
+  },
+  "planExecutionComplete": "Executed all {count} planned step(s) in order.",
+  "@planExecutionComplete": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planOperationAdded": "Added to the operation plan. No Git changes have run yet.",
+  "planSnapshotFailed": "Could not capture the safety snapshot: {error}",
+  "@planSnapshotFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "clearRemoteMustRunAlone": "Clearing a remote must run alone. Remove or execute the other planned steps first.",
+  "commitMustRemainLast": "Commit is already at the end of the plan. Remove it before editing files again.",
+  "exclusiveOperationMustRunAlone": "This lifecycle operation must run alone.",
+  "exclusiveOperationAlreadyQueued": "The plan already contains an operation that must run alone.",
+  "selectItemsToDelete": "Select items to delete first.",
+  "renameSelectOne": "Select exactly one file or folder to rename.",
+  "nameCannotBeEmpty": "The name cannot be empty.",
+  "historyEntryRemoved": "Removed from recent repositories.",
+  "gitMetadataClearAvailable": "No remote is configured; Git metadata may be cleared.",
+  "gitMetadataCleared": "Git metadata was cleared. Working files remain.",
+  "gitMetadataRemoteForbidden": "Git metadata cannot be cleared while remotes are configured.",
+  "fileRenamed": "Renamed to {name}.",
+  "@fileRenamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "bootstrapPlanAlreadyUsed": "This preview has already run or is running. Open a new preview.",
+  "bootstrapStateChanged": "The target changed after confirmation. Refresh the preview and confirm again.",
+  "unableToInspectRepository": "Unable to inspect the repository.",
+  "stepsCount": "{count} steps",
+  "@stepsCount": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planKindInitialize": "Initialize",
+  "planKindClone": "Clone",
+  "planKindMove": "Move",
+  "planKindCopy": "Copy",
+  "planKindRename": "Rename",
+  "planKindDelete": "Delete",
+  "planKindClearGitMetadata": "Clear Git metadata",
+  "planKindStageAll": "Stage",
+  "planKindUnstageAll": "Unstage",
+  "planKindCommit": "Commit",
+  "planKindFetchCurrent": "Fetch upstream",
+  "planKindFetchAll": "Fetch all",
+  "planKindPull": "Fast-forward pull",
+  "planKindPush": "Push",
+  "planKindPushAll": "Push all",
+  "planKindAddRemote": "Add remote",
+  "planKindUpdateRemote": "Update remote",
+  "planKindRemoveRemote": "Remove remote",
+  "planKindClearRemote": "Clear remote",
+  "planKindCreateBranch": "Create branch",
+  "planKindSwitchBranch": "Switch branch",
+  "planKindRenameBranch": "Rename branch",
+  "planKindDeleteBranch": "Delete branch",
+  "planKindCreateStash": "Create Stash",
+  "planKindApplyStash": "Apply Stash",
+  "planKindPopStash": "Pop Stash",
+  "planKindDropStash": "Drop Stash",
+  "planTitleInitializeRepository": "Initialize Git repository",
+  "planDescriptionInitializeRepository": "Run git init in {path} after confirmation, then open the repository.",
+  "@planDescriptionInitializeRepository": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "planTitleCloneRepository": "Clone Git repository",
+  "planDescriptionCloneRepository": "Clone {url} into {path}. Canceling creates nothing; confirming rechecks the destination and runs git clone.",
+  "@planDescriptionCloneRepository": {
+    "placeholders": {
+      "path": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "planTitleMove": "Move {count} item(s) to {destination}",
+  "@planTitleMove": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "planDescriptionMove": "Move {count} item(s) with Git into {destination}.",
+  "@planDescriptionMove": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "planTitleCopy": "Copy {count} item(s) to {destination}",
+  "@planTitleCopy": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "planDescriptionCopy": "Copy {count} item(s) with Git into {destination}.",
+  "@planDescriptionCopy": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "destination": {"type": "String"}
+    }
+  },
+  "planTitleRename": "Rename {source}",
+  "@planTitleRename": {
+    "placeholders": {
+      "source": {"type": "String"}
+    }
+  },
+  "planDescriptionRename": "Change the name of {source} to {newName}.",
+  "@planDescriptionRename": {
+    "placeholders": {
+      "newName": {"type": "String"},
+      "source": {"type": "String"}
+    }
+  },
+  "planTitleDelete": "Delete {count} item(s)",
+  "@planTitleDelete": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planDescriptionDelete": "Permanently delete {count} item(s): {paths}. Tracked files use git rm; untracked or ignored files use git clean.",
+  "@planDescriptionDelete": {
+    "placeholders": {
+      "count": {"type": "String"},
+      "paths": {"type": "String"}
+    }
+  },
+  "planTitleClearGitMetadata": "Clear Git metadata",
+  "planDescriptionClearGitMetadata": "Repository: {path}. Permanently delete .git while keeping working files. Commit history, branches, tags, index, Stashes, remote configuration, and repository settings will be lost. This operation must run alone.",
+  "@planDescriptionClearGitMetadata": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "planTitleCreateBranch": "Create branch {branch}",
+  "@planTitleCreateBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionCreateBranch": "Run git branch -- {branch} to create a local branch from HEAD.",
+  "@planDescriptionCreateBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "branchCreated": "Created branch {branch}.",
+  "@branchCreated": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planTitleSwitchBranch": "Switch to branch {branch}",
+  "@planTitleSwitchBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionSwitchBranch": "Run git switch {branch}. Git refuses the switch if uncommitted changes conflict.",
+  "@planDescriptionSwitchBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "branchSwitched": "Switched to branch {branch}.",
+  "@branchSwitched": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "alreadyOnBranch": "Already on branch {branch}.",
+  "@alreadyOnBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planTitleRenameBranch": "Rename branch {from} to {to}",
+  "@planTitleRenameBranch": {
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"}
+    }
+  },
+  "planDescriptionRenameBranch": "Run git branch -m {from} {to}.",
+  "@planDescriptionRenameBranch": {
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"}
+    }
+  },
+  "branchRenamed": "Renamed branch {from} to {to}.",
+  "@branchRenamed": {
+    "placeholders": {
+      "from": {"type": "String"},
+      "to": {"type": "String"}
+    }
+  },
+  "planTitleDeleteBranch": "Delete branch {branch}",
+  "@planTitleDeleteBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionDeleteBranchForce": "Run git branch -D {branch} to force-delete an unmerged branch.",
+  "@planDescriptionDeleteBranchForce": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionDeleteBranchSafe": "Run git branch -d {branch}. Only merged branches can be deleted.",
+  "@planDescriptionDeleteBranchSafe": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "branchDeleted": "Deleted branch {branch}.",
+  "@branchDeleted": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "cannotDeleteCurrentBranch": "The current branch cannot be deleted. Switch branches first.",
+  "planTitleCreateStash": "Create Stash",
+  "planTitleCreateStashNamed": "Create Stash: {message}",
+  "@planTitleCreateStashNamed": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "planDescriptionCreateStash": "Run git stash push for the supplied message: {message}",
+  "@planDescriptionCreateStash": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "planDescriptionCreateStashIncludeUntracked": "Run git stash push --include-untracked for the supplied message: {message}",
+  "@planDescriptionCreateStashIncludeUntracked": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "stashCreated": "Stash created.",
+  "planTitleApplyStash": "Apply {selector}",
+  "@planTitleApplyStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "planDescriptionApplyStash": "Run git stash apply {selector} and keep the Stash entry.",
+  "@planDescriptionApplyStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "stashApplied": "Applied {selector}.",
+  "@stashApplied": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "planTitlePopStash": "Pop {selector}",
+  "@planTitlePopStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "planDescriptionPopStash": "Run git stash pop {selector}; apply it and remove the Stash entry.",
+  "@planDescriptionPopStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "stashPopped": "Popped {selector}.",
+  "@stashPopped": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "planTitleDropStash": "Drop {selector}",
+  "@planTitleDropStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "planDescriptionDropStash": "Run git stash drop {selector}. This cannot be undone in this app.",
+  "@planDescriptionDropStash": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "stashDropped": "Dropped {selector}.",
+  "@stashDropped": {
+    "placeholders": {
+      "selector": {"type": "String"}
+    }
+  },
+  "invalidStashSelector": "The Stash selector is invalid.",
+  "planTitlePushCurrent": "Push current branch",
+  "planTitlePushBranch": "Push {branch}",
+  "@planTitlePushBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionPushCurrent": "Push the current branch to its upstream, or configure origin/first remote as upstream when needed.",
+  "planTitleFetchRemote": "Fetch remote {remote}",
+  "@planTitleFetchRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionFetchRemote": "Run git fetch --prune {remote}. Tracked remote refs update; working files do not change.",
+  "@planDescriptionFetchRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planTitleFetchAllRemotes": "Fetch all {count} remotes",
+  "@planTitleFetchAllRemotes": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planDescriptionFetchAllRemotes": "Run git fetch --prune for each remote: {remotes}. Failures are reported per remote.",
+  "@planDescriptionFetchAllRemotes": {
+    "placeholders": {
+      "remotes": {"type": "String"}
+    }
+  },
+  "remoteFetched": "Fetched updates from remote {remote}.",
+  "@remoteFetched": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "allRemotesFetched": "Fetched all {count} remotes.",
+  "@allRemotesFetched": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "remoteBatchPartialFailure": "{succeeded} succeeded and {failed} failed. Details: {details}",
+  "@remoteBatchPartialFailure": {
+    "placeholders": {
+      "details": {"type": "String"},
+      "failed": {"type": "String"},
+      "succeeded": {"type": "String"}
+    }
+  },
+  "syncStateUnavailable": "Unable to read the current branch synchronization state.",
+  "detachedCannotPull": "The repository is on a detached HEAD and cannot pull a branch.",
+  "unbornCannotPull": "The current branch has no commit and cannot pull.",
+  "upstreamMissing": "The current branch has no usable upstream. Configure a tracked remote branch first.",
+  "dirtyWorktreeCannotPull": "The worktree or index is dirty. Commit or Stash changes before pulling.",
+  "pullUpToDate": "The current branch is already synchronized with upstream.",
+  "pullAhead": "The branch contains all upstream commits and has local commits to push.",
+  "pullDiverged": "Local and upstream histories diverged. Use external Git to merge or rebase first.",
+  "pullRelationUnknown": "The current synchronization relation is unknown.",
+  "pullNoUpdate": "No fast-forward update was needed.",
+  "planTitlePull": "Safely fast-forward {branch}",
+  "@planTitlePull": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "planDescriptionPull": "Fetch {remote} and recheck ahead/behind. Run git merge --ff-only {upstream} only when {branch} is behind and not diverged; no merge commit is created automatically.",
+  "@planDescriptionPull": {
+    "placeholders": {
+      "branch": {"type": "String"},
+      "remote": {"type": "String"},
+      "upstream": {"type": "String"}
+    }
+  },
+  "pullCompleted": "Fast-forwarded {branch} to {upstream}.",
+  "@pullCompleted": {
+    "placeholders": {
+      "branch": {"type": "String"},
+      "upstream": {"type": "String"}
+    }
+  },
+  "syncAuthenticationFailed": "Git authentication failed: {error}",
+  "@syncAuthenticationFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "syncNetworkFailed": "Git network access failed: {error}",
+  "@syncNetworkFailed": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "pushedCurrentBranch": "Pushed the current branch.",
+  "pushedBranch": "Pushed {branch}.",
+  "@pushedBranch": {
+    "placeholders": {
+      "branch": {"type": "String"}
+    }
+  },
+  "noRemotesConfigured": "No remotes are configured.",
+  "remoteListRefreshed": "Remote list refreshed.",
+  "planTitleAddRemote": "Add remote {remote}",
+  "@planTitleAddRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionAddRemote": "Add remote {remote} with URL {url}.",
+  "@planDescriptionAddRemote": {
+    "placeholders": {
+      "remote": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "planTitleUpdateRemote": "Update remote {remote}",
+  "@planTitleUpdateRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionUpdateRemote": "Change remote {remote} to {url}.",
+  "@planDescriptionUpdateRemote": {
+    "placeholders": {
+      "remote": {"type": "String"},
+      "url": {"type": "String"}
+    }
+  },
+  "remoteAdded": "Remote {remote} added.",
+  "@remoteAdded": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "remoteUpdated": "Remote {remote} updated.",
+  "@remoteUpdated": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "remoteRemoved": "Remote {remote} removed.",
+  "@remoteRemoved": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planTitleRemoveRemote": "Remove remote configuration {remote}",
+  "@planTitleRemoveRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionRemoveRemote": "Remove only the Git remote configuration in this repository; the hosted repository is not deleted.",
+  "planTitlePushRemote": "Push to remote {remote}",
+  "@planTitlePushRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionPushRemote": "Push branch {branch} to remote {remote}.",
+  "@planDescriptionPushRemote": {
+    "placeholders": {
+      "branch": {"type": "String"},
+      "remote": {"type": "String"}
+    }
+  },
+  "pushedToRemote": "Pushed to {remote}.",
+  "@pushedToRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planTitlePushAllRemotes": "Push to all {count} remotes",
+  "@planTitlePushAllRemotes": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "planDescriptionPushAllRemotes": "Push the current branch to: {remotes}.",
+  "@planDescriptionPushAllRemotes": {
+    "placeholders": {
+      "remotes": {"type": "String"}
+    }
+  },
+  "pushedToAllRemotes": "Pushed to all {count} remotes.",
+  "@pushedToAllRemotes": {
+    "placeholders": {
+      "count": {"type": "String"}
+    }
+  },
+  "remoteInspectionEmpty": "Remote {remote} currently has no branches or tags.",
+  "@remoteInspectionEmpty": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "remoteInspectionCounts": "Remote {remote} has {branches} branch(es) and {tags} tag(s).",
+  "@remoteInspectionCounts": {
+    "placeholders": {
+      "branches": {"type": "String"},
+      "remote": {"type": "String"},
+      "tags": {"type": "String"}
+    }
+  },
+  "planTitleClearRemote": "Clear remote history {remote}",
+  "@planTitleClearRemote": {
+    "placeholders": {
+      "remote": {"type": "String"}
+    }
+  },
+  "planDescriptionClearRemote": "Project {project}, target branch {branch}. Back up and delete {branches} branch(es) and {tags} tag(s), then keep one empty commit: “{message}”. Local files remain, but the local index is reset to empty and files appear untracked after refresh.",
+  "@planDescriptionClearRemote": {
+    "placeholders": {
+      "branch": {"type": "String"},
+      "branches": {"type": "String"},
+      "message": {"type": "String"},
+      "project": {"type": "String"},
+      "tags": {"type": "String"}
+    }
+  },
+  "clearRemoteCompleted": "Cleared remote {remote}. Branch {branch} now points to empty commit {commit}; local files remain and appear untracked.",
+  "@clearRemoteCompleted": {
+    "placeholders": {
+      "branch": {"type": "String"},
+      "commit": {"type": "String"},
+      "remote": {"type": "String"}
+    }
+  },
+  "clearRemoteDrift": "Clearing remote {remote} stopped because refs changed. It now has {branches} branch(es) and {tags} tag(s). {error}",
+  "@clearRemoteDrift": {
+    "placeholders": {
+      "branches": {"type": "String"},
+      "error": {"type": "String"},
+      "remote": {"type": "String"},
+      "tags": {"type": "String"}
+    }
+  },
+  "planTitleStageAll": "Stage all changes",
+  "planDescriptionStageAll": "Run git add -A to add all current changes to the Git index.",
+  "stageAllCompleted": "Staged all changes.",
+  "planTitleUnstageAll": "Unstage all changes",
+  "planDescriptionUnstageAll": "Reset the Git index to HEAD while preserving working files.",
+  "unstageAllCompleted": "Unstaged all changes.",
+  "planTitleCommitAll": "Commit all changes",
+  "planDescriptionCommitAll": "Commit message: {message}. Execution runs git add -A and then git commit.",
+  "@planDescriptionCommitAll": {
+    "placeholders": {
+      "message": {"type": "String"}
+    }
+  },
+  "commitMessageRequired": "Enter a commit message.",
+  "noChangesToCommit": "There are no changes to commit.",
+  "commitAlreadyQueued": "A commit step is already in the plan.",
+  "commitIdentityUnavailable": "Git author and committer identity is unavailable. Configure user.name and user.email, then retry.",
+  "commitSucceeded": "Commit created.",
+  "settingsSaved": "Settings saved.",
+  "desktopShortcutWindowsOnly": "Desktop shortcuts are currently supported only on Windows.",
+  "desktopShortcutCreated": "Desktop shortcut created: {path}",
+  "@desktopShortcutCreated": {
+    "placeholders": {
+      "path": {"type": "String"}
+    }
+  },
+  "maintenanceKindOldVersion": "Old version directory",
+  "maintenanceKindUpdateArchive": "Update archive",
+  "maintenanceKindPartialDownload": "Incomplete download",
+  "maintenanceKindStagingDirectory": "Temporary extraction directory",
+  "maintenanceKindLegacyUpdater": "Legacy updater script",
+  "maintenanceKindLegacyFlatFile": "Legacy flat application file",
+  "maintenanceKindLegacyFlatDirectory": "Legacy flat application directory",
+  "maintenanceKindObsoleteGitRuntime": "Obsolete PortableGit runtime",
+  "maintenanceKindGitRuntimeArchive": "PortableGit update archive",
+  "maintenanceKindGitRuntimeStaging": "PortableGit staging directory",
+  "driftRepositoryRoot": "Repository root",
+  "driftBranch": "Branch",
+  "driftHead": "HEAD",
+  "driftStatus": "Worktree status",
+  "driftRemotes": "Remote configuration",
+  "driftPathType": "Path type",
+  "driftDestinationParent": "Parent directory",
+  "driftDestinationExists": "Target exists",
+  "driftDestinationEmpty": "Target is empty",
+  "driftGitMetadata": "Git metadata",
+  "driftSource": "Source",
+  "driftRemoteName": "Remote name",
+  "driftRemoteTargetBranch": "Target branch",
+  "driftRemoteRefs": "Remote refs",
+  "updateGithubNoRelease": "No public GitHub Release is available. Open the release page for details.",
+  "updateGiteeNoRelease": "No public Gitee Release is available. Open the release page for details.",
+  "updateHttpError": "{platform} returned HTTP {status}. Try again later.",
+  "@updateHttpError": {
+    "placeholders": {
+      "platform": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "updateInvalidResponseGithub": "The GitHub update response could not be parsed.",
+  "updateInvalidResponseGitee": "The Gitee update response could not be parsed.",
+  "updateVersionMissingGithub": "The public GitHub Release has no recognizable version.",
+  "updateVersionMissingGitee": "The public Gitee Release has no recognizable version.",
+  "updateAssetMissingGithub": "A new version exists, but its Release has no Windows x64 ZIP with SHA-256.",
+  "updateAvailableGithub": "A new version is available for automatic download, verification, and restart.",
+  "updateAvailableGitee": "A new Gitee version is available for automatic download, verification, and restart.",
+  "updateUpToDate": "v{version} is the latest GitHub version.",
+  "@updateUpToDate": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "updateGiteeUpToDate": "v{version} is the latest Gitee version.",
+  "@updateGiteeUpToDate": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "updateNetworkUnavailableGithub": "Cannot connect to GitHub. Check the network and retry.",
+  "updateNetworkUnavailableGitee": "Cannot connect to Gitee. Check the network and retry.",
+  "updateRequestFailed": "The network request failed. Try again later.",
+  "updateGiteeRequestFailed": "The Gitee request failed. Try again later.",
+  "updateGiteeDigestMissing": "A Gitee update exists, but no trusted GitHub SHA-256 metadata is available. Automatic installation is disabled; open the release page to download manually.",
+  "updateProgressPreparing": "Preparing automatic update…",
+  "updateProgressConnecting": "Connecting to the Release download…",
+  "updateProgressDownloading": "Downloading {asset}…",
+  "@updateProgressDownloading": {
+    "placeholders": {
+      "asset": {"type": "String"}
+    }
+  },
+  "updateProgressVerifying": "Verifying the update archive SHA-256…",
+  "updateProgressExtracting": "Extracting into an independent version directory…",
+  "updateProgressVerifyingRuntime": "Validating the packaged PortableGit runtime…",
+  "updateProgressNotifyingLauncher": "Notifying the Launcher to switch versions…",
+  "updatePackageMissing": "The update archive does not exist.",
+  "updateWindowsOnly": "Automatic updates currently support Windows only.",
+  "updateNoNewVersion": "There is no new version to install.",
+  "updateAssetInvalid": "The update asset is missing a download URL or valid SHA-256; automatic update was cancelled.",
+  "updateVersionInvalid": "The update version contains invalid characters.",
+  "updateInstallSuccess": "v{version} is ready. The Launcher will switch versions and restart after the application exits.",
+  "@updateInstallSuccess": {
+    "placeholders": {
+      "version": {"type": "String"}
+    }
+  },
+  "changelog0100Title": "Structured runtime messages, Markdown guides, and safe links",
+  "changelog0100ItemMessages": "Operation results, queued plans, and logs now use semantic templates, with stable event IDs, write-time locale, and credential redaction.",
+  "changelog0100ItemMarkdown": "Bundled guides now use native Markdown rendering for headings, lists, tables, quotes, code blocks, images, and inline formatting.",
+  "changelog0100ItemLinks": "Guide links are limited to HTTPS, bundled guides, and heading anchors, with keyboard focus, text selection, and responsive layouts.",
+  "changelog0100ItemTests": "Added three-language guide resources, source regression checks, and complete structured-message test coverage.",
+  "changelog099Title": "Branch sync, safe fast-forward pull, and commit identity checks",
+  "changelog099ItemSyncStatus": "Shows upstream, ahead, behind, and worktree synchronization state.",
+  "changelog099ItemFetchPlan": "Adds fetch plans for the current upstream or all remotes with per-remote results.",
+  "changelog099ItemFastForwardPull": "Adds fast-forward-only pull and rejects dirty worktrees, missing upstreams, and diverged histories.",
+  "changelog099ItemGitIdentity": "Checks valid Git author and committer identities before queueing and before execution.",
+  "guideLanguageEnglish": "English",
+  "guideLanguageSimplifiedChinese": "Simplified Chinese",
+  "guideLanguageTraditionalChinese": "Traditional Chinese",
+  "unableToOpenGuideLink": "Unable to open the guide link: {error}",
+  "@unableToOpenGuideLink": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  }
+}

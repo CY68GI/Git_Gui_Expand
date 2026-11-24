@@ -56,14 +56,17 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
       _scan = refreshed;
       _clearing = false;
       _message = result.failed.isEmpty
-          ? context.l10n.tr('已清除 {count} 项，共释放 {size}。', {
+          ? context.l10n.tr('removedItemsAndFreed', {
               'count': result.removed.length,
               'size': formatFileSize(result.removedBytes, const AppSettings()),
             })
-          : context.l10n.tr('已清除 {removed} 项；{failed} 项无法删除，请查看详细日志。', {
-              'removed': result.removed.length,
-              'failed': result.failed.length,
-            });
+          : context.l10n.tr(
+              'removedItemsCouldNotBeDeletedCheckTheDetailedLog',
+              {
+                'removed': result.removed.length,
+                'failed': result.failed.length,
+              },
+            );
     });
   }
 
@@ -78,7 +81,7 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
         children: [
           Icon(Icons.cleaning_services_outlined, color: colors.primary),
           const SizedBox(width: 9),
-          Expanded(child: Text(l10n.tr('旧版本与安装包清理'))),
+          Expanded(child: Text(l10n.tr('oldVersionAndInstallerCleanup'))),
         ],
       ),
       content: SizedBox(
@@ -88,9 +91,10 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              l10n.tr('当前版本：{version}。只清理旧版本、旧安装包和旧平铺程序文件，不删除 userdata 数据。', {
-                'version': scan?.currentVersion ?? '—',
-              }),
+              l10n.tr(
+                'currentVersionOnlyOldVersionsInstallersAndLegacyFlatApplicationFilesAreRemovedUserdataIsRetained',
+                {'version': scan?.currentVersion ?? '—'},
+              ),
               style: TextStyle(
                 fontSize: 12,
                 height: 1.5,
@@ -119,7 +123,9 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
                     const SizedBox(width: 9),
                     Expanded(
                       child: Text(
-                        l10n.tr('未发现旧版本或旧安装包，当前目录已经是干净状态。'),
+                        l10n.tr(
+                          'noOldVersionsOrInstallersWereFoundTheDirectoryIsAlreadyClean',
+                        ),
                         style: const TextStyle(fontSize: 13, height: 1.45),
                       ),
                     ),
@@ -137,7 +143,7 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
                   borderRadius: BorderRadius.circular(9),
                 ),
                 child: Text(
-                  l10n.tr('扫描到 {count} 项，可释放 {size}。', {
+                  l10n.tr('foundItemsAndCanBeFreed', {
                     'count': items.length,
                     'size': formatFileSize(
                       scan!.totalBytes,
@@ -221,7 +227,7 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
         TextButton.icon(
           onPressed: _scanning || _clearing ? null : _scanFiles,
           icon: const Icon(Icons.refresh_rounded, size: 17),
-          label: Text(l10n.tr('重新扫描')),
+          label: Text(l10n.tr('scanAgain')),
         ),
         FilledButton.icon(
           onPressed: _scanning || _clearing || items.isEmpty ? null : _clearAll,
@@ -232,12 +238,12 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.delete_sweep_rounded, size: 18),
-          label: Text(l10n.tr('一键清除')),
+          label: Text(l10n.tr('cleanAll')),
           style: FilledButton.styleFrom(backgroundColor: colors.error),
         ),
         TextButton(
           onPressed: _clearing ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('关闭')),
+          child: Text(l10n.tr('close')),
         ),
       ],
     );
@@ -252,19 +258,29 @@ class _InstallationCleanupDialogState extends State<InstallationCleanupDialog> {
       MaintenanceItemKind.legacyUpdater => Icons.code_off_rounded,
       MaintenanceItemKind.legacyFlatFile => Icons.insert_drive_file_outlined,
       MaintenanceItemKind.legacyFlatDirectory => Icons.folder_outlined,
+      MaintenanceItemKind.obsoleteGitRuntime => Icons.extension_off_outlined,
+      MaintenanceItemKind.gitRuntimeArchive => Icons.inventory_outlined,
+      MaintenanceItemKind.gitRuntimeStaging => Icons.folder_delete_outlined,
     };
   }
 
   String _kindLabel(AppLocalizations l10n, MaintenanceItemKind kind) {
-    final label = switch (kind) {
-      MaintenanceItemKind.oldVersion => '旧版本目录',
-      MaintenanceItemKind.updateArchive => '更新安装包',
-      MaintenanceItemKind.partialDownload => '未完成下载',
-      MaintenanceItemKind.stagingDirectory => '临时解压目录',
-      MaintenanceItemKind.legacyUpdater => '旧更新脚本',
-      MaintenanceItemKind.legacyFlatFile => '旧平铺程序文件',
-      MaintenanceItemKind.legacyFlatDirectory => '旧平铺程序目录',
+    final key = switch (kind) {
+      MaintenanceItemKind.oldVersion => 'maintenanceKindOldVersion',
+      MaintenanceItemKind.updateArchive => 'maintenanceKindUpdateArchive',
+      MaintenanceItemKind.partialDownload => 'maintenanceKindPartialDownload',
+      MaintenanceItemKind.stagingDirectory => 'maintenanceKindStagingDirectory',
+      MaintenanceItemKind.legacyUpdater => 'maintenanceKindLegacyUpdater',
+      MaintenanceItemKind.legacyFlatFile => 'maintenanceKindLegacyFlatFile',
+      MaintenanceItemKind.legacyFlatDirectory =>
+        'maintenanceKindLegacyFlatDirectory',
+      MaintenanceItemKind.obsoleteGitRuntime =>
+        'maintenanceKindObsoleteGitRuntime',
+      MaintenanceItemKind.gitRuntimeArchive =>
+        'maintenanceKindGitRuntimeArchive',
+      MaintenanceItemKind.gitRuntimeStaging =>
+        'maintenanceKindGitRuntimeStaging',
     };
-    return l10n.tr(label);
+    return l10n.tr(key);
   }
 }

@@ -80,7 +80,11 @@ $launcherVersion = if (Test-Path -LiteralPath $launcher) {
           }
         }
       } catch (error) {
-        _log.warning('version', '读取可执行文件版本失败：$error');
+        _log.warningEvent(
+          'version',
+          'version.read.failed',
+          details: {'error': '$error'},
+        );
       }
     } else {
       launcherVersion = '';

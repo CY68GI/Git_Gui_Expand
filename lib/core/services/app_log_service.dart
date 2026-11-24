@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/widgets.dart';
 
 import '../localization/app_localizations.dart';
+import '../localization/localized_message.dart';
 import 'app_storage_service.dart';
 
 enum AppLogType { normal, detailed }
@@ -25,20 +26,80 @@ class AppLogService {
     _localizations = AppLocalizations(AppLocalizations.resolveLocale(locale));
   }
 
-  void info(String area, String message) {
-    _enqueue('INFO', area, message, includeInNormal: true);
+  void infoEvent(
+    String area,
+    String eventId, {
+    Map<String, String> details = const {},
+  }) {
+    event(
+      level: AppLogLevel.info,
+      area: area,
+      message: _eventMessage('logInfo', eventId, details),
+    );
   }
 
-  void detail(String area, String message) {
-    _enqueue('DETAIL', area, message, includeInNormal: false);
+  void detailEvent(
+    String area,
+    String eventId, {
+    Map<String, String> details = const {},
+  }) {
+    event(
+      level: AppLogLevel.detail,
+      area: area,
+      message: _eventMessage('logDetail', eventId, details),
+    );
   }
 
-  void warning(String area, String message) {
-    _enqueue('WARN', area, message, includeInNormal: true);
+  void warningEvent(
+    String area,
+    String eventId, {
+    Map<String, String> details = const {},
+  }) {
+    event(
+      level: AppLogLevel.warning,
+      area: area,
+      message: _eventMessage('logWarning', eventId, details),
+    );
   }
 
-  void error(String area, String message) {
-    _enqueue('ERROR', area, message, includeInNormal: true);
+  void errorEvent(
+    String area,
+    String eventId, {
+    Map<String, String> details = const {},
+  }) {
+    event(
+      level: AppLogLevel.error,
+      area: area,
+      message: _eventMessage('logError', eventId, details),
+    );
+  }
+
+  void event({
+    required AppLogLevel level,
+    required String area,
+    required LocalizedMessage message,
+  }) {
+    final eventId = message.eventId.isEmpty ? area : message.eventId;
+    _enqueue(
+      level,
+      area,
+      message,
+      eventId: eventId,
+      includeInNormal: level != AppLogLevel.detail,
+    );
+  }
+
+  LocalizedMessage _eventMessage(
+    String key,
+    String eventId,
+    Map<String, String> details,
+  ) {
+    return LocalizedMessage(
+      key: key,
+      parameters: {'eventId': eventId},
+      eventId: eventId,
+      technicalDetails: details,
+    );
   }
 
   Future<void> flush() => _writeQueue;
@@ -77,10 +138,10 @@ class AppLogService {
       if (result.length <= maxCharacters) {
         return result;
       }
-      return '… 仅显示最近日志 …\n\n'
+      return '${_localizations.tr('logsTruncated')}\n\n'
           '${result.substring(result.length - maxCharacters)}';
     } catch (error) {
-      return '读取日志失败：$error';
+      return _localizations.tr('logReadFailed', {'error': '$error'});
     }
   }
 
@@ -100,24 +161,29 @@ class AppLogService {
   }
 
   void _enqueue(
-    String level,
+    AppLogLevel level,
     String area,
-    String message, {
+    LocalizedMessage message, {
+    required String eventId,
     required bool includeInNormal,
   }) {
     final now = DateTime.now();
-    final localizedMessage = _localizations.tr(message);
-    final line =
-        '${now.toIso8601String()} [$level] [$area] '
-        '${_singleLine(localizedMessage)}';
+    final localizations = _localizations;
+    final localizedMessage = message.resolve(localizations);
+    final baseLine =
+        '${now.toIso8601String()} [${level.label}] [$area] '
+        '[$eventId] ${_singleLine(localizedMessage)}';
+    final detailLine = message.technicalDetails.isEmpty
+        ? baseLine
+        : '$baseLine ${_formatDetails(message.technicalDetails)}';
     _writeQueue = _writeQueue
         .then((_) async {
           await storage.ensureLogsDirectory();
           final day = _dayStamp(now);
           if (includeInNormal) {
-            await _append(type: AppLogType.normal, day: day, line: line);
+            await _append(type: AppLogType.normal, day: day, line: baseLine);
           }
-          await _append(type: AppLogType.detailed, day: day, line: line);
+          await _append(type: AppLogType.detailed, day: day, line: detailLine);
         })
         .catchError((Object _) {
           // Logging must never interrupt a Git or UI operation.
@@ -148,4 +214,23 @@ class AppLogService {
         ? normalized
         : '${normalized.substring(0, 30000)}…[truncated]';
   }
+
+  String _formatDetails(Map<String, String> details) {
+    final entries = details.entries.toList(growable: false)
+      ..sort((left, right) => left.key.compareTo(right.key));
+    return entries
+        .map((entry) => '${entry.key}=${_singleLine(entry.value)}')
+        .join(' | ');
+  }
+}
+
+enum AppLogLevel {
+  info('INFO'),
+  detail('DETAIL'),
+  warning('WARN'),
+  error('ERROR');
+
+  const AppLogLevel(this.label);
+
+  final String label;
 }

@@ -28,6 +28,13 @@ jobs:
       - name: Resolve dependencies
         run: flutter pub get
 
+      - name: Generate and validate localization catalogs
+        run: |
+          flutter gen-l10n
+          dart run tool/validate_localizations.dart --arb-dir lib/l10n --report build/l10n_untranslated.json
+          dart run tool/validate_localization_scripts.dart lib/l10n
+          dart run tool/validate_localization_source.dart
+
       - name: Analyze
         run: flutter analyze
 
@@ -36,6 +43,12 @@ jobs:
 
       - name: Build Windows release
         run: flutter build windows --release
+
+      - name: Fetch and verify pinned PortableGit runtime
+        shell: pwsh
+        run: |
+          ./tool/fetch_portablegit_runtime.ps1 `
+            -OutputDirectory build/portablegit-runtime
 
       - name: Package Windows release
         shell: pwsh
@@ -54,7 +67,8 @@ jobs:
         run: |
           gh release create $env:GITHUB_REF_NAME `
             "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip" `
-            "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip.sha256" `
+            "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64-PortableGit.zip" `
+            "dist/PortableGit-2.56.1-64-bit-runtime.zip" `
             --title "Git GUI Expand $env:GITHUB_REF_NAME" `
             --notes-file RELEASE_NOTES.md `
             --verify-tag
@@ -67,6 +81,7 @@ jobs:
             -Tag $env:GITHUB_REF_NAME `
             -AssetPath @(
               "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip",
-              "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64.zip.sha256"
+              "dist/Git_Gui_Expand-$env:GITHUB_REF_NAME-windows-x64-PortableGit.zip",
+              "dist/PortableGit-2.56.1-64-bit-runtime.zip"
             ) `
             -NotesPath RELEASE_NOTES.md

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:git_gui_expand/core/localization/runtime_messages.dart';
 import 'package:git_gui_expand/core/models/app_models.dart';
 import 'package:git_gui_expand/core/models/git_remote.dart';
 import 'package:git_gui_expand/core/models/operation_safety.dart';
@@ -19,6 +20,8 @@ import 'package:git_gui_expand/features/dialogs/settings_dialog.dart';
 import 'package:git_gui_expand/features/explorer/file_explorer_panel.dart';
 import 'package:git_gui_expand/features/repository/repository_controller.dart';
 import 'package:git_gui_expand/features/start/start_view.dart';
+
+import 'support/localized_message_fixture.dart';
 
 void main() {
   setUpAll(() async {
@@ -57,30 +60,58 @@ void main() {
       PlannedRepositoryOperation(
         id: 'rename',
         kind: PlannedOperationKind.rename,
-        title: '重命名 docs/这是一个很长很长的说明文档文件名.md',
-        description:
-            '将 docs/这是一个很长很长的说明文档文件名.md 的新名称设为'
-            ' README-完整使用说明与操作计划.md。',
-        run: () async => const OperationOutcome.success('renamed'),
+        title: RuntimeMessages.messageFor(
+          'planTitleRename',
+          parameters: {'source': 'docs/这是一个很长很长的说明文档文件名.md'},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionRename',
+          parameters: {
+            'source': 'docs/这是一个很长很长的说明文档文件名.md',
+            'newName': 'README-完整使用说明与操作计划.md',
+          },
+        ),
+        run: () async => OperationOutcome.success(fixtureMessage('renamed')),
       ),
       PlannedRepositoryOperation(
         id: 'delete',
         kind: PlannedOperationKind.delete,
-        title: '删除 2 个项目',
-        description:
-            '将永久删除 docs/这是一个很长很长的说明文档文件名.md、'
-            'src/another/deeply/nested/example.dart。',
+        title: RuntimeMessages.messageFor(
+          'planTitleDelete',
+          parameters: {'count': 2},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionDelete',
+          parameters: {
+            'count': 2,
+            'paths':
+                'docs/这是一个很长很长的说明文档文件名.md | '
+                'src/another/deeply/nested/example.dart',
+          },
+        ),
         isDangerous: true,
-        run: () async => const OperationOutcome.success('deleted'),
+        run: () async => OperationOutcome.success(fixtureMessage('deleted')),
       ),
       PlannedRepositoryOperation(
         id: 'clear',
         kind: PlannedOperationKind.clearRemote,
-        title: '清空远端历史 origin',
-        description: '项目 Git_Gui_Expand，目标分支 main。将保留一个空提交，删除其它分支和标签，本地内容不变。',
+        title: RuntimeMessages.messageFor(
+          'planTitleClearRemote',
+          parameters: {'remote': 'origin'},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionClearRemote',
+          parameters: {
+            'project': 'Git_Gui_Expand',
+            'branch': 'main',
+            'branches': 1,
+            'tags': 0,
+            'message': '仓库已清除',
+          },
+        ),
         isDangerous: true,
         strongConfirmationText: 'CY68GI/Git_Gui_Expand/main',
-        run: () async => const OperationOutcome.success('cleared'),
+        run: () async => OperationOutcome.success(fixtureMessage('cleared')),
       ),
     ];
 
@@ -136,18 +167,25 @@ void main() {
       PlannedRepositoryOperation(
         id: 'commit',
         kind: PlannedOperationKind.commit,
-        title: '提交全部更改',
-        description:
-            '提交说明：完善文件操作计划、危险确认、长文本显示和用户指南。'
-            '执行时先运行 git add -A，再运行 git commit。',
-        run: () async => const OperationOutcome.success('committed'),
+        title: RuntimeMessages.messageFor('planTitleCommitAll'),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionCommitAll',
+          parameters: {'message': '完善文件操作计划、危险确认、长文本显示和用户指南。'},
+        ),
+        run: () async => OperationOutcome.success(fixtureMessage('committed')),
       ),
       PlannedRepositoryOperation(
         id: 'push',
         kind: PlannedOperationKind.pushAllRemotes,
-        title: '推送到全部 2 个远端',
-        description: '依次推送当前分支到：origin、gitee。',
-        run: () async => const OperationOutcome.success('pushed'),
+        title: RuntimeMessages.messageFor(
+          'planTitlePushAllRemotes',
+          parameters: {'count': 2},
+        ),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionPushAllRemotes',
+          parameters: {'remotes': 'origin | gitee'},
+        ),
+        run: () async => OperationOutcome.success(fixtureMessage('pushed')),
       ),
     ];
 
@@ -481,11 +519,18 @@ class _DriftPlanHost extends ChangeNotifier implements OperationPlanHost {
         PlannedRepositoryOperation(
           id: 'drift',
           kind: PlannedOperationKind.rename,
-          title: '重命名 docs/这是用于验证漂移提示的长文件名.md',
-          description:
-              '执行前会重新检查仓库分支、HEAD、工作区、远端配置和路径类型，'
-              '发现任何变化都会停止。',
-          run: () async => const OperationOutcome.success('not run'),
+          title: RuntimeMessages.messageFor(
+            'planTitleRename',
+            parameters: {'source': 'docs/这是用于验证漂移提示的长文件名.md'},
+          ),
+          description: RuntimeMessages.messageFor(
+            'planDescriptionRename',
+            parameters: {
+              'source': 'docs/这是用于验证漂移提示的长文件名.md',
+              'newName': 'README.md',
+            },
+          ),
+          run: () async => OperationOutcome.success(fixtureMessage('not run')),
         ),
       ];
 
@@ -502,7 +547,7 @@ class _DriftPlanHost extends ChangeNotifier implements OperationPlanHost {
   OperationOutcome clearPendingOperations() {
     pendingOperations = const [];
     notifyListeners();
-    return const OperationOutcome.success('Cleared');
+    return OperationOutcome.success(fixtureMessage('Cleared'));
   }
 
   @override
@@ -513,7 +558,7 @@ class _DriftPlanHost extends ChangeNotifier implements OperationPlanHost {
   }) async {
     return OperationPlanResult(
       isSuccess: false,
-      message: '仓库状态与确认预览不一致，已停止执行。请刷新仓库并重新建立操作计划。',
+      message: RuntimeMessages.messageFor('planStateChanged'),
       completed: 0,
       total: pendingOperations.length,
       remaining: pendingOperations,
@@ -540,7 +585,7 @@ class _DriftPlanHost extends ChangeNotifier implements OperationPlanHost {
         .where((operation) => operation.id != id)
         .toList(growable: false);
     notifyListeners();
-    return const OperationOutcome.success('Removed');
+    return OperationOutcome.success(fixtureMessage('Removed'));
   }
 
   @override

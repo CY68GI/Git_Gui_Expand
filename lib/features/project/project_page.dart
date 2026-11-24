@@ -4,11 +4,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../core/constants/app_info.dart';
 import '../../core/localization/app_localizations.dart';
+import '../../core/localization/runtime_messages.dart';
 import '../../core/models/git_remote.dart';
 import '../../core/models/operation_safety.dart';
 import '../../core/models/settings_models.dart';
 import '../../core/services/app_log_service.dart';
+import '../../core/services/external_link_service.dart';
 import '../../core/services/folder_picker_service.dart';
 import '../../core/services/git_service.dart';
 import '../../core/services/installation_maintenance_service.dart';
@@ -18,6 +21,7 @@ import '../commit/commit_panel.dart';
 import '../dialogs/branch_management_dialog.dart';
 import '../dialogs/clone_repository_dialog.dart';
 import '../dialogs/git_metadata_clear_dialog.dart';
+import '../dialogs/git_runtime_recovery_dialog.dart';
 import '../dialogs/log_viewer_dialog.dart';
 import '../dialogs/installation_cleanup_dialog.dart';
 import '../dialogs/operation_plan_dialog.dart';
@@ -61,6 +65,7 @@ class _ProjectPageState extends State<ProjectPage> {
   final FocusNode _explorerFocus = FocusNode(debugLabel: 'explorer-shortcuts');
   final InstallationMaintenanceService _maintenance =
       const InstallationMaintenanceService();
+  final ExternalLinkService _externalLinks = ExternalLinkService();
 
   bool _isOpening = false;
   bool _isCommitFieldFocused = false;
@@ -93,13 +98,16 @@ class _ProjectPageState extends State<ProjectPage> {
       final scan = await _maintenance.scan();
       if (scan.items.isNotEmpty) {
         final result = await _maintenance.cleanup(scan);
-        _log.info(
+        _log.infoEvent(
           'maintenance',
-          '启动自动清理：移除 ${result.removed.length} 项，'
-              '失败 ${result.failed.length} 项',
+          'maintenance.startup.cleanup',
+          details: {
+            'removed': '${result.removed.length}',
+            'failed': '${result.failed.length}',
+          },
         );
       } else {
-        _log.detail('maintenance', '启动扫描：没有需要清理的旧版本或安装包');
+        _log.detailEvent('maintenance', 'maintenance.startup.scan.clean');
       }
       await _maintenance.scheduleLauncherSelfUpdate();
       final remaining = await _maintenance.scan();
@@ -114,7 +122,11 @@ class _ProjectPageState extends State<ProjectPage> {
         });
       }
     } catch (error) {
-      _log.error('maintenance', '启动自动维护失败：$error');
+      _log.errorEvent(
+        'maintenance',
+        'maintenance.startup.failed',
+        details: {'error': '$error'},
+      );
     }
   }
 
@@ -205,7 +217,11 @@ class _ProjectPageState extends State<ProjectPage> {
     final keyboard = HardwareKeyboard.instance;
     final key = event.logicalKey;
     if (keyboard.isControlPressed && key == LogicalKeyboardKey.keyO) {
-      _log.detail('shortcut', 'Ctrl+O 打开仓库');
+      _log.detailEvent(
+        'shortcut',
+        'shortcut.openRepository',
+        details: {'shortcut': 'Ctrl+O'},
+      );
       _runShortcut(() => unawaited(_openRepository()));
       return true;
     }
@@ -218,19 +234,31 @@ class _ProjectPageState extends State<ProjectPage> {
       return false;
     }
     if (key == LogicalKeyboardKey.f2) {
-      _log.detail('shortcut', 'F2 重命名');
+      _log.detailEvent(
+        'shortcut',
+        'shortcut.rename',
+        details: {'shortcut': 'F2'},
+      );
       _runShortcut(_renameActiveSelection);
       return true;
     }
     if (key == LogicalKeyboardKey.delete) {
-      _log.detail('shortcut', 'Delete 删除');
+      _log.detailEvent(
+        'shortcut',
+        'shortcut.delete',
+        details: {'shortcut': 'Delete'},
+      );
       _runShortcut(_deleteActiveSelection);
       return true;
     }
     if (keyboard.isControlPressed &&
         keyboard.isShiftPressed &&
         key == LogicalKeyboardKey.keyU) {
-      _log.detail('shortcut', 'Ctrl+Shift+U 推送');
+      _log.detailEvent(
+        'shortcut',
+        'shortcut.push',
+        details: {'shortcut': 'Ctrl+Shift+U'},
+      );
       _runShortcut(_pushCurrentBranch);
       return true;
     }
@@ -252,9 +280,10 @@ class _ProjectPageState extends State<ProjectPage> {
     if (action == null) {
       return false;
     }
-    _log.detail(
+    _log.detailEvent(
       'shortcut',
-      '${keyboard.isControlPressed ? 'Ctrl+' : ''}${key.keyLabel}',
+      'shortcut.command',
+      details: {'key': key.keyLabel, 'control': '${keyboard.isControlPressed}'},
     );
     _runShortcut(action);
     return true;
@@ -279,28 +308,43 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openRepository() async {
     if (_isOpening) return;
+    if (!await _ensureGitAvailable()) return;
+    if (!mounted) return;
     final l10n = context.l10n;
-    _log.detail('repository', '请求打开仓库文件夹选择器');
+    _log.detailEvent('repository', 'repository.picker.opened');
     setState(() => _isOpening = true);
     try {
       final path = await _folderPicker.pickRepositoryFolder(
         initialDirectory: _controller.repositoryPath,
       );
       if (path == null) {
-        _log.detail('repository', '用户取消文件夹选择');
+        _log.detailEvent('repository', 'repository.picker.cancelled');
         return;
       }
-      if (!await _confirmDiscardPendingPlan(l10n.tr('打开另一个仓库'))) {
+      if (!await _confirmDiscardPendingPlan(
+        l10n.tr('openingAnotherRepository'),
+      )) {
         return;
       }
-      _log.info('repository', '用户选择仓库：$path');
+      _log.infoEvent(
+        'repository',
+        'repository.picker.selected',
+        details: {'path': path},
+      );
       await _openRepositoryPath(path);
     } catch (error) {
-      _log.error('repository', '打开文件夹选择器失败：$error');
+      _log.errorEvent(
+        'repository',
+        'repository.picker.failed',
+        details: {'error': '$error'},
+      );
       if (mounted) {
         _showOutcome(
           OperationOutcome.failure(
-            error.toString().replaceFirst('Unsupported operation: ', ''),
+            RuntimeMessages.operationFailed(
+              error.toString().replaceFirst('Unsupported operation: ', ''),
+              eventId: 'repository.picker.failed',
+            ),
           ),
         );
       }
@@ -313,11 +357,13 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openEmptyFolder() async {
     if (_isOpening) return;
+    if (!await _ensureGitAvailable()) return;
+    if (!mounted) return;
     setState(() => _isOpening = true);
     try {
       final path = await _folderPicker.pickFolder(
         initialDirectory: _controller.repositoryPath,
-        title: context.l10n.tr('打开空白文件夹'),
+        title: context.l10n.tr('openEmptyFolder'),
       );
       if (path == null || !mounted) return;
       final gitPath = '$path${Platform.pathSeparator}.git';
@@ -330,9 +376,20 @@ class _ProjectPageState extends State<ProjectPage> {
         await _openRepositoryPath(path);
       }
     } catch (error) {
-      _log.error('repository', '初始化空白文件夹失败：$error');
+      _log.errorEvent(
+        'repository',
+        'repository.initializeBlank.failed',
+        details: {'error': '$error'},
+      );
       if (mounted) {
-        _showOutcome(OperationOutcome.failure(error.toString()));
+        _showOutcome(
+          OperationOutcome.failure(
+            RuntimeMessages.operationFailed(
+              error,
+              eventId: 'repository.initializeBlank.failed',
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isOpening = false);
@@ -341,6 +398,8 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _cloneRepository() async {
     if (_isOpening) return;
+    if (!await _ensureGitAvailable()) return;
+    if (!mounted) return;
     final request = await showDialog<CloneRepositoryRequest>(
       context: context,
       barrierDismissible: false,
@@ -360,12 +419,15 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<bool> _showInitializationPlan(String path) async {
     if (!mounted) return false;
-    final l10n = context.l10n;
     final snapshot = await GitService.inspectInitializationTarget(path);
     if (!mounted) return false;
     if (!snapshot.targetExists || snapshot.gitMetadataType != 'notFound') {
       _showOutcome(
-        OperationOutcome.failure(l10n.tr('初始化目标必须存在且不能已经包含 Git 元数据。')),
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor(
+            'theInitializationTargetMustExistAndMustNotAlreadyContainGitMetadata',
+          ),
+        ),
       );
       return false;
     }
@@ -374,16 +436,29 @@ class _ProjectPageState extends State<ProjectPage> {
       operation: PlannedRepositoryOperation(
         id: 'bootstrap-init',
         kind: PlannedOperationKind.initializeRepository,
-        title: l10n.tr('初始化 Git 仓库'),
-        description: l10n.tr('目标目录：{path}\n确认后在目标目录执行 git init，然后打开该仓库。', {
-          'path': path,
-        }),
+        title: RuntimeMessages.messageFor('planTitleInitializeRepository'),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionInitializeRepository',
+          parameters: {'path': path},
+        ),
         run: () async {
           try {
             await GitService.initializeRepository(path);
-            return OperationOutcome.success(l10n.tr('Git 仓库已初始化'));
+            return OperationOutcome.success(
+              RuntimeMessages.messageFor(
+                'gitRepositoryInitialized',
+                eventId: 'repository.initialize.succeeded',
+                technicalDetails: {'path': path},
+              ),
+            );
           } catch (error) {
-            return OperationOutcome.failure(error.toString());
+            return OperationOutcome.failure(
+              RuntimeMessages.operationFailed(
+                error,
+                eventId: 'repository.initialize.failed',
+                target: path,
+              ),
+            );
           }
         },
         affectedPaths: const [],
@@ -416,18 +491,31 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<bool> _showClonePlan(CloneRepositoryRequest request) async {
     if (!mounted) return false;
-    final l10n = context.l10n;
     final snapshot = await GitService.inspectCloneTarget(
       request.remoteUrl,
       request.destinationPath,
     );
     if (!mounted) return false;
     if (!await Directory(snapshot.parentPath).exists()) {
-      _showOutcome(OperationOutcome.failure(l10n.tr('克隆目标父目录不存在。')));
+      _showOutcome(
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor(
+            'theCloneDestinationParentFolderDoesNotExist',
+            technicalDetails: {'path': snapshot.parentPath},
+          ),
+        ),
+      );
       return false;
     }
     if (snapshot.targetExists && !snapshot.targetIsEmpty) {
-      _showOutcome(OperationOutcome.failure(l10n.tr('克隆目标目录不是空目录。')));
+      _showOutcome(
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor(
+            'theCloneDestinationFolderIsNotEmpty',
+            technicalDetails: {'path': request.destinationPath},
+          ),
+        ),
+      );
       return false;
     }
     final precondition = OperationPrecondition(bootstrap: snapshot);
@@ -435,11 +523,10 @@ class _ProjectPageState extends State<ProjectPage> {
       operation: PlannedRepositoryOperation(
         id: 'bootstrap-clone',
         kind: PlannedOperationKind.cloneRepository,
-        title: l10n.tr('克隆 Git 仓库'),
-        description: l10n.tr(
-          '地址：{url}\n目标目录：{path}\n取消不会创建任何文件，'
-          '确认计划后才会再次检查目标并执行 git clone。',
-          {
+        title: RuntimeMessages.messageFor('planTitleCloneRepository'),
+        description: RuntimeMessages.messageFor(
+          'planDescriptionCloneRepository',
+          parameters: {
             'url': GitRemote.maskRemoteUrl(request.remoteUrl),
             'path': request.destinationPath,
           },
@@ -450,9 +537,24 @@ class _ProjectPageState extends State<ProjectPage> {
               request.remoteUrl,
               request.destinationPath,
             );
-            return OperationOutcome.success(l10n.tr('Git 仓库已克隆'));
+            return OperationOutcome.success(
+              RuntimeMessages.messageFor(
+                'gitRepositoryCloned',
+                eventId: 'repository.clone.succeeded',
+                technicalDetails: {
+                  'path': request.destinationPath,
+                  'url': GitRemote.maskRemoteUrl(request.remoteUrl),
+                },
+              ),
+            );
           } catch (error) {
-            return OperationOutcome.failure(error.toString());
+            return OperationOutcome.failure(
+              RuntimeMessages.operationFailed(
+                error,
+                eventId: 'repository.clone.failed',
+                target: request.destinationPath,
+              ),
+            );
           }
         },
         affectedPaths: const [],
@@ -491,16 +593,29 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openRepositoryPath(String path) async {
     if (!mounted) return;
-    _log.detail('repository', '开始打开仓库：$path');
+    if (!await _ensureGitAvailable()) return;
+    _log.detailEvent(
+      'repository',
+      'repository.open.started',
+      details: {'path': path},
+    );
     setState(() => _isOpening = true);
     try {
       final outcome = await _controller.openRepository(path);
       if (!mounted) return;
       _showOutcome(outcome);
       if (outcome.isSuccess) {
-        _log.info('repository', '仓库已打开：${_controller.repositoryPath}');
+        _log.infoEvent(
+          'repository',
+          'repository.open.completed',
+          details: {'path': _controller.repositoryPath ?? path},
+        );
       } else {
-        _log.error('repository', '仓库打开失败：${outcome.message}');
+        _log.errorEvent(
+          'repository',
+          'repository.open.failed',
+          details: {'outcomeKey': outcome.message.key, 'path': path},
+        );
       }
       if (outcome.isSuccess) {
         _explorerFocus.requestFocus();
@@ -509,7 +624,10 @@ class _ProjectPageState extends State<ProjectPage> {
       if (mounted) {
         _showOutcome(
           OperationOutcome.failure(
-            error.toString().replaceFirst('Unsupported operation: ', ''),
+            RuntimeMessages.operationFailed(
+              error.toString().replaceFirst('Unsupported operation: ', ''),
+              eventId: 'repository.open.failed',
+            ),
           ),
         );
       }
@@ -522,33 +640,97 @@ class _ProjectPageState extends State<ProjectPage> {
 
   Future<void> _openRecentRepository(String path) async {
     if (_isOpening) return;
-    if (!await _confirmDiscardPendingPlan(context.l10n.tr('打开另一个仓库'))) {
+    if (!await _ensureGitAvailable()) return;
+    if (!mounted) return;
+    if (!await _confirmDiscardPendingPlan(
+      context.l10n.tr('openingAnotherRepository'),
+    )) {
       return;
     }
-    _log.info('history', '从最近仓库打开：$path');
+    _log.infoEvent('history', 'history.open', details: {'path': path});
     await _openRepositoryPath(path);
+  }
+
+  Future<bool> _ensureGitAvailable() async {
+    if (_controller.isGitAvailable) return true;
+    if (!mounted) return false;
+    final recovered = await showDialog<bool>(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) => GitRuntimeRecoveryDialog(
+        runtimeManager: _controller.gitRuntime,
+        externalLinks: _externalLinks,
+      ),
+    );
+    return recovered == true || _controller.isGitAvailable;
+  }
+
+  Future<void> _recheckGitRuntime() async {
+    final status = await _controller.refreshGitRuntime();
+    if (!mounted) return;
+    if (!status.isAvailable) {
+      await showDialog<void>(
+        context: context,
+        builder: (context) => GitRuntimeRecoveryDialog(
+          runtimeManager: _controller.gitRuntime,
+          externalLinks: _externalLinks,
+        ),
+      );
+    }
+  }
+
+  Future<void> _openGitDownload() async {
+    try {
+      await _externalLinks.openExternalUrl(AppInfo.gitForWindowsDownloadUrl);
+    } catch (error) {
+      if (mounted) {
+        _showOutcome(
+          OperationOutcome.failure(
+            RuntimeMessages.messageFor(
+              'unableToOpenTheGitDownloadPage',
+              parameters: {'error': '$error'},
+              eventId: 'ui.openGitDownload.failed',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _openProjectDirectory() async {
     final path = _controller.repositoryPath;
     if (path == null || path.isEmpty) {
-      _showOutcome(OperationOutcome.failure(context.l10n.tr('当前没有打开的项目。')));
+      _showOutcome(
+        OperationOutcome.failure(RuntimeMessages.messageFor('noProjectIsOpen')),
+      );
       return;
     }
     try {
       await _folderPicker.openDirectory(path);
-      _log.detail('ui', '已在 Windows 资源管理器中打开项目目录：$path');
+      _log.detailEvent(
+        'ui',
+        'ui.projectDirectory.opened',
+        details: {'path': path},
+      );
     } catch (error) {
-      _log.error('ui', '打开项目目录失败：$error');
+      _log.errorEvent(
+        'ui',
+        'ui.projectDirectory.failed',
+        details: {'path': path, 'error': '$error'},
+      );
       if (mounted) {
         _showOutcome(
           OperationOutcome.failure(
-            context.l10n.tr('无法打开项目目录：{error}', {
-              'error': error.toString().replaceFirst(
-                'FileSystemException: ',
-                '',
-              ),
-            }),
+            RuntimeMessages.messageFor(
+              'unableToOpenProjectFolder',
+              parameters: {
+                'error': error.toString().replaceFirst(
+                  'FileSystemException: ',
+                  '',
+                ),
+              },
+              eventId: 'ui.projectDirectory.failed',
+            ),
           ),
         );
       }
@@ -563,9 +745,14 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   void _showOutcome(OperationOutcome outcome) {
-    _log.detail(
+    _log.detailEvent(
       'ui',
-      '操作提示 ${outcome.isSuccess ? '成功' : '失败'}：${outcome.message}',
+      'ui.outcome.presented',
+      details: {
+        'success': '${outcome.isSuccess}',
+        'messageKey': outcome.message.key,
+        'eventId': outcome.message.eventId,
+      },
     );
     showAppOutcomeSnackBar(context, outcome, onViewLogs: _showLogs);
   }
@@ -573,17 +760,25 @@ class _ProjectPageState extends State<ProjectPage> {
   Future<void> _renameActiveSelection() async {
     final panel = _controller.panelFor(_controller.activeSide);
     if (panel.selectedPaths.isEmpty) {
-      _showOutcome(OperationOutcome.failure(context.l10n.tr('请先勾选要重命名的项目。')));
+      _showOutcome(
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor('selectAnItemToRename'),
+        ),
+      );
       return;
     }
     if (panel.selectedPaths.length > 1) {
-      _showOutcome(OperationOutcome.failure(context.l10n.tr('重命名时只能勾选一个项目。')));
+      _showOutcome(
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor('selectExactlyOneItemToRename'),
+        ),
+      );
       return;
     }
 
     final path = panel.selectedPaths.single;
     final l10n = context.l10n;
-    _log.detail('ui', '打开重命名对话框：$path');
+    _log.detailEvent('ui', 'ui.renameDialog.opened', details: {'path': path});
     final currentName = repositoryName(path);
     final textController = TextEditingController(text: currentName);
     final isFile = panel.entries
@@ -601,7 +796,7 @@ class _ProjectPageState extends State<ProjectPage> {
           children: [
             const Icon(Icons.drive_file_rename_outline_rounded, size: 21),
             const SizedBox(width: 9),
-            Text(l10n.tr('重命名')),
+            Text(l10n.tr('rename')),
           ],
         ),
         content: SizedBox(
@@ -623,14 +818,13 @@ class _ProjectPageState extends State<ProjectPage> {
               TextField(
                 controller: textController,
                 autofocus: true,
-                decoration: InputDecoration(labelText: l10n.tr('新名称')),
+                decoration: InputDecoration(labelText: l10n.tr('newName')),
                 onSubmitted: (value) => Navigator.pop(context, value),
               ),
               const SizedBox(height: 10),
               Text(
                 l10n.tr(
-                  '此操作只会加入待执行计划。确认并执行计划后，'
-                  '软件才会运行 git mv。',
+                  'thisActionIsAddedToThePlanGitMvRunsOnlyAfterConfirmation',
                 ),
                 style: const TextStyle(fontSize: 12.5, height: 1.45),
               ),
@@ -640,11 +834,11 @@ class _ProjectPageState extends State<ProjectPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(l10n.tr('取消')),
+            child: Text(l10n.tr('cancel2')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, textController.text),
-            child: Text(l10n.tr('加入执行计划')),
+            child: Text(l10n.tr('addToPlan')),
           ),
         ],
       ),
@@ -661,12 +855,20 @@ class _ProjectPageState extends State<ProjectPage> {
   Future<void> _deleteActiveSelection() async {
     final panel = _controller.panelFor(_controller.activeSide);
     if (panel.selectedPaths.isEmpty) {
-      _showOutcome(OperationOutcome.failure(context.l10n.tr('请先勾选要删除的项目。')));
+      _showOutcome(
+        OperationOutcome.failure(
+          RuntimeMessages.messageFor('selectItemsToDelete'),
+        ),
+      );
       return;
     }
     final paths = panel.selectedPaths.toList(growable: false);
     final l10n = context.l10n;
-    _log.detail('ui', '打开删除确认：${paths.join(' | ')}');
+    _log.detailEvent(
+      'ui',
+      'ui.deleteDialog.opened',
+      details: {'paths': paths.join(' | ')},
+    );
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -674,7 +876,9 @@ class _ProjectPageState extends State<ProjectPage> {
         final preview = paths.take(6).toList(growable: false);
         return AlertDialog(
           icon: Icon(Icons.delete_forever_outlined, color: colors.error),
-          title: Text(l10n.tr('将删除 {count} 个项目加入计划', {'count': paths.length})),
+          title: Text(
+            l10n.tr('addDeletionOfItemsToThePlan', {'count': paths.length}),
+          ),
           content: SizedBox(
             width: 480,
             child: SingleChildScrollView(
@@ -684,8 +888,7 @@ class _ProjectPageState extends State<ProjectPage> {
                 children: [
                   Text(
                     l10n.tr(
-                      '现在不会删除文件。此步骤加入计划后，必须在“待执行操作计划”'
-                      '中再次确认，才会使用 git rm 或 git clean 执行。',
+                      'filesAreNotDeletedYetConfirmTheOperationPlanBeforeGitRmOrGitCleanRuns',
                     ),
                     style: TextStyle(
                       fontSize: 13,
@@ -727,7 +930,7 @@ class _ProjectPageState extends State<ProjectPage> {
                             ),
                           if (paths.length > preview.length)
                             Text(
-                              l10n.tr('以及其他 {count} 项', {
+                              l10n.tr('andMore', {
                                 'count': paths.length - preview.length,
                               }),
                               style: TextStyle(
@@ -746,12 +949,12 @@ class _ProjectPageState extends State<ProjectPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.tr('取消')),
+              child: Text(l10n.tr('cancel2')),
             ),
             FilledButton.icon(
               onPressed: () => Navigator.pop(context, true),
               icon: const Icon(Icons.delete_outline_rounded, size: 17),
-              label: Text(l10n.tr('加入删除计划')),
+              label: Text(l10n.tr('addDeletionToPlan')),
               style: FilledButton.styleFrom(
                 backgroundColor: colors.error,
                 foregroundColor: colors.onError,
@@ -777,19 +980,18 @@ class _ProjectPageState extends State<ProjectPage> {
     if (!_controller.hasRepository) return;
     final l10n = context.l10n;
     final branch = _controller.branch.isEmpty
-        ? l10n.tr('当前分支')
+        ? l10n.tr('currentBranch')
         : _controller.branch;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.cloud_upload_outlined),
-        title: Text(l10n.tr('将推送 {branch} 加入计划', {'branch': branch})),
+        title: Text(l10n.tr('addPushOfToThePlan', {'branch': branch})),
         content: SizedBox(
           width: 430,
           child: Text(
             l10n.tr(
-              '现在不会联网推送。执行计划时，已配置 upstream 会运行 git push；'
-              '否则优先使用 origin 并设置当前分支的 upstream。',
+              'nothingIsPushedYetThePlanWillRunGitPushAndConfigureUpstreamWhenNeeded',
             ),
             style: const TextStyle(fontSize: 13, height: 1.5),
           ),
@@ -797,18 +999,18 @@ class _ProjectPageState extends State<ProjectPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text(l10n.tr('取消')),
+            child: Text(l10n.tr('cancel2')),
           ),
           FilledButton.icon(
             onPressed: () => Navigator.pop(context, true),
             icon: const Icon(Icons.cloud_upload_outlined, size: 17),
-            label: Text(l10n.tr('加入推送计划')),
+            label: Text(l10n.tr('addPushToPlan')),
           ),
         ],
       ),
     );
     if (confirmed != true || !mounted) return;
-    _log.info('ui', '用户确认推送 $branch');
+    _log.infoEvent('ui', 'ui.push.confirmed', details: {'branch': branch});
     final outcome = await _controller.pushCurrentBranch();
     if (mounted) {
       _showOutcome(outcome);
@@ -821,7 +1023,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showSettings() async {
-    _log.detail('ui', '打开设置对话框');
+    _log.detailEvent('ui', 'ui.settingsDialog.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => SettingsDialog(controller: _controller),
@@ -832,7 +1034,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showUpdates() async {
-    _log.detail('ui', '打开发布更新与更新日志对话框');
+    _log.detailEvent('ui', 'ui.updateDialog.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => const UpdateDialog(),
@@ -840,7 +1042,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showLogs() async {
-    _log.detail('ui', '打开操作日志查看器');
+    _log.detailEvent('ui', 'ui.logViewer.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => const LogViewerDialog(),
@@ -848,7 +1050,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showUserGuide() async {
-    _log.detail('ui', '打开使用指南');
+    _log.detailEvent('ui', 'ui.userGuide.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => const UserGuideDialog(),
@@ -856,7 +1058,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showRemotes() async {
-    _log.detail('ui', '打开远端仓库管理');
+    _log.detailEvent('ui', 'ui.remoteDialog.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => RemoteManagementDialog(controller: _controller),
@@ -867,7 +1069,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showBranches() async {
-    _log.detail('ui', '打开分支管理');
+    _log.detailEvent('ui', 'ui.branchDialog.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => BranchManagementDialog(controller: _controller),
@@ -892,7 +1094,7 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showStashes() async {
-    _log.detail('ui', '打开 Stash 管理');
+    _log.detailEvent('ui', 'ui.stashDialog.opened');
     await showDialog<void>(
       context: context,
       builder: (context) => StashManagementDialog(controller: _controller),
@@ -903,7 +1105,11 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _showOperationPlan() async {
-    _log.detail('ui', '打开待执行操作计划，共 ${_controller.pendingOperations.length} 步');
+    _log.detailEvent(
+      'ui',
+      'ui.operationPlan.opened',
+      details: {'count': '${_controller.pendingOperations.length}'},
+    );
     await showDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -925,13 +1131,12 @@ class _ProjectPageState extends State<ProjectPage> {
         final l10n = context.l10n;
         return AlertDialog(
           icon: Icon(Icons.warning_amber_rounded, color: colors.error),
-          title: Text(l10n.tr('放弃待执行操作计划？')),
+          title: Text(l10n.tr('discardThePendingOperationPlan')),
           content: SizedBox(
             width: 460,
             child: Text(
               l10n.tr(
-                '当前有 {count} 步操作尚未执行。{action}会清除这些计划，'
-                '仓库不会发生这些变更。',
+                'plannedStepsHaveNotRunWillDiscardThemNoRepositoryChangesWillOccur',
                 {
                   'count': _controller.pendingOperations.length,
                   'action': action,
@@ -943,12 +1148,12 @@ class _ProjectPageState extends State<ProjectPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: Text(l10n.tr('返回')),
+              child: Text(l10n.tr('back')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               style: FilledButton.styleFrom(backgroundColor: colors.error),
-              child: Text(l10n.tr('放弃计划并继续')),
+              child: Text(l10n.tr('discardPlanAndContinue')),
             ),
           ],
         );
@@ -962,7 +1167,9 @@ class _ProjectPageState extends State<ProjectPage> {
   }
 
   Future<void> _closeRepository() async {
-    if (!await _confirmDiscardPendingPlan(context.l10n.tr('关闭仓库'))) {
+    if (!await _confirmDiscardPendingPlan(
+      context.l10n.tr('closingTheRepository'),
+    )) {
       return;
     }
     _controller.closeRepository();
@@ -986,8 +1193,18 @@ class _ProjectPageState extends State<ProjectPage> {
     if (mounted) {
       _showOutcome(
         _controller.fatalError == null
-            ? OperationOutcome.success(context.l10n.tr('仓库视图已刷新'))
-            : OperationOutcome.failure(_controller.fatalError!),
+            ? OperationOutcome.success(
+                RuntimeMessages.messageFor(
+                  'repositoryViewRefreshed',
+                  eventId: 'repository.refresh.succeeded',
+                ),
+              )
+            : OperationOutcome.failure(
+                RuntimeMessages.operationFailed(
+                  _controller.fatalError!,
+                  eventId: 'repository.refresh.failed',
+                ),
+              ),
       );
     }
   }
@@ -999,18 +1216,31 @@ class _ProjectPageState extends State<ProjectPage> {
         preferredSize: const Size.fromHeight(72),
         child: _buildTopBar(context),
       ),
-      body: _controller.hasRepository
-          ? _buildRepositoryWorkspace(context)
-          : StartView(
-              onOpenRepository: _openRepository,
-              onOpenEmptyFolder: _openEmptyFolder,
-              onCloneRepository: _cloneRepository,
-              isOpening: _isOpening || _controller.isBusy,
-              recentRepositories: _controller.recentRepositories,
-              onOpenRecent: _openRecentRepository,
-              onRemoveRecent: _removeRecentRepository,
-              error: _controller.fatalError,
+      body: Column(
+        children: [
+          if (!_controller.isGitAvailable)
+            _MissingGitBanner(
+              checking: _controller.gitRuntimeStatus.isChecking,
+              onDownload: _openGitDownload,
+              onRecheck: _recheckGitRuntime,
             ),
+          Expanded(
+            child: _controller.hasRepository
+                ? _buildRepositoryWorkspace(context)
+                : StartView(
+                    onOpenRepository: _openRepository,
+                    onOpenEmptyFolder: _openEmptyFolder,
+                    onCloneRepository: _cloneRepository,
+                    isOpening: _isOpening || _controller.isBusy,
+                    isGitAvailable: _controller.isGitAvailable,
+                    recentRepositories: _controller.recentRepositories,
+                    onOpenRecent: _openRecentRepository,
+                    onRemoveRecent: _removeRecentRepository,
+                    error: _controller.fatalError,
+                  ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1064,40 +1294,40 @@ class _ProjectPageState extends State<ProjectPage> {
             const Spacer(),
           _TopBarButton(
             icon: Icons.folder_open_rounded,
-            label: l10n.tr('打开'),
+            label: l10n.tr('open'),
             onTap: _openRepository,
           ),
           if (_controller.hasRepository)
             _TopBarButton(
               icon: Icons.folder_copy_outlined,
-              label: l10n.tr('项目目录'),
+              label: l10n.tr('projectFolder'),
               onTap: _openProjectDirectory,
             ),
           if (_controller.hasRepository)
             _TopBarButton(
               icon: Icons.delete_forever_outlined,
-              label: l10n.tr('Git 元数据'),
+              label: l10n.tr('gitMetadata'),
               onTap: _showGitMetadata,
             ),
           _TopBarButton(
             icon: Icons.system_update_alt_rounded,
-            label: l10n.tr('更新'),
+            label: l10n.tr('updates'),
             onTap: () => _showUpdates(),
           ),
           _TopBarButton(
             icon: Icons.receipt_long_outlined,
-            label: l10n.tr('操作日志'),
+            label: l10n.tr('logs'),
             onTap: _showLogs,
           ),
           _TopBarButton(
             icon: Icons.menu_book_outlined,
-            label: l10n.tr('指南'),
+            label: l10n.tr('guide'),
             onTap: _showUserGuide,
           ),
           const SizedBox(width: 4),
           IconButton(
             onPressed: _showSettings,
-            tooltip: l10n.tr('设置'),
+            tooltip: l10n.tr('settings2'),
             icon: const Icon(Icons.settings_outlined, size: 20),
           ),
         ],
@@ -1206,7 +1436,7 @@ class _ProjectPageState extends State<ProjectPage> {
                   children: [
                     Flexible(
                       child: Text(
-                        _controller.projectName ?? l10n.tr('Git 仓库'),
+                        _controller.projectName ?? l10n.tr('gitRepository'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.headlineSmall,
@@ -1216,7 +1446,7 @@ class _ProjectPageState extends State<ProjectPage> {
                     _InfoChip(
                       icon: Icons.account_tree_outlined,
                       label: _controller.branch.isEmpty
-                          ? l10n.tr('无分支')
+                          ? l10n.tr('noBranch')
                           : _controller.branch,
                     ),
                   ],
@@ -1233,19 +1463,19 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
           ),
           _SummaryMetric(
-            label: l10n.tr('项目大小'),
+            label: l10n.tr('projectSize'),
             value: size,
             icon: Icons.data_usage_rounded,
           ),
           const SizedBox(width: 9),
           _SummaryMetric(
-            label: l10n.tr('文件'),
+            label: l10n.tr('files'),
             value: '${stats?.fileCount ?? 0}',
             icon: Icons.insert_drive_file_outlined,
           ),
           const SizedBox(width: 9),
           _SummaryMetric(
-            label: l10n.tr('待提交'),
+            label: l10n.tr('pending2'),
             value: '${_controller.changedFiles.length}',
             icon: Icons.change_circle_outlined,
           ),
@@ -1274,21 +1504,21 @@ class _ProjectPageState extends State<ProjectPage> {
           children: [
             _OperationButton(
               icon: Icons.content_cut_rounded,
-              label: l10n.tr('剪切'),
+              label: l10n.tr('cut'),
               shortcut: 'Ctrl X',
               enabled: selectedCount > 0 && !_controller.isBusy,
               onTap: () => _handleClipboard(ClipboardMode.cut),
             ),
             _OperationButton(
               icon: Icons.content_copy_rounded,
-              label: l10n.tr('复制'),
+              label: l10n.tr('copy'),
               shortcut: 'Ctrl C',
               enabled: selectedCount > 0 && !_controller.isBusy,
               onTap: () => _handleClipboard(ClipboardMode.copy),
             ),
             _OperationButton(
               icon: Icons.content_paste_rounded,
-              label: l10n.tr('粘贴'),
+              label: l10n.tr('paste'),
               shortcut: 'Ctrl V',
               enabled:
                   clipboard != null &&
@@ -1298,7 +1528,7 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
             _OperationButton(
               icon: Icons.drive_file_rename_outline_rounded,
-              label: l10n.tr('重命名'),
+              label: l10n.tr('rename'),
               shortcut: 'F2',
               enabled:
                   selectedCount == 1 &&
@@ -1308,7 +1538,7 @@ class _ProjectPageState extends State<ProjectPage> {
             ),
             _OperationButton(
               icon: Icons.delete_outline_rounded,
-              label: l10n.tr('删除'),
+              label: l10n.tr('delete'),
               shortcut: 'Delete',
               enabled:
                   selectedCount > 0 &&
@@ -1339,8 +1569,8 @@ class _ProjectPageState extends State<ProjectPage> {
                   const SizedBox(width: 5),
                   Text(
                     _controller.activeSide == ExplorerSide.left
-                        ? l10n.tr('粘贴到左侧')
-                        : l10n.tr('粘贴到右侧'),
+                        ? l10n.tr('pasteToLeft')
+                        : l10n.tr('pasteToRight'),
                     style: TextStyle(
                       fontSize: 11,
                       color: colors.primary,
@@ -1359,8 +1589,8 @@ class _ProjectPageState extends State<ProjectPage> {
             else
               Text(
                 selectedCount == 0
-                    ? l10n.tr('勾选文件后可剪切或复制')
-                    : l10n.tr('已选择 {count} 项', {'count': selectedCount}),
+                    ? l10n.tr('selectFilesToCutOrCopy')
+                    : l10n.tr('selected2', {'count': selectedCount}),
                 style: TextStyle(
                   fontSize: 11.5,
                   color: colors.onSurfaceVariant,
@@ -1368,7 +1598,7 @@ class _ProjectPageState extends State<ProjectPage> {
               ),
             const SizedBox(width: 10),
             Tooltip(
-              message: l10n.tr('查看、移除或确认执行所有待处理操作'),
+              message: l10n.tr('reviewRemoveOrExecutePendingOperations'),
               child: OutlinedButton.icon(
                 onPressed: _controller.isBusy ? null : _showOperationPlan,
                 icon: Icon(
@@ -1378,7 +1608,7 @@ class _ProjectPageState extends State<ProjectPage> {
                   size: 16,
                 ),
                 label: Text(
-                  l10n.tr('待执行 {count}', {
+                  l10n.tr('pending', {
                     'count': _controller.pendingOperations.length,
                   }),
                 ),
@@ -1409,13 +1639,13 @@ class _ProjectPageState extends State<ProjectPage> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ),
             Text(
-              l10n.tr('双击文件夹进入 · 点击面板切换粘贴目标'),
+              l10n.tr('doubleClickAFolderClickAPaneToChooseThePasteTarget'),
               style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
             ),
             const SizedBox(width: 8),
             IconButton(
               onPressed: _refreshRepository,
-              tooltip: l10n.tr('刷新仓库 (Ctrl+R)'),
+              tooltip: l10n.tr('refreshRepositoryCtrlR'),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               visualDensity: VisualDensity.compact,
             ),
@@ -1601,7 +1831,7 @@ class _ClipboardView extends StatelessWidget {
         ),
         const SizedBox(width: 5),
         Text(
-          l10n.tr(isCut ? '待移动 {count} 项' : '待复制 {count} 项', {
+          l10n.tr(isCut ? 'clipboardPendingCut' : 'clipboardPendingCopy', {
             'count': selection.paths.length,
           }),
           style: TextStyle(
@@ -1620,6 +1850,68 @@ class _ClipboardView extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _MissingGitBanner extends StatelessWidget {
+  const _MissingGitBanner({
+    required this.checking,
+    required this.onDownload,
+    required this.onRecheck,
+  });
+
+  final bool checking;
+  final VoidCallback onDownload;
+  final VoidCallback onRecheck;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        border: Border(
+          bottom: BorderSide(color: colors.error.withValues(alpha: 0.3)),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline_rounded, color: colors.onErrorContainer),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              l10n.tr('gitIsUnavailableRepositoryActionsAreDisabled'),
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: colors.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: onDownload,
+            child: Text(l10n.tr('downloadGit')),
+          ),
+          const SizedBox(width: 4),
+          FilledButton.tonalIcon(
+            onPressed: checking ? null : onRecheck,
+            icon: checking
+                ? const SizedBox(
+                    width: 14,
+                    height: 14,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded, size: 16),
+            label: Text(
+              checking ? l10n.tr('checkingForGit') : l10n.tr('checkAgain'),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

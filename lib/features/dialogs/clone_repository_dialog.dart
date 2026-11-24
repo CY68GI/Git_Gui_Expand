@@ -53,7 +53,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
       initialDirectory: _parentController.text.trim().isEmpty
           ? null
           : _parentController.text.trim(),
-      title: context.l10n.tr('选择克隆父目录'),
+      title: context.l10n.tr('chooseCloneParentFolder'),
     );
     if (path != null && mounted) {
       _parentController.text = path;
@@ -74,7 +74,11 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
     final name = _nameController.text.trim();
     final url = _urlController.text.trim();
     if (parent.isEmpty || name.isEmpty || url.isEmpty) {
-      setState(() => _error = context.l10n.tr('请填写克隆地址、父目录和项目名称。'));
+      setState(
+        () => _error = context.l10n.tr(
+          'enterACloneUrlParentFolderAndProjectName',
+        ),
+      );
       return;
     }
     setState(() {
@@ -128,7 +132,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
         children: [
           Icon(Icons.download_rounded, color: colors.primary),
           const SizedBox(width: 9),
-          Expanded(child: Text(l10n.tr('克隆 Git 仓库'))),
+          Expanded(child: Text(l10n.tr('cloneGitRepository'))),
         ],
       ),
       content: SizedBox(
@@ -142,7 +146,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
               enabled: !_cloning,
               onChanged: _updateRepositoryName,
               decoration: InputDecoration(
-                labelText: l10n.tr('远程仓库地址'),
+                labelText: l10n.tr('remoteRepositoryUrl'),
                 hintText: 'git@github.com:owner/repository.git',
               ),
             ),
@@ -152,10 +156,10 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
               enabled: !_cloning,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: l10n.tr('克隆到父目录'),
+                labelText: l10n.tr('cloneIntoParentFolder'),
                 suffixIcon: IconButton(
                   onPressed: _cloning ? null : _pickParent,
-                  tooltip: l10n.tr('选择文件夹'),
+                  tooltip: l10n.tr('chooseFolder'),
                   icon: const Icon(Icons.folder_open_rounded, size: 18),
                 ),
               ),
@@ -165,20 +169,21 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
               controller: _nameController,
               enabled: !_cloning,
               onChanged: (_) => setState(() {}),
-              decoration: InputDecoration(labelText: l10n.tr('项目文件夹名称')),
+              decoration: InputDecoration(
+                labelText: l10n.tr('projectFolderName'),
+              ),
             ),
             if (destination.isNotEmpty) ...[
               const SizedBox(height: 10),
               SelectableText(
-                l10n.tr('目标目录：{path}', {'path': destination}),
+                l10n.tr('destinationFolder', {'path': destination}),
                 style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
               ),
             ],
             const SizedBox(height: 12),
             Text(
               l10n.tr(
-                '下一步只创建克隆操作预览；取消不会创建任何文件，'
-                '确认计划时才会再次检查目标目录并执行 git clone。',
+                'theNextStepOnlyCreatesAClonePreviewCancelCreatesNothingConfirmingThePlanRechecksTheDestinationAndRunsGitClone',
               ),
               style: TextStyle(
                 fontSize: 11.5,
@@ -199,7 +204,7 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
       actions: [
         TextButton(
           onPressed: _cloning ? null : () => Navigator.pop(context),
-          child: Text(l10n.tr('取消')),
+          child: Text(l10n.tr('cancel2')),
         ),
         FilledButton.icon(
           onPressed: _cloning ? null : _previewClone,
@@ -210,7 +215,9 @@ class _CloneRepositoryDialogState extends State<CloneRepositoryDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.download_rounded, size: 18),
-          label: Text(_cloning ? l10n.tr('正在检查…') : l10n.tr('加入克隆计划')),
+          label: Text(
+            _cloning ? l10n.tr('checking2') : l10n.tr('addCloneToPlan'),
+          ),
         ),
       ],
     );
